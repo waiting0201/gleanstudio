@@ -102,7 +102,22 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 
 **尾斜線**：實測 `/Home/About/` → 200，不轉址。所以 `astro.config.mjs` 用 `trailingSlash: 'ignore'`（預設值）。設成 `'never'` 會發出舊站從來不發的 301。
 
-**已知缺口**：靜態資源 `/content/css/style.css`（小寫）在新站會 404，因為 Workers Assets 在 Worker 之前就處理掉了，middleware 看不到。Workers Assets 對大小寫是否敏感沒有文件記載，**Phase 3 要用 `wrangler dev` 實測**，不要假設。若確實敏感，建議接受這個落差並記在 [09-known-issues](09-known-issues.md) —— 站內只會產生大小寫正確的資源網址。
+~~**已知缺口**：靜態資源 `/content/css/style.css`（小寫）在新站會 404~~ —— **2026-08-07 已補齊。**
+
+實測結果是 Workers Assets 確實大小寫敏感，但**沒命中的請求會落到 Worker**，所以 middleware 補得起來：用 `env.ASSETS.fetch()` 拿正規大小寫的路徑重取一次。詳見 [08-verification](08-verification.md) §5.4。
+
+現在四類路徑都不分大小寫，各自的理由不同：
+
+| 路徑 | 為什麼會壞 | 怎麼修 |
+|---|---|---|
+| `/Home/*` | Astro 路由敏感 | rewrite，**而且要還原整頁的站內連結**（§5.6） |
+| `/backend/*` | 同上 | rewrite，不動連結（後台沒有 markup 契約）。⚠️ CSRF token 的判斷式也要跟著不分大小寫 |
+| `/Upload/*` | 只有最前面那段 | rewrite 前綴；entity / id / photo 由 route 自己正規化 |
+| `/Content/*`、`/Scripts/*` | Workers Assets 敏感，且在 Worker 之前 | 沒命中時用 `env.ASSETS` 重取 |
+
+後台的正規大小寫用 `import.meta.glob` 在 build 時從實際檔案列舉，不手工維護清單。前台那 10 條刻意留成明列的常數 —— 它們多一道站內連結還原，而且是凍結契約的一部分。
+
+回歸驗證：`npm run verify:url-case`（42 項，已接進 CI）。
 
 ### 3.4 `compressHTML: false` 是硬性要求
 

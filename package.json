@@ -22,6 +22,7 @@
     "verify:d1": "node scripts/verify-d1.mjs",
     "verify:media": "node scripts/verify-media.mjs",
     "verify:permissions": "node --experimental-strip-types scripts/verify-permissions.mjs",
+    "verify:url-case": "node scripts/verify-url-case.mjs",
     "dev": "astro dev",
     "//prebuild": "binding 型別由 wrangler.jsonc 產生且不進版控，建置前重新產生以確保與設定同步",
     "prebuild": "wrangler types",

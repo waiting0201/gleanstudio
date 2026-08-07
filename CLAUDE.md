@@ -91,6 +91,7 @@ npm run golden             # 從正式站擷取 golden 基準 → tests/golden/
 npm run verify:d1
 npm run verify:media
 npm run verify:permissions # 權限註冊表 ↔ Lims 資料一致（30 個路由）
+npm run verify:url-case    # 網址大小寫不敏感（42 項，要有跑著的伺服器）
 npm run smoke:admin        # 後台端到端（會真的建一筆文章再刪掉，跑完資料回原狀）
 
 # 部署（Phase 6）
@@ -153,6 +154,7 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - `Articles` 排序一律 `ORDER BY CreateDate DESC, LegacyOrder` —— 有兩組日期並列
   （**依分類篩選時要換成 `LegacyTypeOrder`**，舊站兩種查詢的並列順序不同，見 [ADR-017](docs/10-decisions.md)）
 - **`wrangler dev` 不會可靠地重載新 build 的 chunk** —— 改完一定要重啟，用 `npm run preview`
+- **網址一律不分大小寫**（舊站跑 IIS）。四類路徑壞掉的原因不一樣，修法也不一樣，見 [docs/03](docs/03-url-contract.md) §3.3。改 `src/middleware.ts` 之後跑 `npm run verify:url-case`。**macOS 驗不出大小寫問題**，一定要看 CI 在 Linux 上的結果
 - **不要用 `LENGTH()` 比對內容完整性** —— 它數 code point，JS `.length` 數 UTF-16 單位，內文有 🔗 就會差 1。要比就比整串或雜湊
 - **版型與頁面的空白是契約的一部分** —— `<Site>` 開標籤後換不換行逐頁不同，改之前先跑 `npm run parity -- <path> --level a`
 - **Razor 的 `@x` 不等於 Astro 的 `{x}`** —— 前者把 160–255 的字元編成 `&#nnn;`。要 byte parity 就用 `set:html={htmlEncode(x)}`（`src/lib/format.ts`）

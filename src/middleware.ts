@@ -5,10 +5,16 @@
  *
  * 站內沒有任何地方產生小寫網址，這只影響外部連結、舊書籤與手打網址。
  *
- * ⚠️ 靜態資源（/content/css/style.css）不走這裡 —— Workers Assets 在 Worker
- *    之前就處理掉了，middleware 看不到。見 docs/09-known-issues.md
+ * 四類路徑各有各的處理方式，因為它們壞掉的原因不一樣：
+ *
+ *   /Home/*        Astro 路由敏感 → rewrite，**而且要還原整頁的站內連結**（§5.6）
+ *   /backend/*     同上，但後台沒有 markup 契約，不動連結
+ *   /Upload/*      路由本身已經處理 entity/id/photo 的大小寫，只差最前面那段
+ *   /Content/*     Workers Assets 敏感，**而且它在 Worker 之前**就處理掉命中的請求 ——
+ *   /Scripts/*     沒命中才會落到這裡，所以要用 env.ASSETS 重新取一次
  */
 import { defineMiddleware } from 'astro:middleware';
+import { env } from 'cloudflare:workers';
 import { ensureCsrfToken } from './lib/auth/csrf';
 import { FLASH_KEY, type Flash } from './api/app';
 
@@ -20,15 +26,50 @@ const CANONICAL = new Map(
   ].map((p) => [p.toLowerCase(), p]),
 );
 
+/**
+ * 後台與 /Error 的正規大小寫。用 `import.meta.glob` 在 build 時列舉實際檔案，
+ * 不手工維護清單 —— 之後新增一頁自動涵蓋，不會漂移。
+ *
+ * 前台那 10 條刻意不併進來：它們多一道站內連結還原，而這裡的頁面不需要。
+ */
+const OTHER_PAGES = new Map(
+  Object.keys({
+    ...import.meta.glob('./pages/backend/**/*.astro'),
+    ...import.meta.glob('./pages/Error/**/*.astro'),
+  })
+    .map((f) => f.replace(/^\.\/pages/, '').replace(/\.astro$/, ''))
+    .map((p) => [p.toLowerCase(), p] as const),
+);
+
+/** Workers Assets 服務的兩個目錄。`public/` 底下就只有這兩個第一層資料夾。 */
+const ASSET_ROOTS = new Map([['content', 'Content'], ['scripts', 'Scripts']]);
+
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const path = ctx.url.pathname.replace(/\/+$/, '') || '/';
+  const lower = path.toLowerCase();
+
+  // ── 靜態資源：大小寫打錯 ───────────────────────────────
+  // 命中的請求根本不會進 Worker（Workers Assets 先攔），所以走到這裡就代表
+  // 「大小寫錯了」或「真的不存在」。兩種候選都試：只有第一段錯（/content/css/…），
+  // 或整條都被打成小寫。試不到就照常往下走，讓 Astro 回它的 404。
+  const assetRoot = ASSET_ROOTS.get(lower.split('/')[1] ?? '');
+  if (assetRoot && env.ASSETS) {
+    const tail = path.slice(1 + assetRoot.length);
+    for (const candidate of new Set([`/${assetRoot}${tail}`, `/${assetRoot}${tail.toLowerCase()}`])) {
+      if (candidate === path) continue;
+      const res = await env.ASSETS.fetch(new URL(candidate + ctx.url.search, ctx.url));
+      if (res.status !== 404) return res;
+    }
+  }
 
   // ── 後台：CSRF token 與 flash 訊息 ─────────────────────
   // ⚠️ 這兩件事**一定要在這裡做，不能在元件裡做**。元件渲染時 header 已經
   //    送出去了，session.set() 會被 Astro 丟掉（只留一行 warning）——
   //    token 會渲染得出來但沒存進 session，於是每一次 POST 都 403；
   //    flash 則是永遠清不掉。兩個都不會讓頁面看起來壞掉。
-  if (path.startsWith('/backend')) {
+  // 比對用 lower —— /Backend/Main/Login 也要拿得到 token，不然下面 rewrite 過去
+  // 之後表單會渲染出一個空的 token，每一次 POST 都 403，而畫面看起來完全正常。
+  if (lower.startsWith('/backend')) {
     ctx.locals.csrf = await ensureCsrfToken(ctx.session as never);
     const flash = (await ctx.session?.get(FLASH_KEY)) as Flash | undefined;
     if (flash) {
@@ -37,7 +78,18 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
     }
   }
 
-  const canonical = CANONICAL.get(path.toLowerCase());
+  // ── 後台 / Error：rewrite，不動連結 ────────────────────
+  const other = OTHER_PAGES.get(lower);
+  if (other && other !== path) return ctx.rewrite(other + ctx.url.search);
+
+  // ── /Upload/*：只有最前面那段要正規化 ──────────────────
+  // entity / id / photo 的大小寫由路由自己處理（src/pages/Upload/…），
+  // 它已經把 entity 對回正式大小寫、id 轉小寫，因為 R2 的 key 是大小寫敏感的。
+  if (lower.startsWith('/upload/') && !path.startsWith('/Upload/')) {
+    return ctx.rewrite('/Upload' + path.slice('/upload'.length) + ctx.url.search);
+  }
+
+  const canonical = CANONICAL.get(lower);
   if (!canonical || canonical === path) return next();
 
   const res = await ctx.rewrite(canonical + ctx.url.search);

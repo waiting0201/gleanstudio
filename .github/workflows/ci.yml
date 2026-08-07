@@ -126,6 +126,11 @@ jobs:
       - name: 聯絡表單 POST
         run: npm run parity:contact
 
+      # 大小寫這件事在 macOS 上驗不出來（檔案系統不分大小寫），
+      # 跟 golden fixture 檔名那次踩到的是同一個坑 —— 一定要在 Linux 上跑。
+      - name: 網址大小寫
+        run: npm run verify:url-case
+
       - name: 後台端到端
         env:
           SMOKE_USERNAME: ci

@@ -155,8 +155,8 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 | 4.7 | 上傳驗證 | 無 | magic bytes + 10 MB 上限 | |
 | 4.8 | 權限比對 | `Key.Contains()` 子字串 | 精確比對 + CI 斷言 | 見 [06-admin-spec](06-admin-spec.md) §5 |
 | 4.9 | `Sort*` 操作的權限 | 完全沒被涵蓋 | 對應到 `update` | |
-| 4.10 | 資源路徑小寫（如 `/content/css/style.css`） | IIS 服務（200） | **404**（Phase 3 已實測） | Workers Assets 大小寫敏感。站內不會產生小寫資源網址，影響僅限手打網址。見 [08-verification](08-verification.md) §5.4 |
-| 4.11 | `/upload/...`（小寫路徑） | IIS 服務（200） | **404** | middleware 的正規化表只涵蓋 10 條 `/Home/*`（[03-url-contract](03-url-contract.md) §3.3）。同 4.10，站內只產生 `/Upload/` |
+| 4.10 | 資源路徑小寫（如 `/content/css/style.css`） | IIS 服務（200） | **200 —— 已補齊（2026-08-07）** | 原本接受落差，後來改成用 `env.ASSETS` 重取。見 [08-verification](08-verification.md) §5.4 |
+| 4.11 | `/upload/...`（小寫路徑） | IIS 服務（200） | **200 —— 已補齊（2026-08-07）** | middleware 正規化最前面那段，route 本身早就處理了 entity/id/photo |
 | 4.12 | 跨站 POST 到 `/Home/Contact` | 接受（沒有 anti-forgery token，見 1.8） | **403** | Astro 預設開 `security.checkOrigin`，`Origin` 對不上就擋。**新站比舊站嚴，但合法流程零影響** —— 瀏覽器送同源表單一定會帶 `Origin`。等於在不動 markup 的前提下補上了 1.8 缺的那層防護，所以保留 |
 | 4.13 | 聯絡表單寄信 | 一定呼叫 SendGrid（雖然三個缺陷疊起來很可能從未送達） | `SENDGRID_API_KEY` 與 `CONTACT_TO` 都有設才寄 | 兩個閘門任一個沒設就不寄 —— fail-safe，不是預設寄給誰 |
 | 4.14 | 聯絡表單的**收件人** | `entity.Email`（**訪客自己**填的信箱） | `CONTACT_TO` secret，訪客的信箱放 `reply_to` | ⚠️ **刻意不重現舊行為**，理由見 §3.1。照抄會讓訪客收到一封他們從來沒收過的信，而禾勤還是收不到 |

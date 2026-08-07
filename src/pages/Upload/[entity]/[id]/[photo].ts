@@ -20,7 +20,10 @@ export const GET: APIRoute = async ({ params, request }) => {
     return new Response(null, { status: 404 });
   }
 
-  const key = `Upload/${entity}/${params.id!.toLowerCase()}/${params.photo}`;
+  // photo 也要轉小寫：檔名是 `yyyyMMddHHmmss.{ext}`，數字不受影響，而副檔名
+  // 一定是小寫 —— src/lib/media.ts 的副檔名是從 magic bytes 查表得到的，
+  // 表裡全是小寫字面值；舊資料則整批都是 .jpg。所以 R2 的 key 不可能有大寫。
+  const key = `Upload/${entity}/${params.id!.toLowerCase()}/${params.photo!.toLowerCase()}`;
   const wantsRange = request.headers.has('range');
   const obj = await env.MEDIA.get(key, {
     onlyIf: request.headers,   // If-None-Match / If-Modified-Since
