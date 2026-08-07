@@ -19,6 +19,14 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const REMOTE = process.argv.includes('--remote');
+/**
+ * `--no-accounts` 跳過 Admins / AdminLims 的列數對照。
+ * CI 的資料庫是用 `build-seed-sql.mjs --no-accounts` 灌的 —— 帳號資料不進版控
+ * （Admins.json 有舊系統的明碼密碼），帳號由 bootstrap-admin.mjs 現場建。
+ * 見 docs/07-deployment.md §2
+ */
+const NO_ACCOUNTS = process.argv.includes('--no-accounts');
+const ACCOUNT_TABLES = new Set(['Admins', 'AdminLims']);
 const D1_DIR = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject';
 const IN = resolve('data/export');
 
@@ -31,13 +39,45 @@ if (REMOTE) {
     return JSON.parse(out)[0].results;
   };
 } else {
-  const dbFile = readdirSync(D1_DIR)
-    .filter((f) => f.endsWith('.sqlite') && f !== 'metadata.sqlite')
-    .map((f) => `${D1_DIR}/${f}`)[0];
-  if (!dbFile) {
-    console.error('找不到本機 D1 檔案。先跑 npx wrangler d1 migrations apply gleanstudio --local');
+  /**
+   * ⚠️ 不要用「目錄裡第一個 .sqlite」。
+   *
+   * miniflare 的檔名是內部雜湊，而只要用 `CLOUDFLARE_ENV=preview` build 過一次，
+   * 這個目錄就會多出第二個（空的）資料庫 —— 然後這支腳本會挑到它，
+   * 報出「no such table: Lims」這種看起來像資料損壞、其實是挑錯檔的錯誤。
+   *
+   * 改成挑**真的有 schema 的那一個**，多於一個就報錯不猜。
+   */
+  const explicit = process.argv.indexOf('--db');
+  const candidates = explicit !== -1
+    ? [process.argv[explicit + 1]]
+    : readdirSync(D1_DIR)
+        .filter((f) => f.endsWith('.sqlite') && f !== 'metadata.sqlite')
+        .map((f) => `${D1_DIR}/${f}`);
+
+  const hasSchema = (file) => {
+    try {
+      const o = execFileSync('sqlite3', ['-json', file,
+        "SELECT COUNT(*) c FROM sqlite_master WHERE type='table' AND name='Lims'"],
+        { encoding: 'utf8' }).trim();
+      return o ? JSON.parse(o)[0].c === 1 : false;
+    } catch { return false; }
+  };
+
+  const usable = candidates.filter(hasSchema);
+  if (usable.length === 0) {
+    console.error('找不到已套用 migration 的本機 D1。先跑 npm run db:migrate');
+    if (candidates.length) console.error(`  （看到 ${candidates.length} 個 .sqlite，但都沒有 Lims 表）`);
     process.exit(1);
   }
+  if (usable.length > 1) {
+    console.error('本機有多個 D1 資料庫，不猜是哪一個：');
+    for (const f of usable) console.error(`  ${f}`);
+    console.error('用 --db <路徑> 指定，或刪掉不用的（通常是 CLOUDFLARE_ENV=preview build 留下的）。');
+    process.exit(1);
+  }
+
+  const dbFile = usable[0];
   query = (q) => {
     const o = execFileSync('sqlite3', ['-json', dbFile, q],
       { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }).trim();
@@ -57,6 +97,10 @@ const check = (label, ok, detail = '') => {
 console.log('列數對照 data/export/manifest.json');
 const manifest = JSON.parse(await readFile(`${IN}/manifest.json`, 'utf8'));
 for (const [table, meta] of Object.entries(manifest.files)) {
+  if (NO_ACCOUNTS && ACCOUNT_TABLES.has(table)) {
+    console.log(`  – ${table.padEnd(14)} 略過（--no-accounts）`);
+    continue;
+  }
   const n = query(`SELECT COUNT(*) c FROM ${table}`)[0].c;
   check(table.padEnd(14), n === meta.rows, `D1 ${String(n).padStart(3)} / 匯出 ${String(meta.rows).padStart(3)}`);
 }

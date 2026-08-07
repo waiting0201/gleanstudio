@@ -96,16 +96,32 @@ function insertArticles(rows, legacyOrder, legacyTypeOrder) {
 }
 
 // ── 組裝 ──────────────────────────────────────────────
-const [lims, admins, adminLims, articleTypes, articles, services, teams, projects, abouts] =
-  await Promise.all(['Lims', 'Admins', 'AdminLims', 'ArticleTypes', 'Articles', 'Services', 'Teams', 'Projects', 'Abouts'].map(read));
+/**
+ * `--no-accounts` 只產生內容與 Lims，跳過 Admins / AdminLims。
+ *
+ * CI 用得到：內容匯出（含 Articles.json）進版控，帳號資料不進 ——
+ * Admins.json 裡有舊系統的**明碼**密碼。CI 需要帳號時用
+ * scripts/bootstrap-admin.mjs 現場建一個。
+ */
+const NO_ACCOUNTS = process.argv.includes('--no-accounts');
 
-const hashes = JSON.parse(await readFile(`${IN}/admin-hashes.json`, 'utf8'));
+const readOptional = async (name) => {
+  try { return await read(name); } catch (e) { if (NO_ACCOUNTS && e.code === 'ENOENT') return []; throw e; }
+};
+const [lims, admins, adminLims, articleTypes, articles, services, teams, projects, abouts] =
+  await Promise.all([
+    read('Lims'), readOptional('Admins'), readOptional('AdminLims'),
+    read('ArticleTypes'), read('Articles'), read('Services'),
+    read('Teams'), read('Projects'), read('Abouts'),
+  ]);
+
+const hashes = NO_ACCOUNTS ? {} : JSON.parse(await readFile(`${IN}/admin-hashes.json`, 'utf8'));
 const legacy = JSON.parse(await readFile(`${IN}/legacy-order.json`, 'utf8'));
 const legacyOrder = legacy.order;           // 未篩選清單的順序
 const legacyTypeOrder = legacy.typeOrder;   // 依分類篩選後的順序，見 docs/04-data-model.md §5
 const projectOrder = JSON.parse(await readFile(`${IN}/projects-order.json`, 'utf8')).order;
 
-const adminRows = admins.map((a) => {
+const adminRows = NO_ACCOUNTS ? [] : admins.map((a) => {
   const h = hashes[a.AdminID];
   if (!h) throw new Error(`AdminID ${a.AdminID} 沒有雜湊 —— 請先跑 scripts/hash-passwords.mjs`);
   return { ...a, PasswordHash: h.passwordHash, MustChangePassword: h.mustChangePassword, IsSuperAdmin: 0 };
@@ -124,8 +140,10 @@ const add = (title, stmts) => { parts.push(`-- ── ${title} ──`, ...stmts
 
 add('Lims', insertRows('Lims', ['LimID', '"Key"', 'Value', 'Icon', 'Sort', 'ParentID'],
   lims.map((r) => ({ ...r, '"Key"': r.Key }))));
-add('Admins', insertRows('Admins', ['AdminID', 'Name', 'Username', 'PasswordHash', 'Email', 'IsSuperAdmin', 'MustChangePassword'], adminRows));
-add('AdminLims', insertRows('AdminLims', ['AdminLimID', 'AdminID', 'LimID', 'IsAdd', 'IsUpdate', 'IsDelete'], adminLims));
+if (!NO_ACCOUNTS) {
+  add('Admins', insertRows('Admins', ['AdminID', 'Name', 'Username', 'PasswordHash', 'Email', 'IsSuperAdmin', 'MustChangePassword'], adminRows));
+  add('AdminLims', insertRows('AdminLims', ['AdminLimID', 'AdminID', 'LimID', 'IsAdd', 'IsUpdate', 'IsDelete'], adminLims));
+}
 add('ArticleTypes', insertRows('ArticleTypes', ['ArticleTypeID', 'Title', 'SubTitle', 'Summary', 'Description', 'BgClass', 'Photo', 'Sort'], articleTypes));
 
 const art = insertArticles(articles, legacyOrder, legacyTypeOrder);

@@ -164,14 +164,21 @@ node scripts/verify-media.mjs [--remote]
 
 ---
 
-## Phase 6 — CI/CD
+## Phase 6 — CI/CD 🚧 workflow 寫好了，等雲端資源
 
-- [ ] `ci.yml` 綠燈（含 parity Level B gating）
-- [ ] `deploy-preview.yml` 能從 PR 產出可達的 preview URL
-- [ ] CI 對 preview D1 套用 migration
-- [ ] `deploy-production.yml` 需人工核准
-- [ ] Cloudflare API token 權限正確（**含 D1 與 R2** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
+- [x] `ci.yml` —— 完整序列在本機用**乾淨的資料庫**實測跑通：migrate → seed（`--no-accounts`）→ 順序補值 → verify-d1 → 權限斷言 → build → wrangler dev → parity → parity:contact → bootstrap 帳號 → smoke:admin 47 項
+- [x] **內容匯出進版控、帳號資料不進** —— 沒有這一步 CI 根本跑不了 parity（[07-deployment](07-deployment.md) §2）
+- [x] `scripts/bootstrap-admin.mjs` —— 取代舊系統寫死的 `weypro` 後門（[06-admin-spec](06-admin-spec.md) §4）
+- [x] `deploy-preview.yml` / `deploy-production.yml`，migration 排在 build 之前
+- [x] `scripts/check-deploy-config.mjs` —— 部署前守門，見下方
+- [ ] **在 GitHub 上真的跑一次** —— 目前只在本機逐步驗證過
+- [ ] Cloudflare API token（**含 D1 與 R2** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
+- [ ] 建 preview 的 D1 / R2 / KV，把 `wrangler.jsonc` 裡的 placeholder 換掉
 - [ ] Worker secrets 已設定
+
+**踩到一個安靜的坑**（[07-deployment](07-deployment.md) §2）：
+
+`@astrojs/cloudflare` 把設定攤平成 `dist/server/wrangler.json` 時**不保留 `env` 區塊**，所以 `wrangler versions upload --env preview` 不會報錯，只會退回頂層綁定 —— **把 PR 的 preview 綁上正式的 D1 與 R2**。正確做法是 build 時給 `CLOUDFLARE_ENV`，部署指令不加 `--env`。`check-deploy-config.mjs` 把這件事變成一道會擋下部署的檢查。
 
 ---
 

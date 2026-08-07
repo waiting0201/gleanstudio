@@ -1,0 +1,67 @@
+# 正式部署。`environment: production` 讓 GitHub 擋在人工核准前面。
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production
+  cancel-in-progress: false      # 正式部署不要互相取消
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production      # ← 需要人工核准
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # migration 一定在 build 與 deploy 之前。兩者之間有幾秒鐘，所以
+      # **每個 migration 都必須與當下已部署的 Worker 向後相容**。
+      - name: 套用正式的 migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply gleanstudio --remote --env production --config wrangler.jsonc
+
+      # ⚠️ 環境在 build 時用 CLOUDFLARE_ENV 決定，部署時**不要**加 --env。
+      #    理由見 deploy-preview.yml 的同一段註解與 docs/07-deployment.md §2
+      - name: build（綁 production）
+        env:
+          CLOUDFLARE_ENV: production
+        run: npm run build
+
+      - name: 確認綁定正確
+        run: node scripts/check-deploy-config.mjs --expect production
+
+      - name: 部署
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+
+      # parity 打**已部署的**網址，不是本機。這是唯一能證明線上輸出仍與
+      # 舊站一致的檢查。見 docs/08-verification.md §6
+      - name: parity 打線上
+        run: npm run parity -- --base ${{ vars.PRODUCTION_URL || 'https://gleanstudio.com.tw' }}

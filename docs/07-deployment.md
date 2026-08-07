@@ -59,19 +59,36 @@
 
 ### `ci.yml` — 每個 PR 與 push
 
+實作見 `.github/workflows/ci.yml`。
+
 ```
-checkout
-→ setup-node 24（cache: npm）
-→ npm ci
-→ npx wrangler types，若 worker-configuration.d.ts 有變動就失敗
-→ astro check
-→ tsc --noEmit
-→ 單元測試
-→ wrangler d1 migrations apply gleanstudio --local + seed
+npm ci
+→ 建本機 D1：migrate → seed（--no-accounts）→ 順序補值
+→ 順序資料可從 golden 重建（git diff --exit-code）
+→ verify-d1（--no-accounts）
 → 權限註冊表斷言（06-admin-spec §5）
-→ parity 套件對照 tests/golden/（Level B 為 gating）
-→ astro build
+→ astro build → wrangler dev
+→ parity（Level B 為 gating）
+→ parity:contact
+→ bootstrap 一個 CI 帳號 → smoke:admin
 ```
+
+#### CI 要跑 parity，就得有資料
+
+parity 必須有一個灌好內容的資料庫才跑得動，而 `data/export/` 原本整個 gitignored。
+
+拆法：**內容匯出進版控，帳號資料不進。**
+
+| 進版控 | 不進 |
+|---|---|
+| `ArticleTypes / Articles / Services / Teams / Projects / Abouts / Lims` `.json` | `Admins.json`（有舊系統的**明碼**密碼） |
+| 兩個順序檔 | `admin-hashes.json` |
+
+`Articles.json` 6.1 MB，幾乎全是內文內嵌的 base64 圖片；其餘加起來 46 KB。
+
+**為什麼不從 `tests/golden/` 反推內容？** 那會讓 9 頁 ArticleDetail 的 parity 變成循環論證 —— 拿 oracle 的輸出去餵資料庫，再跟同一份 oracle 比對，等於什麼都沒驗。內容匯出來自本機 SQL Server，golden 來自線上，兩者互相獨立，比對才有意義。
+
+CI 需要管理者帳號時，用 `scripts/bootstrap-admin.mjs` 現場建一個，密碼取自 workflow 的 run id，跑完就沒了。**刻意只給 LimID 3,4,5,6,8,9（不給 7）**，重現正式資料的權限形狀，`smoke:admin` 才驗得到「沒權限的區塊被擋」。
 
 ```yaml
 concurrency:
@@ -79,26 +96,45 @@ concurrency:
   cancel-in-progress: true
 ```
 
-### `deploy-preview.yml` — PR
+### ⚠️ 環境是在 build 時決定的，不是部署時
 
-```yaml
-- uses: actions/checkout@v6
-- uses: actions/setup-node@v4
-  with: { node-version: 24, cache: npm }
-- run: npm ci && npm run build
-- uses: cloudflare/wrangler-action@v3
-  with:
-    apiToken:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
-    accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    command: d1 migrations apply gleanstudio-preview --remote --env preview
-- uses: cloudflare/wrangler-action@v3
-  with:
-    apiToken:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
-    accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    command: versions upload --env preview
+**這一段是踩過才知道的，而且失敗模式是安靜的。**
+
+`@astrojs/cloudflare` 會在 `astro build` 時把 `wrangler.jsonc` 攤平成 `dist/server/wrangler.json`，並寫一份 `.wrangler/deploy/config.json` 把 wrangler 導過去。**攤平的結果不保留 `env` 區塊。**
+
+於是：
+
+```bash
+astro build
+wrangler versions upload --env preview    # ← 不會報錯
 ```
 
-`versions upload` 產生一個 per-version 的 preview URL 而不動到線上流量，把它貼成 PR comment。
+wrangler 在那份設定裡找不到 `preview` 這個環境，就**直接退回頂層綁定** —— 也就是把 PR 的 preview 版本綁上**正式的** D1 與 R2。實測輸出：
+
+```
+env.DB (gleanstudio)              D1 Database        ← 不是 gleanstudio-preview
+env.MEDIA (gleanstudio-media)     R2 Bucket          ← 不是 …-preview
+```
+
+**正確做法**：環境用 `CLOUDFLARE_ENV` 在 build 時給，部署指令**不要**加 `--env`。
+
+```bash
+CLOUDFLARE_ENV=preview npm run build      # adapter 解析出 preview 的綁定
+node scripts/check-deploy-config.mjs --expect preview
+wrangler versions upload                  # 沒有 --env
+```
+
+adapter 連 worker 名稱都會換掉（`gleanstudio` → `gleanstudio-preview`），所以「有沒有生效」是看得出來的。
+
+`scripts/check-deploy-config.mjs` 就是把這件事變成一道會擋下部署的檢查：驗 worker 名稱、D1 名稱、R2 名稱是否符合預期環境，以及有沒有還沒填的 placeholder。
+
+**例外**：`d1 migrations apply` 讀的是根 `wrangler.jsonc`（那裡有 `env` 區塊），所以那一行**要**加 `--env preview`。為了不受 `.wrangler/deploy/config.json` 重導影響，明確加上 `--config wrangler.jsonc`，而且**排在 build 之前**。
+
+### `deploy-preview.yml` — PR
+
+實作見 `.github/workflows/deploy-preview.yml`。順序是 **migration → build（帶 `CLOUDFLARE_ENV`）→ 守門 → upload**。
+
+`versions upload` 產生一個 per-version 的 preview URL 而不動到線上流量，workflow 會把它貼成 PR comment（同一個 PR 只留一則，後續 push 就地更新）。
 
 ⚠️ **fork 來的 PR 拿不到 secrets**，所以這支 workflow 只對同 repo 的 PR 有效。這件事要寫在這裡，而不是等別人踩到才發現。
 

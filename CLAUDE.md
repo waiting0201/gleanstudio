@@ -80,6 +80,11 @@ npm run verify:media
 npm run verify:permissions # 權限註冊表 ↔ Lims 資料一致（30 個路由）
 npm run smoke:admin        # 後台端到端（會真的建一筆文章再刪掉，跑完資料回原狀）
 
+# 部署（Phase 6）
+CLOUDFLARE_ENV=preview npm run build          # ⚠️ 環境在 build 時決定，不是部署時
+node scripts/check-deploy-config.mjs --expect preview   # 部署前守門
+node scripts/bootstrap-admin.mjs --username <帳號> --super  # 建管理者，密碼走 stdin
+
 # 前台（已可用）
 npm run dev                # astro dev
 npm run build
@@ -140,6 +145,7 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - **Razor 的 `@x` 不等於 Astro 的 `{x}`** —— 前者把 160–255 的字元編成 `&#nnn;`。要 byte parity 就用 `set:html={htmlEncode(x)}`（`src/lib/format.ts`）
 - **Tailwind 只透過 Vite plugin 掛，不要加 Astro integration** —— integration 會注入全域樣式，前台每頁多一個 `<link>`，parity 立刻掉。`src/styles/admin.css` 只能被 `src/layouts/Admin.astro` import（[docs/06](docs/06-admin-spec.md) §11）
 - **後台的等寬「儀表層」只放拉丁字母與數字** —— 中文小標籤用 `.eyebrow`
+- **部署環境是在 `astro build` 時用 `CLOUDFLARE_ENV` 決定的** —— adapter 攤平設定時不保留 `env` 區塊，部署指令加 `--env preview` 不會報錯，只會安靜地綁上**正式**資源（[docs/07](docs/07-deployment.md) §2）
 - **`session.set()` 不能寫在元件裡** —— 回應 header 已送出，寫入會被靜默丟掉。CSRF token 與 flash 都在 `src/middleware.ts` 處理，元件只從 `Astro.locals` 讀（[docs/06](docs/06-admin-spec.md) §11）
 
 ---

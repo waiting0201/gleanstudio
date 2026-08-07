@@ -1,0 +1,32 @@
+[
+  {
+    "ArticleTypeID": "6a3f74fd-82d1-4102-86f6-55eec9fb662d",
+    "Title": "視覺設計與展場規劃",
+    "SubTitle": "Exhibition <br> planning &<br> design",
+    "Summary": "轉譯展覽要旨．銘刻觀展體驗",
+    "Description": "<strong>視覺設計與展場規劃</strong>｜轉譯展覽要旨．銘刻觀展體驗<br>\r\n視覺設計不從眾、著重傾聽需求的展陳規劃，整合出美感與典藏功能兼具之空間，同時也提供展覽手冊與畫冊設計，完整化展覽周邊文宣品，為館舍轉譯文化內容、提供使用者深刻的觀展體驗。",
+    "BgClass": "r-bg-secondary",
+    "Photo": "20250502083701.jpg",
+    "Sort": 5
+  },
+  {
+    "ArticleTypeID": "d6c3abfd-9f01-4e88-93a9-a1ff0661e357",
+    "Title": "研究與教育推廣",
+    "SubTitle": "Interpretation <br>of Cultural <br> Relics Research",
+    "Summary": "跨越專業壁壘．延伸知識觸角",
+    "Description": "<strong>研究與教育推廣</strong>｜跨越專業壁壘．延伸知識觸角<br>\r\n將文物保存知識與概念透過深入潛出的方法，轉化為圖像或互動式體驗，透過修護現地展示、實務工作坊或是專題講座拉近一般民眾與修護專業的距離。",
+    "BgClass": "r-bg-third",
+    "Photo": "20250502080044.jpg",
+    "Sort": 10
+  },
+  {
+    "ArticleTypeID": "ff829f70-4d55-4f55-aa1f-750c050d2be0",
+    "Title": "文物保存與修護",
+    "SubTitle": "Cultural <br>relic<br>restoration",
+    "Summary": "適當展陳．延續文物價值｜嚴守真實性．延長文物存世時間",
+    "Description": "<p><strong>文物保存</strong>｜適當展陳．延續文物價值<br>\r\n配合展覽設計規劃，依據文物的特性、保存狀況及展示需求審慎評估，給予合適的保護措施，確保文物於展出期間穩定安全，並達到良好的展示效果。<br><br>\r\n\r\n<strong>文物修護</strong>｜嚴守真實性．延長文物存世時間<br>\r\n除了調查分析文物的狀況、傾聽需求，也著重釐清業主實際面對的問題與困難，我們集結紙質、器物、油畫、木質、石質多元材質修護人才，並整合建築、化學、設計、藝術理論等多領域的服務，以制定真正貼合問題核心的處理方案，延長文物壽命。</p>",
+    "BgClass": "r-bg-primary",
+    "Photo": "20250502081529.jpg",
+    "Sort": 0
+  }
+]

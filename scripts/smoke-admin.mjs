@@ -33,8 +33,20 @@ const check = (label, ok, note = '') => {
   ok ? pass++ : fail++;
 };
 
-const admin = JSON.parse(await readFile('data/export/Admins.json', 'utf8'))[0];
-d1('UPDATE Admins SET MustChangePassword = 0 WHERE AdminID = 1');
+/**
+ * 帳密來源：CI 用環境變數（帳號由 scripts/bootstrap-admin.mjs 現場建），
+ * 本機沿用 gitignored 的匯出檔。兩邊都不把密碼印出來。
+ */
+const admin = process.env.SMOKE_USERNAME
+  ? { Username: process.env.SMOKE_USERNAME, Password: process.env.SMOKE_PASSWORD ?? '' }
+  : JSON.parse(await readFile('data/export/Admins.json', 'utf8'))[0];
+
+const ADMIN_ID = d1(`SELECT AdminID FROM Admins WHERE Username = '${admin.Username}'`, true)[0]?.AdminID;
+if (!ADMIN_ID) {
+  console.error(`找不到帳號 ${admin.Username}。CI 請先跑 scripts/bootstrap-admin.mjs`);
+  process.exit(1);
+}
+d1(`UPDATE Admins SET MustChangePassword = 0 WHERE AdminID = ${ADMIN_ID}`);
 
 let cookie = '';
 const post = (path, body, isForm = false) => fetch(BASE + path, {
@@ -91,11 +103,11 @@ try {
 
   // 真的撤掉一個權限來測那條鏈，測完還原。
   // （唯一天生沒權限的 Teams 頁面還沒建，拿它測會變成在測 404）
-  d1('UPDATE AdminLims SET IsDelete = 0 WHERE AdminID = 1 AND LimID = 4');
+  d1(`UPDATE AdminLims SET IsDelete = 0 WHERE AdminID = ${ADMIN_ID} AND LimID = 4`);
   r = await post('/api/admin/articles/delete',
     new URLSearchParams({ __csrf: csrfOf(await get('/backend/WebMs/Articles')), ArticleID: '00000000-0000-0000-0000-000000000000' }));
   check('權限被撤掉就 403', r.status === 403, '（不用重新登入就生效）');
-  d1('UPDATE AdminLims SET IsDelete = 1 WHERE AdminID = 1 AND LimID = 4');
+  d1(`UPDATE AdminLims SET IsDelete = 1 WHERE AdminID = ${ADMIN_ID} AND LimID = 4`);
 
   console.log('\n新增');
   const before = d1('SELECT COUNT(*) n FROM Articles', true)[0].n;
@@ -253,7 +265,7 @@ try {
   check('太短的初始密碼被擋', /至少 12 個字元/.test(await get('/backend/SettingMs/AddAdmins')));
 
   r = await post('/api/admin/Admins/delete',
-    new URLSearchParams({ __csrf: csrfOf(await get('/backend/SettingMs/Admins')), id: String(admin.AdminID) }));
+    new URLSearchParams({ __csrf: csrfOf(await get('/backend/SettingMs/Admins')), id: String(ADMIN_ID) }));
   check('不能刪除自己', /不能刪除自己/.test(await get('/backend/SettingMs/Admins')));
 
   r = await post('/api/admin/Admins/delete',
@@ -278,10 +290,10 @@ try {
   if (createdProjectId) d1(`DELETE FROM Projects WHERE ProjectID = '${createdProjectId}'`);
   if (createdAdminId) d1(`DELETE FROM Admins WHERE AdminID = ${createdAdminId}`);
   d1("DELETE FROM Admins WHERE Username IN ('smoketest','weakpw')");
-  check('測試帳號已清乾淨', d1("SELECT COUNT(*) n FROM Admins", true)[0].n === 1);
-  d1('UPDATE Admins SET MustChangePassword = 1 WHERE AdminID = 1');
+  check('測試帳號已清乾淨', d1("SELECT COUNT(*) n FROM Admins WHERE Username IN ('smoketest','weakpw')", true)[0].n === 0);
+  d1(`UPDATE Admins SET MustChangePassword = 1 WHERE AdminID = ${ADMIN_ID}`);
   check('MustChangePassword 已還原',
-    d1('SELECT MustChangePassword m FROM Admins WHERE AdminID = 1', true)[0].m === 1);
+    d1(`SELECT MustChangePassword m FROM Admins WHERE AdminID = ${ADMIN_ID}`, true)[0].m === 1);
 }
 
 console.log(fail ? `\n❌ ${fail} 項未通過（${pass} 項通過）` : `\n✅ ${pass} 項全部通過`);

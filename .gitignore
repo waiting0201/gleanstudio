@@ -27,6 +27,17 @@ data/export/*
 !data/export/legacy-order.json
 !data/export/projects-order.json
 
+# 內容匯出進版控 —— CI 要靠它 seed 出資料才跑得了 parity。
+# 這些就是公開網站上看得到的東西，沒有機密；**Admins.json 與 admin-hashes.json
+# 不在這裡**，前者有舊系統的明碼密碼。見 docs/07-deployment.md §2
+!data/export/ArticleTypes.json
+!data/export/Articles.json
+!data/export/Services.json
+!data/export/Teams.json
+!data/export/Projects.json
+!data/export/Abouts.json
+!data/export/Lims.json
+
 # Node
 node_modules/
 dist/

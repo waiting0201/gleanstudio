@@ -1,0 +1,85 @@
+# PR 的 preview 部署。versions upload 產生一個 per-version 的網址，**不動線上流量**。
+#
+# ⚠️ fork 來的 PR 拿不到 secrets，所以這支只對同 repo 的 PR 有效。
+# 這件事寫在這裡，不要等別人踩到才發現。
+name: Deploy preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # fork 的 PR 直接跳過，不要留一個永遠紅的 job
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # migration 在 build 與部署之前 —— 新程式碼永遠不會遇到舊 schema。
+      # 推論：每個 migration 都必須與**當下已部署的** Worker 向後相容。
+      #
+      # 這裡讀的是根 wrangler.jsonc（明確指定），所以 --env preview 是對的。
+      - name: 套用 preview 的 migration
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply gleanstudio-preview --remote --env preview --config wrangler.jsonc
+
+      # ⚠️ 環境是在 **build 時**用 CLOUDFLARE_ENV 決定的，不是部署時用 --env。
+      #    @astrojs/cloudflare 會把設定攤平成 dist/server/wrangler.json 且**不保留
+      #    env 區塊** —— 部署時加 --env preview 不會報錯，只會安靜地退回頂層綁定，
+      #    也就是把 PR 的 preview 寫進**正式的** D1 與 R2。
+      #    見 docs/07-deployment.md §2
+      - name: build（綁 preview）
+        env:
+          CLOUDFLARE_ENV: preview
+        run: npm run build
+
+      - name: 確認綁定正確
+        run: node scripts/check-deploy-config.mjs --expect preview
+
+      - name: 上傳版本
+        id: upload
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload
+
+      - name: 貼上 preview 網址
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const out = `${{ steps.upload.outputs.command-output }}`;
+            const url = out.match(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/)?.[0];
+            const body = url
+              ? `Preview：${url}\n\n這是 per-version 的網址，沒有動到線上流量。`
+              : '版本已上傳，但輸出裡找不到網址 —— 請看 workflow log。';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+            });
+            const mine = comments.find((c) => c.user.type === 'Bot' && c.body.startsWith('Preview'));
+            if (mine) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }

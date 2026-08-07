@@ -1,0 +1,74 @@
+[
+  {
+    "LimID": 1,
+    "Key": "WebMs",
+    "Value": "網站管理",
+    "Icon": "fa-briefcase",
+    "Sort": 0,
+    "ParentID": null
+  },
+  {
+    "LimID": 2,
+    "Key": "SettingMs",
+    "Value": "系統管理",
+    "Icon": "fa-cog",
+    "Sort": 5,
+    "ParentID": null
+  },
+  {
+    "LimID": 3,
+    "Key": "ArticleTypes",
+    "Value": "文章分類維護",
+    "Icon": null,
+    "Sort": 0,
+    "ParentID": 1
+  },
+  {
+    "LimID": 4,
+    "Key": "Articles",
+    "Value": "文章維護",
+    "Icon": null,
+    "Sort": 5,
+    "ParentID": 1
+  },
+  {
+    "LimID": 5,
+    "Key": "Services",
+    "Value": "服務洽談維護",
+    "Icon": null,
+    "Sort": 10,
+    "ParentID": 1
+  },
+  {
+    "LimID": 6,
+    "Key": "Admins",
+    "Value": "管理者維護",
+    "Icon": null,
+    "Sort": 0,
+    "ParentID": 2
+  },
+  {
+    "LimID": 7,
+    "Key": "Teams",
+    "Value": "人員維護",
+    "Icon": null,
+    "Sort": 15,
+    "ParentID": 1
+  },
+  {
+    "LimID": 8,
+    "Key": "Projects",
+    "Value": "案例維護",
+    "Icon": null,
+    "Sort": 20,
+    "ParentID": 1
+  },
+  {
+    "LimID": 9,
+    "Key": "Abouts",
+    "Value": "關於禾勤",
+    "Icon": null,
+    "Sort": 25,
+    "ParentID": 1
+  }
+]

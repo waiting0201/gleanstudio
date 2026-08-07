@@ -1,0 +1,87 @@
+# 每個 PR 與 push 都跑。**parity 的 Level B 是 gating** —— 前台掉一個 class 就擋。
+#
+# CI 能跑 parity 的前提是資料進得了版控：內容匯出（data/export/*.json）在庫裡，
+# 帳號資料不在。管理者帳號由 bootstrap-admin.mjs 現場建，密碼是隨機的。
+# 見 docs/07-deployment.md §2
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # sqlite3 給 verify-d1.mjs 讀本機 miniflare 的 sqlite 檔用
+      - name: 安裝 sqlite3
+        run: sudo apt-get install -y --no-install-recommends sqlite3
+
+      - name: 建立本機 D1 並灌內容
+        run: |
+          npm run db:migrate
+          node scripts/build-seed-sql.mjs --no-accounts
+          npm run db:seed
+          npm run seed:order
+          npx wrangler d1 execute gleanstudio --local --file=db/seed/0002-order-backfill.sql
+
+      # 順序資料能不能從 golden 重建 —— 重建結果要與版控裡的一致
+      - name: 順序資料可重建
+        run: |
+          npm run order:derive
+          git diff --exit-code data/export/legacy-order.json data/export/projects-order.json
+
+      - name: 資料驗證
+        run: node scripts/verify-d1.mjs --no-accounts
+
+      - name: 權限註冊表
+        run: npm run verify:permissions
+
+      - name: build
+        run: npm run build
+
+      - name: 啟動 wrangler dev
+        run: |
+          npx wrangler dev --port 8787 > /tmp/wrangler.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://localhost:8787/ && break
+            sleep 1
+          done
+          curl -sf -o /dev/null http://localhost:8787/ || { cat /tmp/wrangler.log; exit 1; }
+
+      # ── gating ──
+      - name: parity（Level B）
+        run: npm run parity
+
+      - name: 聯絡表單 POST
+        run: npm run parity:contact
+
+      - name: 後台端到端
+        env:
+          SMOKE_USERNAME: ci
+          # 只在這一個 job 裡存在，跑完就沒了
+          SMOKE_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-ci-smoke-pass
+        run: |
+          ADMIN_PASSWORD="$SMOKE_PASSWORD" node scripts/bootstrap-admin.mjs \
+            --username ci --name "CI 測試帳號" --no-force-change \
+            --lims 3,4,5,6,8,9
+          npm run smoke:admin
+
+      - name: 失敗時附上 wrangler log
+        if: failure()
+        run: tail -100 /tmp/wrangler.log

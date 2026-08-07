@@ -27,5 +27,48 @@
   // 本機 wrangler dev 不看 id，miniflare 自己建；**部署前要先建遠端 namespace**：
   //   wrangler kv namespace create SESSION
   // 再把回傳的 id 填進來。
-  "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }]
+  "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }],
+
+  // ⚠️ 這三個 id 都還沒建。部署之前要先跑：
+  //   wrangler d1 create gleanstudio-preview
+  //   wrangler r2 bucket create gleanstudio-media-preview
+  //   wrangler kv namespace create SESSION --preview
+  // 見 docs/07-deployment.md §1
+  "env": {
+    "preview": {
+      "vars": {
+        "GA_MEASUREMENT_ID": "G-G2CBNFFB3Q",
+        "RECAPTCHA_SITE_KEY": "6LdbNcwcAAAAAND-6LKK67EUEnk6I-9rFboJkV5M"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "gleanstudio-preview",
+          "database_id": "PLACEHOLDER_preview_d1",
+          "migrations_dir": "db/migrations"
+        }
+      ],
+      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gleanstudio-media-preview" }],
+      "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_preview_kv" }]
+    },
+    "production": {
+      "vars": {
+        "GA_MEASUREMENT_ID": "G-G2CBNFFB3Q",
+        "RECAPTCHA_SITE_KEY": "6LdbNcwcAAAAAND-6LKK67EUEnk6I-9rFboJkV5M"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "gleanstudio",
+          "database_id": "f311b46f-d288-4a5f-9bb8-38e5aea73558",
+          "migrations_dir": "db/migrations"
+        }
+      ],
+      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gleanstudio-media" }],
+      "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }]
+
+      // Phase 8 才加上 route，開發期間跑在 workers.dev 不動正式網域：
+      // "routes": [{ "pattern": "gleanstudio.com.tw/*", "zone_name": "gleanstudio.com.tw" }]
+    }
+  }
 }
