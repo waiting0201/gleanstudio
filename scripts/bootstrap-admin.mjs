@@ -38,14 +38,23 @@ if (!username) {
   process.exit(1);
 }
 
+/**
+ * 密碼長度下限。**1 = 只擋空字串**（2026-08-07 拿掉原本的 12 字元下限）。
+ *
+ * ⚠️ 這是 `src/lib/auth/password.ts` 那個 `MIN_PASSWORD_LENGTH` 的副本 ——
+ *    這支是純 node 腳本，import 不到 TS 模組。兩邊要一起改。
+ */
+const MIN_PASSWORD_LENGTH = 1;
+
 let password = process.env.ADMIN_PASSWORD ?? '';
 if (!password) {
   const rl = createInterface({ input: process.stdin, output: process.stderr });
-  password = await rl.question(`「${username}」的密碼（至少 12 個字元）：`);
+  const rule = MIN_PASSWORD_LENGTH > 1 ? `（至少 ${MIN_PASSWORD_LENGTH} 個字元）` : '';
+  password = await rl.question(`「${username}」的密碼${rule}：`);
   rl.close();
 }
-if (password.length < 12) {
-  console.error('❌ 密碼至少要 12 個字元。');
+if (password.length < MIN_PASSWORD_LENGTH) {
+  console.error(MIN_PASSWORD_LENGTH > 1 ? `❌ 密碼至少要 ${MIN_PASSWORD_LENGTH} 個字元。` : '❌ 密碼不能是空的。');
   process.exit(1);
 }
 

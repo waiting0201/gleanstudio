@@ -44,7 +44,7 @@ parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30�
 但**修完之後沒有再跑過 workflow**，所以部署後的 smoke 從來沒真的打過線上站。
 
 **Phase 5 程式完成**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
-富文本（擋 base64），以及 **7 個實體的完整 CRUD** —— `npm run smoke:admin` 47 項全綠。
+富文本（擋 base64），以及 **7 個實體的完整 CRUD** —— `npm run smoke:admin` 48 項全綠。
 ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層；
 Articles / Projects / Admins 各有自己的形狀（[docs/06](docs/06-admin-spec.md) §10a）。
 [docs/06](docs/06-admin-spec.md) §12 的 8 條完成條件全部達成；介面設計方向見同文件 §10。

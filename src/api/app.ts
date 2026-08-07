@@ -15,7 +15,7 @@ import { can, getSession, type AdminSession } from '../lib/auth/session';
 import { verifyCsrf, CSRF_FIELD } from '../lib/auth/csrf';
 import type { RouteKey } from '../lib/auth/permissions';
 import { putEntityPhoto, deleteEntityPhoto, checkDescription, MediaError } from '../lib/media';
-import { hashPassword } from '../lib/auth/password';
+import { checkPasswordLength, hashPassword } from '../lib/auth/password';
 import { limTree } from '../lib/admin/admins';
 import { buildEntities, type EntityDef } from '../lib/admin/entities';
 import { getArticleTypes } from '../db/queries';
@@ -275,8 +275,11 @@ app.post('/Admins/save', async (c) => {
 
   if (!name) return stop('請填姓名。');
   if (!username) return stop('請填帳號。');
-  if (isNew && password.length < 12) return stop('初始密碼至少 12 個字元。');
-  if (!isNew && password !== '' && password.length < 12) return stop('新密碼至少 12 個字元。');
+  // 修改時密碼留空 = 不動密碼，只有真的填了才驗
+  if (isNew || password !== '') {
+    const tooShort = checkPasswordLength(password);
+    if (tooShort) return stop(tooShort);
+  }
 
   const clash = await env.DB.prepare('SELECT AdminID FROM Admins WHERE Username = ?1 AND AdminID <> ?2')
     .bind(username, id).first();

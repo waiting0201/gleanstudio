@@ -86,6 +86,25 @@ salt：16 bytes 隨機（crypto.getRandomValues）
 
 **升級路徑**：改用 Workers Paid（$5/月）之後可切換到 `node:crypto` 的 scrypt（`N=16384, r=8, p=1`），格式 `scrypt$16384$8$1$<salt>$<hash>`，需要 `"compatibility_flags": ["nodejs_compat"]`。雜湊字串前綴已經帶了演算法名稱，所以可以做漸進式遷移（登入成功時順手重算）。這條待辦記在 [09-known-issues](09-known-issues.md)。
 
+### 長度下限：沒有（2026-08-07 業主決定）
+
+原本設 12 個字元，**已依業主要求拿掉** —— 現在只擋空字串。
+
+唯一來源是 `src/lib/auth/password.ts` 的 `MIN_PASSWORD_LENGTH`（值為 `1`）與同檔的
+`checkPasswordLength()`。三個 app 端入口都從這裡讀，訊息也在那裡：
+
+| 入口 | 用途 |
+|---|---|
+| `src/api/app.ts` 的 `Admins/save` | 新增管理者的初始密碼、重設別人的密碼 |
+| `src/pages/backend/Main/ChangePassword.astro` | 自己換密碼 |
+| `src/components/admin/AdminForm.astro` | 表單的 `minlength` 與提示文字 |
+
+⚠️ `scripts/bootstrap-admin.mjs` 是純 node 腳本，import 不到那個 TS 模組，**那裡有一份副本**，
+改下限要兩邊一起改。把常數調回大於 1 的值，提示文字與 `minlength` 會自己跟著變。
+
+`smoke:admin` 驗的是剩下的那道底線：**新帳號的密碼不能是空的**（空密碼會建出一個誰都登得進去的帳號），
+而且被擋之後不留殘帳號。
+
 ---
 
 ## 4. 移除後門帳號
@@ -335,7 +354,7 @@ integration 會注入一份全域樣式，**前台每一頁的 `<head>` 都會�
 
 ## 12. 完成條件
 
-**8 條全部達成（2026-08-07）。** 每一條的證據都是 `npm run smoke:admin`（47 項）或
+**8 條全部達成（2026-08-07）。** 每一條的證據都是 `npm run smoke:admin`（48 項）或
 `npm run verify:permissions`（30 個路由）跑得出來的，不是判斷題。
 
 - [x] PBKDF2 登入可用，`MustChangePassword` 流程可走完

@@ -160,14 +160,16 @@ node scripts/verify-media.mjs [--remote]
 
 **過程中發現**
 
-- 舊系統的密碼只有 **6 個字元**。新的換密碼流程要求 12 字元，所以搬過來的密碼**沒有一組能當成新密碼重用** —— 這正是想要的結果
+- 舊系統的密碼只有 **6 個字元**。原本的換密碼流程要求 12 字元，等於搬過來的密碼一組都不能重用。
+  **2026-08-07 業主要求拿掉這個下限**，現在只擋空字串（[06-admin-spec](06-admin-spec.md) §3）。
+  雜湊強度那一層沒有變 —— 擋不住的是使用者自己選短密碼，不是儲存方式
 - `@astrojs/cloudflare` 的 session 設定有個坑：自己設 `driver` 會讓登入當下 500，而 GET 完全正常。見 [06-admin-spec](06-admin-spec.md) §11
 
 ---
 
 ## Phase 6 — CI/CD ✅ 完成（2026-08-07）
 
-- [x] `ci.yml` —— 完整序列在本機用**乾淨的資料庫**實測跑通：migrate → seed（`--no-accounts`）→ 順序補值 → verify-d1 → 權限斷言 → build → wrangler dev → parity → parity:contact → bootstrap 帳號 → smoke:admin 47 項
+- [x] `ci.yml` —— 完整序列在本機用**乾淨的資料庫**實測跑通：migrate → seed（`--no-accounts`）→ 順序補值 → verify-d1 → 權限斷言 → build → wrangler dev → parity → parity:contact → bootstrap 帳號 → smoke:admin 48 項
 - [x] **內容匯出進版控、帳號資料不進** —— 沒有這一步 CI 根本跑不了 parity（[07-deployment](07-deployment.md) §2）
 - [x] `scripts/bootstrap-admin.mjs` —— 取代舊系統寫死的 `weypro` 後門（[06-admin-spec](06-admin-spec.md) §4）
 - [x] `deploy-preview.yml` / `deploy-production.yml`，migration 排在 build 之前

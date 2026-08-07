@@ -14,6 +14,26 @@ const ITERATIONS = 100_000;
 const KEY_BITS = 256;
 const SALT_BYTES = 16;
 
+/**
+ * 密碼長度下限。**1 = 只擋空字串** —— 2026-08-07 依業主要求拿掉原本的 12 字元下限。
+ *
+ * 這裡是唯一的來源，三個 app 端入口（api/app.ts 的 Admins/save、
+ * ChangePassword.astro、AdminForm.astro 的 minlength）都從這裡讀，改一個數字就好。
+ *
+ * ⚠️ `scripts/bootstrap-admin.mjs` 是純 node 腳本，import 不到這個 TS 模組，
+ *    那邊另有一份同名常數 —— 改這裡要一起改那裡。
+ */
+export const MIN_PASSWORD_LENGTH = 1;
+
+/**
+ * 長度不合格就回一句可以直接顯示的話，合格回 `null`。
+ * 訊息集中在這裡，三個入口才不會各寫各的措辭。
+ */
+export function checkPasswordLength(password: string): string | null {
+  if (password.length >= MIN_PASSWORD_LENGTH) return null;
+  return MIN_PASSWORD_LENGTH <= 1 ? '請填密碼。' : `密碼至少 ${MIN_PASSWORD_LENGTH} 個字元。`;
+}
+
 const b64 = (buf: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(buf)));
 const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 

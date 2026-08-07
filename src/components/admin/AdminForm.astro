@@ -7,6 +7,7 @@
  * 而導覽列是照著這個長出來的，所以這裡勾什麼，對方就看得到什麼。
  */
 import Csrf from './Csrf.astro';
+import { MIN_PASSWORD_LENGTH } from '../../lib/auth/password';
 
 interface LimNode { LimID: number; Key: string; Value: string; ParentValue: string }
 interface Props {
@@ -48,10 +49,10 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
     <div class="mt-5">
       <label class="field-label" for="password">{isNew ? '初始密碼' : '重設密碼'}{isNew && <span class="text-oxide"> ＊</span>}</label>
       <input class="field-input" id="password" name="password" type="password"
-             required={isNew} autocomplete="new-password" minlength="12">
+             required={isNew} autocomplete="new-password" minlength={MIN_PASSWORD_LENGTH}>
       <span class="field-hint">
         {isNew
-          ? '至少 12 個字元。對方第一次登入時會被要求換掉。'
+          ? `${MIN_PASSWORD_LENGTH > 1 ? `至少 ${MIN_PASSWORD_LENGTH} 個字元。` : ''}對方第一次登入時會被要求換掉。`
           : '留空就不動密碼。填了就會覆蓋，並要求對方下次登入時再換一次。'}
       </span>
     </div>

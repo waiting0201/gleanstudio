@@ -288,11 +288,16 @@ try {
   await post('/api/admin/Admins/save', dup, true);
   check('重複帳號被擋', /已經有人用了/.test(await get('/backend/SettingMs/AddAdmins')));
 
+  /**
+   * 長度下限已經拿掉（MIN_PASSWORD_LENGTH = 1），所以這裡驗的是剩下的那道底線：
+   * **新帳號的密碼不能是空的**。空密碼會建出一個誰都登得進去的帳號。
+   */
   const weak = new FormData();
   weak.set('__csrf', csrfOf(await get('/backend/SettingMs/AddAdmins')));
-  weak.set('Name', 'x'); weak.set('Username', 'weakpw'); weak.set('password', 'short');
+  weak.set('Name', 'x'); weak.set('Username', 'nopw'); weak.set('password', '');
   await post('/api/admin/Admins/save', weak, true);
-  check('太短的初始密碼被擋', /至少 12 個字元/.test(await get('/backend/SettingMs/AddAdmins')));
+  check('空白的初始密碼被擋', /請填密碼/.test(await get('/backend/SettingMs/AddAdmins')));
+  check('沒有留下殘帳號', d1(`SELECT COUNT(*) n FROM Admins WHERE Username = 'nopw'`, true)[0].n === 0);
 
   r = await post('/api/admin/Admins/delete',
     new URLSearchParams({ __csrf: csrfOf(await get('/backend/SettingMs/Admins')), id: String(ADMIN_ID) }));
