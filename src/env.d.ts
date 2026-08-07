@@ -15,6 +15,9 @@ declare global {
    * 兩個都是 optional：沒設的時候程式要安全降級，不是崩潰。
    *   RECAPTCHA_SECRET  沒設 → 所有送出都判定驗證碼錯誤（fail closed）
    *   SENDGRID_API_KEY  沒設 → 不寄信（docs/09-known-issues.md 4.13）
+   *   CONTACT_TO        沒設 → 不寄信。聯絡表單的收件人（可逗號分隔多個）。
+   *                     **測試期間是開發者的信箱，Phase 8 換正式網域時要改成
+   *                     禾勤的信箱** —— 見 docs/11-roadmap.md Phase 8
    *
    * 設定：wrangler secret put <NAME>
    */
@@ -22,6 +25,7 @@ declare global {
     interface Env {
       RECAPTCHA_SECRET?: string;
       SENDGRID_API_KEY?: string;
+      CONTACT_TO?: string;
     }
   }
 

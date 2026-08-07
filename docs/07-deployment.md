@@ -228,8 +228,11 @@ wrangler 對「token 字串無效」與「token 有效但權限不足」**都回
 
 | 名稱 | 說明 |
 |---|---|
-| `RECAPTCHA_SECRET` | **輪替後的**新值 |
-| `SENDGRID_API_KEY` | **輪替後的**新值 |
+| `RECAPTCHA_SECRET` | 目前是**舊值**，待輪替 |
+| `SENDGRID_API_KEY` | 目前是**舊值**，待輪替 |
+| `CONTACT_TO` | 聯絡表單收件人，可逗號分隔多個。**沒設就不寄** |
+
+⚠️ `CONTACT_TO` 現在是開發者的信箱（測試用）。**Phase 8 換正式網域時要改成禾勤的信箱** —— 見 [11-roadmap](11-roadmap.md) Phase 8。用 secret 而不是 `vars`，是因為這個 repo 是公開的，不想把個人信箱放進版控。
 
 ### 本機開發
 

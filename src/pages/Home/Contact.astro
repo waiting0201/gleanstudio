@@ -34,7 +34,7 @@ if (Astro.request.method === 'POST') {
       env.RECAPTCHA_SECRET,
     );
     if (ok) {
-      await sendContactMail(values, env.SENDGRID_API_KEY);
+      await sendContactMail(values, env.SENDGRID_API_KEY, env.CONTACT_TO);
       // RedirectToAction("Index") 在預設路由下產生的是 "/"，不是 "/Home/Index"
       return Astro.redirect('/', 302);
     }

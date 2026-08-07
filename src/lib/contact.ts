@@ -98,24 +98,43 @@ export function mailBody(values: Values): string {
 }
 
 /**
- * ⚠️ **收件人是訪客自己填的信箱，不是禾勤。** 這是舊站的行為，使用者
- * 2026-08-07 決定本輪原樣保留，見 docs/09-known-issues.md §3.1。
+ * ⚠️ **這裡刻意不重現舊站的行為。**
  *
- * 沒有設 SENDGRID_API_KEY 就不寄 —— 舊 key 已外洩待輪替，而且在收件人這個
- * 缺陷被 triage 之前，讓它開始真的寄信會是一個新的對外行為。
- * 表單的可見行為（302 / 200 重新渲染）與有沒有寄信無關。
+ * 舊站把信寄給 `entity.Email` —— **訪客自己填的信箱**，禾勤根本不在收件人裡
+ * （HomeController.cs:212）。加上呼叫端沒有 await、寄件網域是代理商的，
+ * 合理推斷這張表單從未把任何一筆詢問送到禾勤手上。見 docs/09-known-issues.md §3.1
+ *
+ * 照抄它只會讓事情更糟：新站有 await，所以訪客會**真的**收到一封他們從來
+ * 沒收過、內容是自己剛填的表單、寄件人是陌生網域的信，而禾勤還是收不到。
+ * 那是新增的困惑，不是修復。
+ *
+ * 所以收件人改由 `CONTACT_TO` 決定，並把訪客的信箱放進 `reply_to` ——
+ * 禾勤按「回覆」就直接回到客戶。
+ *
+ * **兩個閘門，任一個沒設就不寄**（fail-safe，不是預設寄給誰）：
+ *   SENDGRID_API_KEY  沒設 → 不寄
+ *   CONTACT_TO        沒設 → 不寄
+ *
+ * 表單的可見行為（成功 302 / 失敗 200 重新渲染）與有沒有寄信完全無關，
+ * 所以 markup 契約不受影響。
  */
-export async function sendContactMail(values: Values, apiKey: string | undefined): Promise<void> {
-  if (!apiKey) {
-    console.warn('SENDGRID_API_KEY 未設定 —— 略過寄信（見 docs/09-known-issues.md §3.1）');
+export async function sendContactMail(
+  values: Values,
+  apiKey: string | undefined,
+  to: string | undefined,
+): Promise<void> {
+  if (!apiKey || !to) {
+    console.warn(`略過寄信 —— ${!apiKey ? 'SENDGRID_API_KEY' : 'CONTACT_TO'} 未設定`);
     return;
   }
   const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
     headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
     body: JSON.stringify({
-      personalizations: [{ to: [{ email: values.Email }] }],
+      personalizations: [{ to: to.split(',').map((e) => ({ email: e.trim() })) }],
       from: { email: 'notification@weypro.com', name: '禾勤藝術' },
+      // 禾勤按「回覆」直接回到客戶，不用手動複製信箱
+      reply_to: { email: values.Email, name: values.Name },
       subject: '禾勤藝術聯絡我們',
       content: [{ type: 'text/html', value: mailBody(values) }],
     }),

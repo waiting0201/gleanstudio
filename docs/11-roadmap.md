@@ -235,6 +235,9 @@ node scripts/verify-media.mjs [--remote]
 
 **切換本身**
 
+- [ ] **`wrangler secret put CONTACT_TO` 改成禾勤的信箱** —— 目前是開發者的信箱（測試用）。
+      候選值 `glean1218@gmail.com` 是禾勤自己印在 Contact 頁上的，但最終值要業主確認。
+      見 [09-known-issues](09-known-issues.md) §3.1
 - [ ] 內容凍結，舊後台停用
 - [ ] 用正式站資料重跑 Phase 2（需要 Azure 存取）
 - [ ] 用新資料重跑 parity
