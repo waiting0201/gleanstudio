@@ -2,7 +2,7 @@
 
 10 個階段。每一階段有明確的完成條件 —— 「做完了沒」應該是機械可答的問題，不是判斷題。
 
-**現況：Phase 1 完成，Phase 2 可以開始。**
+**現況：Phase 2 完成，Phase 3（前台移植）可以開始。**
 
 ---
 
@@ -36,21 +36,29 @@
 
 ---
 
-## Phase 2 — 資料與媒體
+## Phase 2 — 資料與媒體 ✅ 完成（2026-08-07）
 
 **不需要 Azure 存取** —— 資料與圖片本機都有且完整（[05-migration-runbook](05-migration-runbook.md) §0）。
 
-- [ ] `scripts/export-mssql.mjs` 從本機 Docker SQL Server 匯出 9 張表
-- [ ] `Articles.LegacyOrder` 由 Phase 1 的 `legacy-order.json` 填入（[04-data-model](04-data-model.md) §5）
-- [ ] 大型 `Description` 用分段 append 寫入，每段 ≤ 80 KB（[ADR-016](10-decisions.md)）
-- [ ] `data/export/manifest.json` 已進版控
-- [ ] **`data/export/anomalies.json` 已逐條讀過**
-- [ ] `db/migrations/0000_init.sql` 已補上 `STRICT` / `CHECK` / `DESC` 索引
-- [ ] 本機 D1 各表列數符合：Articles 9、Projects 87、ArticleTypes 3、Lims 9、AdminLims 6、Admins 1、Teams 1、Services 0、Abouts 1
-- [ ] 含中文的富文本欄位抽驗無誤
-- [ ] 24 個圖檔上 R2，key 為 `Upload/{Entity}/{ID}/{Photo}`
-- [ ] `scripts/verify-media.mjs` 全綠
-- [ ] 遠端 D1 與 R2 與本機一致
+- [x] `scripts/export-mssql.mjs` 從本機 Docker SQL Server 匯出 9 張表
+- [x] `Articles.LegacyOrder` 由 Phase 1 的 `legacy-order.json` 填入（[04-data-model](04-data-model.md) §5）
+- [x] 大型 `Description` 用分段 append 寫入，最長敘述 78.7 KB（上限 100 KB，[ADR-016](10-decisions.md)）
+- [x] `data/export/manifest.json` 已進版控
+- [x] **`data/export/anomalies.json` 已逐條讀過**（3 筆，全部由 `LegacyOrder` 處理，無 `homepage-latest-tie`）
+- [x] `db/migrations/0000_init.sql` 已補上 `STRICT` / `CHECK` / `DESC` 索引
+- [x] 本機 D1 各表列數符合：Articles 9、Projects 87、ArticleTypes 3、Lims 9、AdminLims 6、Admins 1、Teams 1、Services 0、Abouts 1
+- [x] 含中文的富文本欄位逐字相符（9 篇 `Description` + `Abouts`）
+- [x] 24 個圖檔上 R2，key 為 `Upload/{Entity}/{ID}/{Photo}`
+- [x] `scripts/verify-media.mjs` 全綠（本機 + 遠端）
+- [x] **遠端 D1 與 R2 已建立並與本機一致**
+      D1 `f311b46f-d288-4a5f-9bb8-38e5aea73558`（APAC）／R2 `gleanstudio-media`（APAC）
+
+**驗證指令**（兩支都支援 `--remote`）：
+
+```bash
+node scripts/verify-d1.mjs    [--remote]
+node scripts/verify-media.mjs [--remote]
+```
 
 ---
 

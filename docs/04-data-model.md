@@ -23,6 +23,12 @@
 
 所有表都用 `STRICT`。D1 支援，而且既然是手工移植 schema，讓 SQLite 在寫入時就拒絕字串型的 `Sort` 值，值得那一點匯入時的摩擦。
 
+### ⚠️ 不要用 `LENGTH()` 判斷內容是否完整
+
+SQLite 的 `LENGTH()` 數的是 **code point**，JavaScript 的 `.length` 數的是 **UTF-16 單位**。內文裡只要有一個 BMP 外的字元（實際資料中就有 🔗），兩者就會差 1 —— 看起來像資料被截斷，其實完全正常。
+
+Phase 2 驗證時真的踩到這個：兩篇文章的長度「對不上」，追下去發現是這個計數差異，資料本身逐字相符。**要比就比整個字串或它的雜湊**，`scripts/verify-d1.mjs` 就是這樣做的。
+
 ---
 
 ## 2. 舊 schema 實況
@@ -275,7 +281,8 @@ seed 建構時把這個名次寫進 `Articles.LegacyOrder`，所有涉及 `Artic
 |---|---|---|
 | 單一 SQL 敘述長度 | **100 KB** | ❌ **9 篇文章有 7 篇超過** |
 | 單一字串 / 單列大小 | 2 MB | ⚠️ 最大 1.73 MB，餘裕不多 |
-| 資料庫大小（免費方案） | 500 MB | ✓ 目前約 6 MB |
+| 資料庫大小（免費方案） | 500 MB | ✓ 目前約 6 MB（實測 `size_after` 6,443,008 bytes） |
+| compound SELECT 項數 | **遠端比本機嚴** | ⚠️ 6 個 `UNION ALL` 的查詢在遠端被拒（`SQLITE_ERROR 7500 too many terms in compound SELECT`），本機 sqlite3 可過。驗證腳本要逐項分開查 |
 
 原因：`Articles.Description` 是 Summernote 產生的 HTML，裡面**內嵌了 base64 圖片**。
 

@@ -8,9 +8,20 @@
   },
   "scripts": {
     "export": "node scripts/export-mssql.mjs",
-    "golden": "node scripts/capture-golden.mjs"
+    "hash": "node scripts/hash-passwords.mjs",
+    "seed:build": "node scripts/build-seed-sql.mjs",
+    "golden": "node scripts/capture-golden.mjs",
+    "db:migrate": "wrangler d1 migrations apply gleanstudio --local",
+    "db:migrate:remote": "wrangler d1 migrations apply gleanstudio --remote",
+    "db:seed": "wrangler d1 execute gleanstudio --local --file=db/seed/0001-data.sql",
+    "db:seed:remote": "wrangler d1 execute gleanstudio --remote --file=db/seed/0001-data.sql",
+    "media:upload": "node scripts/upload-r2.mjs --local",
+    "media:upload:remote": "node scripts/upload-r2.mjs --remote",
+    "verify:d1": "node scripts/verify-d1.mjs",
+    "verify:media": "node scripts/verify-media.mjs"
   },
   "devDependencies": {
-    "mssql": "^11.0.1"
+    "mssql": "^11.0.1",
+    "wrangler": "^4.119.0"
   }
 }

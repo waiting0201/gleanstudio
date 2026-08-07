@@ -39,3 +39,7 @@ bin/
 obj/
 *.user
 *.suo
+
+# 產生物
+db/seed/
+.wrangler/

@@ -24,6 +24,7 @@
 | 1.10 | 分頁器的 `<nav class="Page navigation example">` | `ContainerDivClasses` 設成三個 class | 是把 Bootstrap 範例的 `aria-label` 貼錯位置的產物 |
 | 1.11 | 分頁範圍邏輯拿 `PageSize`（6）當視窗大小 | [CustomPager.cs:43-45](../reference/old/Gleanstudio/Infrastructure/Paging/CustomPager.cs#L43-L45) | 目前只有 2 頁不會觸發。**文章超過 42 篇後輸出會變，golden 要重抓** |
 | 1.12 | `Content/images/` 13 MB 未最佳化，多數檔案沒被引用 | | 只搬實際引用到的 |
+| 1.14 | **上傳的原圖沒有壓縮，最大 10.1 MB** | `Upload/Articles/…`（5 個檔超過 2 MB，合計 40.2 MB） | 前台 `<img>` 直接送原圖，沒有縮圖也沒有 `srcset`。`/Home/Articles` 列表頁一次載入多張 MB 級圖片 |
 | 1.13 | **文章內文內嵌 base64 圖片** | `Articles.Description`（Summernote） | 9 篇有 7 篇超過 100 KB，最大 **1.73 MB**。單一新聞頁 1.8 MB 對使用者很糟；也逼近 [D1 的 2 MB 單列上限](https://developers.cloudflare.com/d1/platform/limits/)。抽出來存 R2 會改變渲染的 HTML，所以現在不能動 —— 見 [ADR-016](10-decisions.md)、[04-data-model](04-data-model.md) §5a |
 
 ---
@@ -138,3 +139,4 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 5. **1.2 Bootstrap 版本錯配** —— 對齊到 5.1.1
 6. **1.5 / 1.6 Gallery 與 Team** —— 決定是要補內容、加導覽，還是直接下架
 7. **1.13 文章內嵌 base64 圖片** —— 抽到 R2 可讓最大的頁面從 1.8 MB 降到約 20 KB，但會動到 markup
+8. **1.14 原圖未壓縮** —— 10 MB 的 JPG 可壓到數百 KB；加 Cloudflare Images 或建置期縮圖都會動到 `<img>` markup

@@ -103,7 +103,8 @@ Lims → Admins → AdminLims → ArticleTypes → Articles → Services → Tea
 
 1. **不要寫 `BEGIN TRANSACTION` / `COMMIT`** —— D1 的 import 會拒絕
 2. **`Articles` 必須分段寫入。** [D1 單一 SQL 敘述上限 100 KB](https://developers.cloudflare.com/d1/platform/limits/)，而 9 篇文章有 **7 篇的 `Description` 超過**（最大 1.73 MB，內嵌 Summernote 的 base64 圖片）。做法是先 `INSERT` 空字串再分段 `UPDATE … SET Description = Description || '<段>'`，每段跳脫後 ≤ 80 KB。見 [ADR-016](10-decisions.md)。其他表用 multi-VALUES 一批約 200 列即可
-3. **單引號要成對跳脫**，不要直接字串串接
+3. **單引號要成對跳脫**，不要直接字串串接。分段切點也不能落在跳脫後的 `''` 中間
+4. **連註解裡都不要出現交易控制的關鍵字。** wrangler 的偵測器不理會 `--` 註解，看到那些字就整份拒絕（`Wrangler could not process the provided SQL file, as it contains several transactions`）—— 實際踩過
 
 `Admins` 的 `PasswordHash` 來自 Step 4，**絕對不要寫入明碼**。
 `Articles.LegacyOrder` 來自 `data/export/legacy-order.json`（Phase 1 產生）。
@@ -152,6 +153,15 @@ npx wrangler d1 execute gleanstudio --local --command \
 
 **還要抽驗一筆含中文與 HTML 的 `Description` 有沒有原封不動地繞一圈回來** —— UTF-8 經過 JSON 再經過 SQL 字面值，是最可能默默壞掉的環節。
 
+這些檢查已經寫成腳本，不要手動下 SQL：
+
+```bash
+node scripts/verify-d1.mjs             # 本機
+node scripts/verify-d1.mjs --remote    # 遠端
+```
+
+涵蓋：逐表列數對照 manifest、`LegacyOrder` 排序與正式站相同、9 篇 `Description` 逐字相符、中文欄位、`BgClass` 值、`Admins` 無明碼欄位、雜湊格式、無 888 後門、GUID 全小寫、9 張表皆 `STRICT`、索引數。
+
 本機驗證通過後：
 
 ```bash
@@ -183,9 +193,18 @@ node scripts/upload-r2.mjs --dir reference/old/Gleanstudio/Upload \
 
 ### `scripts/verify-media.mjs`
 
-- D1 裡每一筆 `Photo` 都有對應的 R2 key
-- 每個 R2 key 都有對應的 D1 資料列（沒有也無害，但要知道）
-- byte 長度與來源檔相符
+```bash
+node scripts/verify-media.mjs            # 本機
+node scripts/verify-media.mjs --remote   # 遠端，需下載約 40 MB
+```
+
+- 檔名符合 `yyyyMMddHHmmss.ext`（R2 路由的 regex 會拒絕不合的）
+- D1 裡每一筆 `Photo` 都在 R2 找得到，且位元組數與來源相符
+- 列出超過 2 MB 的圖（警告，不是失敗）
+
+⚠️ **`wrangler r2 bucket info` 的 `object_count` / `bucket_size` 有延遲**，剛上傳完看到 `0` 是正常的，那是週期性統計不是即時值。要確認物件在不在就直接 `r2 object get`。
+
+wrangler 沒有 `object list` 或 `head`，所以驗證只能整個抓下來比對 —— 遠端等於下載 40 MB，腳本用併發 4 來壓縮時間。
 
 ---
 

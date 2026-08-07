@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gleanstudio",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+
+  // Phase 3 建立 Astro 專案時補上：
+  //   "main": "@astrojs/cloudflare/entrypoints/server",
+  //   "assets": { "directory": "./dist", "binding": "ASSETS" },
+  //   "kv_namespaces": [{ "binding": "SESSION", "id": "…" }]
+  // 完整設定見 docs/07-deployment.md §1
+
+  "vars": {
+    // 這兩個本來就印在網頁原始碼裡，是公開值，不是密鑰
+    "GA_MEASUREMENT_ID": "G-G2CBNFFB3Q",
+    "RECAPTCHA_SITE_KEY": "6LdbNcwcAAAAAND-6LKK67EUEnk6I-9rFboJkV5M"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gleanstudio",
+      "database_id": "f311b46f-d288-4a5f-9bb8-38e5aea73558",
+      "migrations_dir": "db/migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gleanstudio-media" }]
+}

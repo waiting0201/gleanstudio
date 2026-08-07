@@ -23,8 +23,8 @@
 
 ## 現在做到哪
 
-**Phase 1 完成**（golden 基準已擷取，35 頁進版控）。**Phase 2（資料與媒體）可以開始。**
-還沒有 Astro 專案 —— `astro.config.mjs`、`wrangler.jsonc`、`src/` 都尚未建立。
+**Phase 2 完成。** golden 基準已擷取（35 頁進版控），資料與媒體已進 D1 + R2，本機與遠端都驗證通過。
+**Phase 3（前台移植）可以開始** —— 還沒有 Astro 專案，`astro.config.mjs` 與 `src/` 尚未建立。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -53,19 +53,23 @@
 
 
 ```bash
-# 已可用
-npm run export             # 從本機 SQL Server 匯出 → data/export/
-npm run golden             # 從正式站擷取 golden 基準 → tests/golden/
+# 資料（已可用）
+npm run export             # 本機 SQL Server → data/export/
+npm run hash               # 明碼密碼 → PBKDF2 雜湊
+npm run seed:build         # → db/seed/0001-data.sql
+npm run db:migrate         # wrangler d1 migrations apply --local（加 :remote 走遠端）
+npm run db:seed            # 灌資料（加 :remote 走遠端）
+npm run media:upload       # 圖片 → R2（加 :remote）
 
-# Phase 2 之後才會有
+# 驗證（已可用，都支援 --remote）
+npm run golden             # 從正式站擷取 golden 基準 → tests/golden/
+npm run verify:d1
+npm run verify:media
+
+# Phase 3 之後才會有
 npm run dev                # astro dev
 npm run preview            # astro build && wrangler dev —— parity 驗證一律用這個
 npm run build
-
-npm run db:migrate:local   # wrangler d1 migrations apply gleanstudio --local
-npm run db:migrate:remote  # 同上 --remote
-npm run db:seed:local      # wrangler d1 execute … --file=db/seed/0001-data.sql
-
 npm run parity             # 三層比對；npm run parity -- /Home/About 可指定單頁
 npm run types              # wrangler types（產物需進版控）
 ```
@@ -83,16 +87,18 @@ docs/              13 篇架構文件（繁體中文）
 reference/old/     舊 ASP.NET 系統 —— 唯讀，gitignored
 .claude/           settings.json + 2 個 skill
 
-scripts/           export-mssql / capture-golden（已有）
+scripts/           匯出 / seed / 上傳 / golden / 驗證（已有）
+db/migrations/     D1 migration（已有）
+db/seed/           產生物，gitignored
 tests/golden/      從正式站抓的 HTML 基準（進版控，35 頁）
 data/              資料庫匯出 —— gitignored，只有 manifest 與 legacy-order 進版控
+wrangler.jsonc     D1 / R2 binding（已有；Phase 3 補 main 與 assets）
 
-以下在 Phase 2 之後才會出現：
+以下在 Phase 3 之後才會出現：
 src/pages/         Astro 路由，檔名逐字對應舊網址（Home/About.astro → /Home/About）
 src/components/    版型元件；pages/ 子目錄放整頁元件
 src/db/            Drizzle schema + 查詢
 src/lib/           auth / media / contact / query 工具
-db/migrations/     D1 migration
 public/Content/    從 reference/ 逐字複製的 CSS 與圖
 ```
 
@@ -107,6 +113,7 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - 文件與 UI 文案寫繁體中文
 - `astro.config.mjs` 必須設 `compressHTML: false`
 - `Articles` 排序一律 `ORDER BY CreateDate DESC, LegacyOrder` —— 有兩組日期並列
+- **不要用 `LENGTH()` 比對內容完整性** —— 它數 code point，JS `.length` 數 UTF-16 單位，內文有 🔗 就會差 1。要比就比整串或雜湊
 
 ---
 
