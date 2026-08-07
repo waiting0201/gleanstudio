@@ -1,0 +1,31 @@
+# 舊系統參考程式碼，不納入版控
+reference/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# 環境變數與機敏設定
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+.cache/
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# .NET
+bin/
+obj/
+*.user
+*.suo

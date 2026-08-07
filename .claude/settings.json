@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npm ci)",
+      "Bash(npm test:*)",
+      "Bash(npx astro check)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx wrangler types)",
+      "Bash(npx wrangler d1 execute * --local:*)",
+      "Bash(npx wrangler d1 migrations list * --local:*)",
+      "Bash(npx wrangler d1 migrations apply * --local:*)",
+      "Bash(npx wrangler r2 object get * --local:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(curl -s https://gleanstudio.com.tw/*)",
+      "Bash(curl -sI https://gleanstudio.com.tw/*)",
+      "Bash(sqlite3 :memory::*)"
+    ],
+    "deny": [
+      "Write(reference/**)",
+      "Edit(reference/**)",
+      "Write(./reference/**)",
+      "Edit(./reference/**)",
+      "Write(//Users/tim/webapps/gleanstudio/reference/**)",
+      "Edit(//Users/tim/webapps/gleanstudio/reference/**)",
+      "Bash(dotnet:*)",
+      "Bash(msbuild:*)",
+      "Bash(nuget:*)"
+    ]
+  }
+}

@@ -1,0 +1,264 @@
+# 03 — URL 凍結契約
+
+> **這份文件是契約，不是說明。** 前台的每一條 URL 與每一個 byte 的 HTML 都已凍結。
+> 動任何一頁之前先讀這裡；要偏離契約，必須先更新 `tests/golden/` 並在 PR 說明理由。
+
+相關：[02-architecture](02-architecture.md)｜[08-verification](08-verification.md)｜[09-known-issues](09-known-issues.md)
+
+---
+
+## 1. 契約範圍
+
+**凍結**：公開前台 10 個 action、13 條可達 URL 的網址、查詢字串名稱、HTTP 狀態碼、以及渲染出來的 HTML。
+
+**不凍結**：後台 `/backend/*`（介面重做，見 [06-admin-spec](06-admin-spec.md)）、`/api/*`（新增，舊站沒有）。
+
+**凍結的理由**：舊站 `gleanstudio.com.tw` 已上線多年，網址已被搜尋引擎索引、被外部連結引用。使用者明確要求「畫面 + URL 全都不變」，因此不做語意化網址、不做 301 轉址。
+
+---
+
+## 2. URL 對照表
+
+狀態碼欄位是 2026-08-07 對正式站 `https://gleanstudio.com.tw` 實測的結果。
+
+| # | URL | Method | 狀態 | Astro 檔案 | golden fixture |
+|---|---|---|---|---|---|
+| 1 | `/` | GET | 200 | `src/pages/index.astro` | `root.html` |
+| 2 | `/Home/Index` | GET | 200 | `src/pages/Home/Index.astro` | `home-index.html` |
+| 3 | `/Home/About` | GET | 200 | `src/pages/Home/About.astro` | `home-about.html` |
+| 4 | `/Home/Articles` | GET | 200 | `src/pages/Home/Articles.astro` | `home-articles.html` |
+| 5 | `/Home/Articles?p={n}` | GET | 200 | 同上 | `home-articles-p2.html` |
+| 6 | `/Home/Articles?p={n}&ArticleTypeID={guid}` | GET | 200 | 同上 | 每個分類一份 |
+| 7 | `/Home/ArticleDetail?ArticleID={guid}` | GET | 200 | `src/pages/Home/ArticleDetail.astro` | 每篇文章一份 |
+| 8 | `/Home/Team` | GET | 200 | `src/pages/Home/Team.astro` | `home-team.html` |
+| 9 | `/Home/Gallery` | GET | 200 | `src/pages/Home/Gallery.astro` | `home-gallery.html` |
+| 10 | `/Home/Project` | GET | 200 | `src/pages/Home/Project.astro` | `home-project.html` |
+| 11 | `/Home/Services` | GET | 200 | `src/pages/Home/Services.astro` | `home-services.html` |
+| 12 | `/Home/Service` | GET | 200 | `src/pages/Home/Service.astro` | `home-service.html` |
+| 13 | `/Home/Service?ArticleTypeID={guid}` | GET | 200 | 同上 | 每個分類一份 |
+| 14 | `/Home/Contact` | GET | 200 | `src/pages/Home/Contact.astro` | `home-contact.html` |
+| 15 | `/Home/Contact` | **POST** | 302 或 200 | 同上 | 無法從正式站取得，見 §7 |
+| 16 | `/Upload/{Entity}/{ID}/{Photo}` | GET | 200 | `src/pages/Upload/[entity]/[id]/[photo].ts` | 見 [02-architecture](02-architecture.md) |
+
+`/Home/Contact` 的 POST：驗證通過 → `302` 轉到 `/`；驗證失敗 → **`200`** 並重新渲染表單（不是 4xx）。
+
+---
+
+## 3. 路由實作要點
+
+### 3.1 Astro 檔案路由逐字對應
+
+Astro 的 `src/pages/**` 直接對應 URL 路徑並**保留大小寫**，所以 `src/pages/Home/About.astro` → `/Home/About`。不需要任何 rewrite 設定。
+
+**查詢字串不參與路由。** `?ArticleID={guid}` 不需要 `[id].astro` 這種動態片段，用 `Astro.url.searchParams` 在 frontmatter 讀就好 —— 這反而比動態路由更貼近 MVC 的 model binding 行為。
+
+### 3.2 `/` 與 `/Home/Index` 必須輸出完全相同的 HTML
+
+已對正式站驗證：`curl /` 與 `curl /Home/Index` 的輸出 byte-identical，兩邊都是 200，都沒有轉址。
+
+**做法**：整頁（含 layout 包裹）放在 `src/components/pages/HomeIndexPage.astro`，兩個 route 檔各 4 行引用它：
+
+```astro
+---
+// src/pages/index.astro 與 src/pages/Home/Index.astro 內容相同
+import HomeIndexPage from '../components/pages/HomeIndexPage.astro';
+---
+<HomeIndexPage />
+```
+
+Astro 元件不會產生任何包裹用的 markup，所以輸出相同是結構上保證的。
+
+**不要用 middleware `context.rewrite('/Home/Index')` 處理 `/`。** Astro 文件明確寫著「middleware 在沒有匹配路由時是否執行由 adapter 決定」，把全站最重要的那條 URL 押在未定義行為上不划算。middleware 只用在 §3.3 的大小寫補救，那裡失敗只是美觀問題。
+
+### 3.3 大小寫：IIS 不敏感，Astro 敏感
+
+實測 `https://gleanstudio.com.tw/home/about` → **200**（直接服務，不是轉址）。Astro 會 404。
+
+站內沒有任何地方產生小寫網址，所以這只影響外部連結、舊書籤與手打網址。但既然契約是「URL 全都不變」，就要補：
+
+```ts
+// src/middleware.ts
+import { defineMiddleware } from 'astro:middleware';
+
+const CANONICAL = new Map(
+  ['/Home/Index','/Home/About','/Home/Articles','/Home/ArticleDetail',
+   '/Home/Services','/Home/Service','/Home/Project','/Home/Team',
+   '/Home/Gallery','/Home/Contact']
+  .map(p => [p.toLowerCase(), p])
+);
+
+export const onRequest = defineMiddleware(async (ctx, next) => {
+  const p = ctx.url.pathname.replace(/\/+$/, '') || '/';
+  const canonical = CANONICAL.get(p.toLowerCase());
+  if (canonical && canonical !== p) {
+    // IIS 是「直接服務」不是轉址，所以用 rewrite 不用 redirect
+    return ctx.rewrite(new Request(new URL(canonical + ctx.url.search, ctx.url), ctx.request));
+  }
+  return next();
+});
+```
+
+**查詢參數名稱也要大小寫不敏感** —— ASP.NET model binding 接受 `?articleid=`。加 `src/lib/query.ts` 的 `getParam(url, 'ArticleID')` 做不分大小寫掃描。
+
+**尾斜線**：實測 `/Home/About/` → 200，不轉址。所以 `astro.config.mjs` 用 `trailingSlash: 'ignore'`（預設值）。設成 `'never'` 會發出舊站從來不發的 301。
+
+**已知缺口**：靜態資源 `/content/css/style.css`（小寫）在新站會 404，因為 Workers Assets 在 Worker 之前就處理掉了，middleware 看不到。Workers Assets 對大小寫是否敏感沒有文件記載，**Phase 3 要用 `wrangler dev` 實測**，不要假設。若確實敏感，建議接受這個落差並記在 [09-known-issues](09-known-issues.md) —— 站內只會產生大小寫正確的資源網址。
+
+### 3.4 `compressHTML: false` 是硬性要求
+
+Astro 預設會壓縮 HTML，Razor 不會。開著壓縮的話每一頁的空白都會不同，byte parity 直接不可能達成。
+
+```js
+// astro.config.mjs
+export default defineConfig({
+  compressHTML: false,   // 不可省略
+  trailingSlash: 'ignore',
+  // …
+});
+```
+
+這是這類移植最常見的「靜默失去 byte parity」原因。
+
+---
+
+## 4. 每頁的資料來源
+
+所有前台頁面都會先取得 `ArticleTypes`（依 `Sort` 排序）—— 舊站是 `BaseController.OnActionExecuting` 全域注入 `ViewBag.ArticleTypes`，驅動 header 的「專業服務項目」下拉選單。新站沒有等價的全域 filter，改為每頁明確呼叫 `getArticleTypes()`。
+
+| 頁面 | 額外資料 | 對應舊程式碼 |
+|---|---|---|
+| `/`、`/Home/Index` | `Abouts` (ID=1)；每個分類最新一篇 `Articles` | [HomeController.cs:41-54](../reference/old/Gleanstudio/Controllers/HomeController.cs#L41-L54) |
+| `/Home/About` | `Abouts` (ID=1) | 同檔 L56-63 |
+| `/Home/Articles` | `Articles` 依 `CreateDate DESC`，可選 `ArticleTypeID` 篩選，每頁 6 筆 | 同檔 L65-78 |
+| `/Home/ArticleDetail` | 單筆 `Articles` + 其 `ArticleTypes` | 同檔 L80-88 |
+| `/Home/Team` | `Teams` 依 `Sort` | 同檔 L90-96 |
+| `/Home/Gallery` | **無** —— 整頁寫死 | 同檔 L98-103 |
+| `/Home/Project` | `Projects` 三層分組 Type → Place → Title | 同檔 L105-127 |
+| `/Home/Services` | 只用 `ArticleTypes` | 同檔 L129-134 |
+| `/Home/Service` | 單一 `ArticleTypes` + 其 `Services` 子項依 `Sort` | 同檔 L136-153 |
+| `/Home/Contact` | **無** —— 聯絡資訊寫死在 view | 同檔 L187-227 |
+
+`/Home/Service` 在 `ArticleTypeID` 為 null 時取 `ArticleTypes.FirstOrDefault()`（即 `Sort` 最小的那筆）。
+
+---
+
+## 5. 必須逐字重現的 markup 怪癖
+
+### 5.1 分頁器
+
+實作在 [CustomPager.cs](../reference/old/Gleanstudio/Infrastructure/Paging/CustomPager.cs)，選項在 [Articles.cshtml:5-15](../reference/old/Gleanstudio/Views/Home/Articles.cshtml#L5-L15)。以下是 **2026-08-07 從正式站抓下來的原文**，重現時以這個為準，不要從 C# 反推。
+
+第 1 頁（共 2 頁）：
+```html
+<nav class="Page navigation example"><ul class="pagination justify-content-center"><li class="disabled page-item"><a class="page-link" href="javascript:;"><img src="/Content/images/svg/arrow-page-back.svg"></a></li><li class="active"><a class="page-link" href="/Home/Articles">1</a></li><li><a class="page-link" href="/Home/Articles">2</a></li><li class="page-item"><a class="page-link" href="/Home/Articles"><img src="/Content/images/svg/arrow-page-next.svg"></a></li></ul></nav>
+```
+
+第 2 頁：
+```html
+<nav class="Page navigation example"><ul class="pagination justify-content-center"><li class="page-item"><a class="page-link" href="/Home/Articles"><img src="/Content/images/svg/arrow-page-back.svg"></a></li><li><a class="page-link" href="/Home/Articles">1</a></li><li class="active"><a class="page-link" href="/Home/Articles">2</a></li><li class="disabled page-item"><a class="page-link" href="javascript:;"><img src="/Content/images/svg/arrow-page-next.svg"></a></li></ul></nav>
+```
+
+必須重現的細節：
+
+1. **`<nav>` 的 class 是 `Page navigation example`** —— 三個獨立 class，來自 `ContainerDivClasses = new[] { "Page", "navigation", "example" }`。這顯然是誰把 Bootstrap 範例的 `aria-label="Page navigation example"` 貼錯位置了，但它現在是契約的一部分。
+2. **前後頁的 `<li>` 有 `page-item`，數字頁的 `<li>` 沒有。** 因為 `PagingOptions.NormalPageElementClass` 從未賦值（`null`），而 [CustomPager.cs:250](../reference/old/Gleanstudio/Infrastructure/Paging/CustomPager.cs#L250) 用 `IsNullOrWhiteSpace` 判斷後跳過。當前頁時 `<li>` 只有 `active`。
+3. **停用狀態的 class 順序是 `disabled page-item`**，不是 `page-item disabled` —— [CustomPager.cs:198-203](../reference/old/Gleanstudio/Infrastructure/Paging/CustomPager.cs#L198-L203) 先加 `LiElementClasses` 再加 `disabled`，而 `TagBuilder.AddCssClass` 是**前插**。
+4. **停用時 `href="javascript:;"`**，不是省略 `href`。
+5. **所有 `href` 都是 `/Home/Articles`**，沒有 `p`、沒有 `ArticleTypeID`。這是 [Articles.cshtml:85](../reference/old/Gleanstudio/Views/Home/Articles.cshtml#L85) 的 `generatePageUrl: page => Url.Action("Articles")` 忽略 `page` 參數造成的既有 bug。**照抄**，理由見 [09-known-issues](09-known-issues.md)。
+6. **首頁/末頁連結不輸出**（`DisplayLinkToFirstPage/LastPage = false`），頁碼統計與總筆數也不輸出。
+
+分頁範圍邏輯（[CustomPager.cs:43-59](../reference/old/Gleanstudio/Infrastructure/Paging/CustomPager.cs#L43-L59)）也要照抄，包含 `if (list.PageCount > list.PageSize)` 這個拿 `PageSize`（6）當視窗大小的明顯筆誤。目前資料只有 2 頁（9 篇 ÷ 每頁 6），`2 > 6` 為 false，所以永遠走「全部頁碼都顯示」那條路。**文章數超過 42 篇（7 頁 × 6）之後這個分支才會啟動**，屆時輸出會變，golden 需要重抓。
+
+### 5.2 `/Home/Service` 每 3 筆斷行
+
+`Service.cshtml` 用 `@Html.Raw("</div><div class=\"d-lg-flex row justify-content-between g-0 mt-4\">")` 在每 3 個項目後硬切一列。這是不平衡的標籤輸出，Astro 這邊要用同樣的方式產生字串，不能靠巢狀元件 —— 否則 DOM 結構會不同。
+
+### 5.3 `/Home/Project` 的三層分組
+
+舊 controller 建立巢狀匿名型別，view 因為匿名型別是 `internal` 而改用反射讀取。新站直接用一般的巢狀資料結構，**輸出的 HTML 必須相同**。目前 `Projects` 有 87 筆，5 個 `Type`：文物修護、文物數位化、展示保存、教育推廣、視覺與展場設計。
+
+### 5.4 日期格式是 en-US，不是 zh-TW
+
+`@item.CreateDate.ToString("dd MMMM yyyy")` 沒有指定 `CultureInfo`，`Web.config` 也沒有 `<globalization>`，所以跟著伺服器 culture 走。正式站實際輸出 **`20 July 2026`** —— 英文月份名。
+
+新站必須用 `en-US`（或 invariant）格式化，格式為 `dd MMMM yyyy`（兩位數日、完整英文月名、四位數年）。**用 zh-TW 格式化會靜默破壞 `/`、`/Home/Articles`、`/Home/ArticleDetail` 三頁的 parity。**
+
+日期在 D1 存 ISO8601 UTC 字串，渲染時用 UTC 解讀，不做時區轉換 —— 舊站也沒做。
+
+### 5.5 其他刻意保留的怪癖
+
+- `<html lang="en">`，但內容是繁體中文（[_Layout.cshtml](../reference/old/Gleanstudio/Views/Shared/_Layout.cshtml)）
+- `<meta name="keywords">` 與 `<meta name="description">` 全站固定，只有 `<title>` 會變
+- CSS 是 Bootstrap **5.1.1**（編進 `style.css`），JS 從 CDN 載 Bootstrap **5.0.1**（[_Scripts.cshtml:3](../reference/old/Gleanstudio/Views/Shared/_Scripts.cshtml#L3)）—— 版本錯配，照抄含 `integrity` 屬性
+- jQuery 檔名叫 `jquery-latest.js` 但其實是 1.11.1
+- 富文本欄位全部走 `@Html.Raw` 未過濾
+- 卡片點擊用 inline `onclick="location.href='…'"`
+
+---
+
+## 6. `<title>` 逐頁對照
+
+`<title>` 是唯一逐頁變動的 `<head>` 內容，必須完全一致：
+
+| 頁面 | `<title>` |
+|---|---|
+| `/`、`/Home/Index` | `禾勤藝術有限公司` |
+| `/Home/About` | `關於禾勤 - 禾勤藝術有限公司` |
+| `/Home/Articles` | `Art News - 禾勤藝術有限公司` |
+| `/Home/ArticleDetail` | `{Articles.Title} - 禾勤藝術有限公司` |
+| `/Home/Team` | `禾勤團隊 - 禾勤藝術有限公司` |
+| `/Home/Gallery` | `文物修復放大鏡 - 禾勤藝術有限公司` |
+| `/Home/Project` | `案例展示 - 禾勤藝術有限公司` |
+| `/Home/Services` | `專業服務項目 - 禾勤藝術有限公司` |
+| `/Home/Service` | `{ArticleTypes.Title} - 禾勤藝術有限公司` |
+| `/Home/Contact` | `聯絡方式 - 禾勤藝術有限公司` |
+
+---
+
+## 7. 契約無法從正式站取得的部分
+
+### 7.1 `POST /Home/Contact`
+
+不能對正式站發 POST 測試 —— 會寄出真實郵件、消耗 reCAPTCHA 配額。它的期望 markup（驗證失敗時重新渲染、帶繁中錯誤訊息）只能從 [Contact.cshtml](../reference/old/Gleanstudio/Views/Home/Contact.cshtml) 與 `Models/Partial/Contact.cs` 的 DataAnnotations **手工推導**，存進 `tests/derived/` 並經人工審閱。
+
+這是全站唯一一處「沒有 oracle、只能從原始碼推理」的地方，[08-verification](08-verification.md) 必須明講，不能讓它看起來跟其他頁一樣可信。
+
+### 7.2 錯誤路徑
+
+實測 `/Home/ArticleDetail?ArticleID=00000000-0000-0000-0000-000000000000` → **500**。原因是 [HomeController.cs:85](../reference/old/Gleanstudio/Controllers/HomeController.cs#L85) 對 null 取 `article.Title` 丟 `NullReferenceException`，加上 `customErrors mode="Off"` 直接吐 ASP.NET 黃頁。
+
+**新站不重現黃頁。** 建議回 **404**，並在 [09-known-issues](09-known-issues.md) 記為刻意分歧。理由：重現一個洩漏堆疊追蹤的錯誤頁沒有任何價值，而 404 是這個情境的正確語意。
+
+### 7.3 文章排序的並列風險 ⚠️
+
+實測資料中有 **3 篇文章的 `CreateDate` 都是 `2026-01-01`**（同屬 `ff829f70-…` 分類）。`OrderByDescending(CreateDate)` 對並列的順序在 SQL Server 與 SQLite 都是未定義的。
+
+這 3 篇正好落在 `/Home/Articles?p=2`。正式站目前的順序是：
+
+```
+4772b8a8-9912-4769-bacf-18d176e0061a
+22acb62c-0b58-498b-8b7b-3e6f95b37653
+d6d01a97-2da1-45da-b620-f859981e4826
+```
+
+**這個順序無法由任何欄位推導**（`ArticleID` 升冪、降冪、`Photo` 時間戳都對不上），它是 SQL Server 的實體掃描順序。
+
+**做法**：匯出時用 `ROW_NUMBER() OVER (ORDER BY (SELECT NULL))` 記下掃描順序，存進 D1 的 `ImportSeq` 欄位，查詢用 `ORDER BY CreateDate DESC, ImportSeq`。細節見 [04-data-model](04-data-model.md) §3。
+
+首頁「每個分類最新一篇」不受影響 —— 三個分類的最新日期都唯一。但**這個保證會隨資料改變**，`anomalies.json` 每次匯出都要重新檢查。
+
+---
+
+## 8. golden fixture 清單
+
+`tests/golden/` 必須涵蓋（截至目前資料）：
+
+- 13 條無參數/固定參數 URL
+- `/Home/Articles?p=1`、`?p=2`
+- `/Home/Articles?ArticleTypeID={guid}` × 3 個分類
+- `/Home/ArticleDetail?ArticleID={guid}` × 9 篇文章
+- `/Home/Service?ArticleTypeID={guid}` × 3 個分類
+
+約 30 頁 × ~16 KB ≈ 500 KB，直接進版控。**進版控是重點** —— 基準必須能在 diff 裡被審閱。
+
+擷取與重新 baseline 的規則見 [08-verification](08-verification.md)。
