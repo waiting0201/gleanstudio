@@ -29,19 +29,25 @@
 **Level B parity 31/31（gating 全綠）、Level A 29/31**。`/Upload/*` 的 R2 路由與大小寫 middleware 都好了。
 剩下的 2 頁 Level A 差異是 Astro 序列化器的正規化行為，已審閱並接受（[docs/08](docs/08-verification.md) §7a）。
 
-**Phase 4 完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠，
-Worker secret 已設定 —— ⚠️ **但用的是舊程式碼裡的原值，不是輪替後的新值**。
-Phase 7 之前必須輪替，並決定 §3.1 的收件人（一部署就會真的開始寄信給訪客本人）。
+**Phase 4 完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠。
+收件人已改由 `CONTACT_TO` 決定，訪客的信箱放 `reply_to` —— 舊站那個把信寄給訪客本人的行為
+**刻意不重現**（[docs/09](docs/09-known-issues.md) §3.1）。
+Worker secret 已設定 —— ⚠️ **但用的是舊程式碼裡的原值，不是輪替後的新值**，Phase 7 之前必須輪替。
 
-**Phase 6 CI 完成**（2026-08-07）。GitHub Actions 上 `guard` + `verify` 兩個 job 全綠 ——
+**Phase 6 完成**（CI/CD，2026-08-07）。GitHub Actions 上 `guard` + `verify` 兩個 job 全綠 ——
 parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30，**都是在 Linux 上驗的**。
-部署 workflow 寫好了但**還沒跑過**：preview 的 D1/R2/KV 還沒建，`production` environment 也還沒開人工核准。
+**已經部署上線**：<https://gleanstudio.waiting0201.workers.dev>，遠端 D1 / R2 / KV 都建好也灌好了，
+打這個網址跑 parity 一樣是 Level B 31/31。刻意不做 preview 環境（[docs/07](docs/07-deployment.md) §2）。
+
+⚠️ **那一次 deploy workflow 的執行結果是紅的，但部署本身是成功的** —— 紅在後面「取得部署網址」
+那一步（`wrangler-action` 不吐 stdout 給它解析），已由 `8bb641c` 改成直接跑 wrangler 修掉，
+但**修完之後沒有再跑過 workflow**，所以部署後的 smoke 從來沒真的打過線上站。
 
 **Phase 5 程式完成**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
 富文本（擋 base64），以及 **7 個實體的完整 CRUD** —— `npm run smoke:admin` 47 項全綠。
 ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層；
 Articles / Projects / Admins 各有自己的形狀（[docs/06](docs/06-admin-spec.md) §10a）。
-**部署前還要建遠端 KV namespace**，介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
+[docs/06](docs/06-admin-spec.md) §12 的 8 條完成條件全部達成；介面設計方向見同文件 §10。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---

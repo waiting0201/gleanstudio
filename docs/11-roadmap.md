@@ -2,13 +2,14 @@
 
 10 個階段。每一階段有明確的完成條件 —— 「做完了沒」應該是機械可答的問題，不是判斷題。
 
-**現況：Phase 3 完成，Phase 4（聯絡表單）與 Phase 5（後台）可以開始。**
+**現況：Phase 1–6 完成（2026-08-07），新站已部署在 <https://gleanstudio.waiting0201.workers.dev>。
+下一步是 Phase 7 soak，前置是輪替 reCAPTCHA 與 SendGrid key。**
 
 ---
 
 ## Phase 0 — harness 與密鑰盤點
 
-**現在這一階段。** 只有文件，沒有應用程式碼。
+只有文件，沒有應用程式碼。**兩項密鑰輪替至今未做**，是 Phase 7 的前置。
 
 - [x] `CLAUDE.md` 索引
 - [x] `docs/00` ~ `docs/11` 共 12 篇
@@ -117,7 +118,7 @@ node scripts/verify-media.mjs [--remote]
 
 ---
 
-## Phase 5 — 後台重建 🚧 進行中
+## Phase 5 — 後台重建 ✅ 完成（2026-08-07）
 
 完成條件見 [06-admin-spec](06-admin-spec.md) §12。介面設計方向見同文件 §10。
 
@@ -152,10 +153,10 @@ node scripts/verify-media.mjs [--remote]
 
 **Phase 5 剩下的**
 
+[06-admin-spec](06-admin-spec.md) §12 的 8 條完成條件全部達成。原本掛在這裡的三項部署前置
+（遠端 KV namespace、遠端 D1 順序補值）已在 Phase 6 做掉，只剩一個要跟業主確認的內容問題：
+
 - [ ] Abouts 的圖片欄位在公開站沒有被引用過（`/Home/About` 只用 Description）—— 要確認是不是該拿掉
-- [ ] **部署前要先建遠端 KV namespace**：`wrangler kv namespace create SESSION`，再把 id 填進 `wrangler.jsonc`
-- [ ] 遠端 D1 的順序補值（`db/seed/0002-order-backfill.sql`）
-- [ ] **部署前要先建遠端 KV namespace**：`wrangler kv namespace create SESSION`，再把 id 填進 `wrangler.jsonc`
 
 **過程中發現**
 
@@ -164,7 +165,7 @@ node scripts/verify-media.mjs [--remote]
 
 ---
 
-## Phase 6 — CI/CD 🚧 workflow 寫好了，等雲端資源
+## Phase 6 — CI/CD ✅ 完成（2026-08-07）
 
 - [x] `ci.yml` —— 完整序列在本機用**乾淨的資料庫**實測跑通：migrate → seed（`--no-accounts`）→ 順序補值 → verify-d1 → 權限斷言 → build → wrangler dev → parity → parity:contact → bootstrap 帳號 → smoke:admin 47 項
 - [x] **內容匯出進版控、帳號資料不進** —— 沒有這一步 CI 根本跑不了 parity（[07-deployment](07-deployment.md) §2）
@@ -190,10 +191,20 @@ node scripts/verify-media.mjs [--remote]
 - [ ] **`smoke:admin` 在 CI 上不穩定** —— `wrangler dev` 崩潰過一次，無法重現，見 [08-verification](08-verification.md) §9
 - [x] `production` environment —— required reviewer + 限定 `master` 分支
 - [x] **決定不做 preview 環境**（[07-deployment](07-deployment.md) §2）—— 多環境在這個 stack 上有安靜的失敗模式，而 CI 每個 PR 跑完整 parity 比 preview 網址有用
-- [ ] Cloudflare API token（**要含 D1** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
+- [x] Cloudflare API token（**要含 D1** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
 - [x] `wrangler kv namespace create SESSION` —— 已建（`5d3e4b47…`），`check-deploy-config` 全綠
+- [x] 遠端 D1 的順序補值（`db/seed/0002-order-backfill.sql`）已灌
 - [x] Worker secrets 已設定 —— ⚠️ **用的是舊值，不是輪替後的**，見 Phase 7 的前置條件
+- [x] **真的部署上去了**：<https://gleanstudio.waiting0201.workers.dev>，
+      版本 `afae605c`（來自 `1420cef`）。打這個網址跑 `parity-diff.mjs --base <url>`
+      是 Level B 31/31、Level A 29/31 —— 跟本機一模一樣
 - [ ] Phase 7 開始時把 `deploy-production.yml` 改成 `push: branches: [master]`
+
+**那次部署的 workflow 是紅的，但部署是成功的** —— 這個組合值得記一下，因為 GitHub 上看起來
+像是沒部署成功。`wrangler-action` 不把 wrangler 的 stdout 交出來，後面「取得部署網址」那一步
+就解析到空字串而 `exit 1`；此時 Worker 早就上線了（log 裡有 `Deployed gleanstudio triggers`）。
+`8bb641c` 改成直接跑 `wrangler deploy` 拿輸出，**但改完之後還沒重跑過 workflow**，
+所以部署後的 smoke 從來沒有真的打過線上站 —— 這一項要在 Phase 7 補。
 
 **踩到一個安靜的坑**（[07-deployment](07-deployment.md) §2）：
 
@@ -206,12 +217,13 @@ node scripts/verify-media.mjs [--remote]
 **開始之前必須先處理**（[09-known-issues](09-known-issues.md) §2 狀態更新）：
 
 - [ ] **輪替 reCAPTCHA 與 SendGrid key** —— 目前設的是舊程式碼裡的原值，等於沒清償
-- [ ] **決定 §3.1 的收件人** —— key 設好了，一部署聯絡表單就會真的開始寄信，
-      而收件人是訪客自己填的信箱。舊站很可能從未真的寄出，新站會。
-      要嘛先修收件人，要嘛先 `wrangler secret delete SENDGRID_API_KEY`
+- [x] **§3.1 的收件人已經決定** —— 收件人改由 `CONTACT_TO` 決定，訪客的信箱放 `reply_to`
+      （`1420cef`，[09-known-issues](09-known-issues.md) §3.1）。兩個 secret 任一個沒設就不寄，
+      是 fail-safe 而不是預設寄給誰。`CONTACT_TO` 現在是開發者信箱，Phase 8 要換成禾勤的
 
-- [ ] 部署到 `gleanstudio.workers.dev`（或 `new.gleanstudio.com.tw`），**使用正式資料**
-- [ ] parity 套件打**已部署的 URL**，不只本機
+- [x] 部署到 `gleanstudio.workers.dev`，**使用正式資料**（Phase 6 一併完成）
+- [x] parity 套件打**已部署的 URL**：Level B 31/31、Level A 29/31
+- [ ] `parity:contact` 與 `smoke:admin` 也打已部署的 URL —— **還沒跑過線上站**
 - [ ] Level C 視覺比對在 375 / 768 / 1440 跑過
 - [ ] 編輯者在新後台實際改一筆內容，確認前台渲染正常
 - [ ] **D1 → Azure SQL 反向回退腳本已寫好並測過**（[07-deployment](07-deployment.md) §5）

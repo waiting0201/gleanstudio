@@ -335,11 +335,14 @@ integration 會注入一份全域樣式，**前台每一頁的 `<head>` 都會�
 
 ## 12. 完成條件
 
-- [ ] PBKDF2 登入可用，`MustChangePassword` 流程可走完
-- [ ] KV session 正常，登出真的清空
-- [ ] 權限註冊表的 CI 斷言全綠
-- [ ] 7 個實體的 CRUD + 排序完整
-- [ ] 上傳走 `media.ts`，magic byte 驗證有效
-- [ ] 所有變更操作有 CSRF 保護，刪除是 POST
-- [ ] 403 原地渲染，`/Error/Validation` 不再 404
-- [ ] `weypro` 後門與 `AdminID = 888` 相關程式碼已完全移除
+**8 條全部達成（2026-08-07）。** 每一條的證據都是 `npm run smoke:admin`（47 項）或
+`npm run verify:permissions`（30 個路由）跑得出來的，不是判斷題。
+
+- [x] PBKDF2 登入可用，`MustChangePassword` 流程可走完
+- [x] KV session 正常，登出真的清空
+- [x] 權限註冊表的 CI 斷言全綠
+- [x] 7 個實體的 CRUD + 排序完整
+- [x] 上傳走 `media.ts`，magic byte 驗證有效
+- [x] 所有變更操作有 CSRF 保護，刪除是 POST
+- [x] 403 原地渲染，`/Error/Validation` 不再 404
+- [x] `weypro` 後門與 `AdminID = 888` 相關程式碼已完全移除
