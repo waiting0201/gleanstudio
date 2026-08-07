@@ -18,7 +18,7 @@
 - [ ] **reCAPTCHA secret 已輪替**（[09-known-issues](09-known-issues.md) 2.3）
 - [ ] **SendGrid API key 已輪替**（同上 2.4）
 - [ ] 確認 `reference/old/` 過去沒有被推上公開 remote
-- [ ] `master` 第一個 commit
+- [x] `master` 第一個 commit（`339f9fb`）
 
 ---
 
