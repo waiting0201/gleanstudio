@@ -20,6 +20,8 @@
 | 1.6 | `/Home/Team` 與 `/Home/Gallery` 沒有任何導覽連結 | `_Header.cshtml` 裡的連結被註解掉 | 網址可達但使用者找不到 |
 | 1.7 | 聯絡表單沒有 JS 就完全送不出去 | 送出鈕是 `<div id="btnSubmit">`，靠 jQuery 觸發 submit | 非真正的 submit button |
 | 1.8 | 聯絡表單沒有 anti-forgery token | [Contact.cshtml](../reference/old/Gleanstudio/Views/Home/Contact.cshtml) | 只靠 reCAPTCHA v3 擋 |
+| 1.15 | **「驗證碼錯誤」永遠不會顯示** | [HomeController.cs:216](../reference/old/Gleanstudio/Controllers/HomeController.cs#L216) 的 `AddModelError("", …)` 是模型層級錯誤，而 Contact.cshtml 沒有 `@Html.ValidationSummary` | reCAPTCHA 判定失敗時，使用者看到的是一張值都還在、**沒有任何錯誤標示**的表單。按幾次都一樣，沒有任何線索。Phase 4 照抄 |
+| 1.16 | 伺服器端 Email 驗證極寬鬆 | .NET 4.5+ 的 `EmailAddressAttribute` 只檢查「一個 `@`、不在頭尾」 | `a@b` 會通過。頁面上的 `data-val-email` 帶著嚴格的 client-side 規則，但 `_Scripts.cshtml` **沒有載入 jquery.validate.unobtrusive** —— 所有 `data-val-*` 屬性從來沒生效過 |
 | 1.9 | `<meta keywords>` / `<meta description>` 全站固定 | `_Layout.cshtml` | 只有 `<title>` 逐頁變化 |
 | 1.10 | 分頁器的 `<nav class="Page navigation example">` | `ContainerDivClasses` 設成三個 class | 是把 Bootstrap 範例的 `aria-label` 貼錯位置的產物 |
 | 1.11 | 分頁範圍邏輯拿 `PageSize`（6）當視窗大小 | [CustomPager.cs:43-45](../reference/old/Gleanstudio/Infrastructure/Paging/CustomPager.cs#L43-L45) | 目前只有 2 頁不會觸發。**文章超過 42 篇後輸出會變，golden 要重抓** |
@@ -124,6 +126,8 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 | 4.9 | `Sort*` 操作的權限 | 完全沒被涵蓋 | 對應到 `update` | |
 | 4.10 | 資源路徑小寫（如 `/content/css/style.css`） | IIS 服務（200） | **404**（Phase 3 已實測） | Workers Assets 大小寫敏感。站內不會產生小寫資源網址，影響僅限手打網址。見 [08-verification](08-verification.md) §5.4 |
 | 4.11 | `/upload/...`（小寫路徑） | IIS 服務（200） | **404** | middleware 的正規化表只涵蓋 10 條 `/Home/*`（[03-url-contract](03-url-contract.md) §3.3）。同 4.10，站內只產生 `/Upload/` |
+| 4.12 | 跨站 POST 到 `/Home/Contact` | 接受（沒有 anti-forgery token，見 1.8） | **403** | Astro 預設開 `security.checkOrigin`，`Origin` 對不上就擋。**新站比舊站嚴，但合法流程零影響** —— 瀏覽器送同源表單一定會帶 `Origin`。等於在不動 markup 的前提下補上了 1.8 缺的那層防護，所以保留 |
+| 4.13 | 聯絡表單寄信 | 一定呼叫 SendGrid（雖然三個缺陷疊起來很可能從未送達） | **沒設 `SENDGRID_API_KEY` 就不寄** | 舊 key 已外洩待輪替（§2.4）；而且在 §3.1 的收件人缺陷被 triage 之前，讓它真的開始寄信會是一個新的對外行為。表單的可見行為（302 / 200）與有沒有寄信無關 |
 
 ---
 

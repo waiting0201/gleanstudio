@@ -27,7 +27,11 @@
 **Level B parity 31/31（gating 全綠）、Level A 29/31**。`/Upload/*` 的 R2 路由與大小寫 middleware 都好了。
 剩下的 2 頁 Level A 差異是 Astro 序列化器的正規化行為，已審閱並接受（[docs/08](docs/08-verification.md) §7a）。
 
-**下一步：Phase 4（聯絡表單 POST）與 Phase 5（後台）** —— 兩者可並行。
+**Phase 4 程式完成**（聯絡表單 POST）。驗證、reCAPTCHA、寄信路徑都好了，
+`npm run parity:contact` 4 個情境全綠。**卡在 key 輪替** ——
+`RECAPTCHA_SECRET` 沒設就是每一筆送出都被判定驗證碼錯誤。
+
+**下一步：輪替 reCAPTCHA / SendGrid key，人工審閱 `tests/derived/`，然後 Phase 5（後台）。**
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -76,6 +80,7 @@ npm run build
 npm run preview            # build → 重啟 wrangler dev → 跑 parity（一律用這個驗證）
 npm run parity             # 只跑比對；npm run parity -- /Home/About 指定單頁
                            # 加 --level a 看 byte 差異細節
+npm run parity:contact     # POST /Home/Contact —— 比 tests/derived/（推導值，不是量到的）
 ```
 
 舊資料庫在本機 Docker 容器 `sqlserver`（`localhost:1433`，資料庫 `gleanstudio`）。
@@ -94,15 +99,17 @@ reference/old/     舊 ASP.NET 系統 —— 唯讀，gitignored
 scripts/           匯出 / seed / 上傳 / golden / 驗證（已有）
 db/migrations/     D1 migration（已有）
 db/seed/           產生物，gitignored
-tests/golden/      從正式站抓的 HTML 基準（進版控，35 頁）
-data/              資料庫匯出 —— gitignored，只有 manifest 與 legacy-order 進版控
-wrangler.jsonc     D1 / R2 binding（已有；Phase 3 補 main 與 assets）
+tests/golden/      從正式站抓的 HTML 基準（進版控，35 頁）—— 量到的
+tests/derived/     POST /Home/Contact 的期望輸出（進版控）—— **推導的，可信度較低**
+data/              資料庫匯出 —— gitignored，只有 manifest / anomalies / 兩個順序檔進版控
+wrangler.jsonc     D1 / R2 binding
 
-以下在 Phase 3 之後才會出現：
 src/pages/         Astro 路由，檔名逐字對應舊網址（Home/About.astro → /Home/About）
+src/middleware.ts  大小寫 rewrite
 src/components/    版型元件；pages/ 子目錄放整頁元件
 src/db/            Drizzle schema + 查詢
-src/lib/           auth / media / contact / query 工具
+src/lib/           format / query / contact 工具（auth / media 在 Phase 5）
+scripts/lib/       parity 與順序推導共用的解析邏輯
 public/Content/    從 reference/ 逐字複製的 CSS 與圖
 ```
 

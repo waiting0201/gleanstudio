@@ -93,15 +93,27 @@ node scripts/verify-media.mjs [--remote]
 
 ---
 
-## Phase 4 — 聯絡表單
+## Phase 4 — 聯絡表單 🚧 程式完成，等 key 輪替
 
-- [x] GET `/Home/Contact` 的 Level B 通過（Phase 3 一併完成，`src/components/pages/HomeContactPage.astro`）
-- [ ] POST 驗證邏輯與 5 個欄位的繁中錯誤訊息一致
-- [ ] 驗證失敗回 **200** 並重新渲染表單（不是 4xx）
-- [ ] 成功回 **302** 到 `/`
-- [ ] reCAPTCHA 用輪替後的 secret，判定條件 `Success && Action === 'login' && Score > 0.5`
-- [ ] 寄信行為**原樣保留**（[09-known-issues](09-known-issues.md) §3.1）
-- [ ] `tests/derived/` 的期望 markup 已由人審閱
+`npm run parity:contact` 4 個情境全綠。
+
+- [x] GET `/Home/Contact` 的 Level B 通過（Phase 3 一併完成）
+- [x] POST 驗證邏輯與 5 個欄位的繁中錯誤訊息一致（`src/lib/contact.ts`）
+- [x] 驗證失敗回 **200** 並重新渲染表單（不是 4xx）
+- [x] 成功回 **302** 到 `/` —— `RedirectToAction("Index")` 在預設路由下產生的是 `/`
+- [x] reCAPTCHA 判定條件 `success && action === 'login' && score > 0.5`，secret 讀 `env.RECAPTCHA_SECRET`，fail closed
+- [x] 寄信行為原樣保留（收件人是訪客自己的信箱，[09-known-issues](09-known-issues.md) §3.1）
+- [x] `tests/derived/` 的期望 markup 已產生並進版控
+- [ ] **`tests/derived/` 由人審閱** ← 這一項只有人能勾
+- [ ] **reCAPTCHA secret 已輪替並 `wrangler secret put RECAPTCHA_SECRET`**
+      —— 沒設就是每一筆送出都被判定驗證碼錯誤（而且畫面上不會有任何提示，見 1.15）
+- [ ] SendGrid key 已輪替並設定（**先與業主確認 §3.1 的收件人要不要一起修**）
+- [ ] 302 那條分支用真的 token 走一次（排在 Phase 7 soak）
+
+**照抄舊站時發現的兩件事**（都寫進 [09-known-issues](09-known-issues.md) §1）：
+
+- 1.15 「驗證碼錯誤」**從來沒有顯示過** —— `AddModelError("", …)` 是模型層級錯誤，而 view 沒有 `ValidationSummary`。captcha 失敗時使用者看到的是一張值都還在、沒有任何提示的表單
+- 1.16 伺服器端 Email 驗證只檢查「一個 `@`、不在頭尾」，`a@b` 會過。頁面上的 `data-val-*` 屬性從來沒生效過 —— `_Scripts.cshtml` 沒載 jquery.validate.unobtrusive
 
 ---
 

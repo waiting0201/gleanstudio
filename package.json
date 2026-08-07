@@ -23,7 +23,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "./scripts/dev-cycle.sh",
-    "parity": "node scripts/parity-diff.mjs"
+    "parity": "node scripts/parity-diff.mjs",
+    "parity:contact": "node scripts/parity-contact.mjs"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",

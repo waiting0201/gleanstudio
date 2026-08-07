@@ -1,5 +1,45 @@
 ---
+// ← HomeController.Contact（GET 與 [HttpPost] 兩個 action）
+//
+// 邏輯留在 route 檔、markup 留在整頁元件 —— 對應舊站的 controller / view 分工。
+//
+// 舊站的流程（HomeController.cs:194-226）與它的狀態碼：
+//   ModelState 有效 + captcha 通過 → 寄信 → RedirectToAction("Index") → 302 到 /
+//   ModelState 有效 + captcha 失敗 → AddModelError("", "驗證碼錯誤") → 200 重新渲染
+//   ModelState 無效                → AddModelError("", "")           → 200 重新渲染
+//
+// ⚠️ 那兩個 AddModelError 加的是**模型層級**的錯誤，而 Contact.cshtml 裡
+//    沒有 @Html.ValidationSummary —— 所以「驗證碼錯誤」這四個字**從來沒有
+//    出現在畫面上過**。captcha 失敗時使用者看到的，是一張值都還在、
+//    沒有任何錯誤標示的表單。照抄，見 docs/09-known-issues.md 1.15
+import { env } from 'cloudflare:workers';
 import HomeContactPage from '../../components/pages/HomeContactPage.astro';
+import { readForm, validate, verifyCaptcha, sendContactMail, type Errors, type Values } from '../../lib/contact';
+
 export const prerender = false;
+
+let values: Values | undefined;
+let errors: Errors | undefined;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  values = readForm(form);
+  errors = validate(values);
+
+  if (Object.keys(errors).length === 0) {
+    const token = String(form.get('GoogleCaptchaToken') ?? '');
+    const ok = await verifyCaptcha(
+      token,
+      Astro.request.headers.get('cf-connecting-ip'),
+      env.RECAPTCHA_SECRET,
+    );
+    if (ok) {
+      await sendContactMail(values, env.SENDGRID_API_KEY);
+      // RedirectToAction("Index") 在預設路由下產生的是 "/"，不是 "/Home/Index"
+      return Astro.redirect('/', 302);
+    }
+    // captcha 失敗 —— 值照樣回填，但沒有任何欄位錯誤（模型層級的錯誤不會渲染）
+  }
+}
 ---
-<HomeContactPage />
+<HomeContactPage values={values} errors={errors} />

@@ -12,7 +12,8 @@
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { parse } from 'parse5';
+import { domSig, firstDiff } from './lib/dom-sig.mjs';
+import { EXEMPTIONS, applyExemptions } from './lib/exemptions.mjs';
 
 function arg(flag, fallback) {
   const i = process.argv.indexOf(flag);
@@ -45,52 +46,6 @@ try {
 
 const norm = (s) => s.replace(/\r\n/g, '\n');
 
-// ── Level B：DOM 正規化 ───────────────────────────────
-// 排序屬性、收斂無意義空白，比對樹狀結構。
-const VOID = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-// 這些元素裡的空白有意義，不收斂
-const PRE = new Set(['pre', 'textarea', 'script', 'style']);
-
-function serialize(node, inPre = false) {
-  if (node.nodeName === '#text') {
-    const t = inPre ? node.value : node.value.replace(/\s+/g, ' ');
-    return t.trim() === '' ? '' : t;
-  }
-  if (node.nodeName === '#comment') return `<!--${node.data.trim()}-->`;
-  if (node.nodeName === '#documentType') return '<!doctype>';
-  if (!node.tagName) return (node.childNodes ?? []).map((c) => serialize(c, inPre)).join('');
-
-  const attrs = (node.attrs ?? [])
-    .map((a) => [a.name, a.name === 'class' ? a.value.trim().split(/\s+/).sort().join(' ') : a.value.trim()])
-    .sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0))
-    .map(([n, v]) => `${n}="${v}"`)
-    .join(' ');
-
-  const open = `<${node.tagName}${attrs ? ' ' + attrs : ''}>`;
-  if (VOID.has(node.tagName)) return open;
-  const nextPre = inPre || PRE.has(node.tagName);
-  const inner = (node.childNodes ?? []).map((c) => serialize(c, nextPre)).join('');
-  return `${open}${inner}</${node.tagName}>`;
-}
-
-/**
- * 明列的 markup 豁免。**只放真的無法達成、且經過審閱的**，不要當成垃圾桶。
- * 每一條都要在 docs/08-verification.md §7 有對應紀錄。
- */
-const EXEMPTIONS = [
-  {
-    // Astro 的編譯器會丟掉版型層的 HTML 註解（四種寫法都試過）。
-    // 零渲染影響，見 src/layouts/Site.astro 的說明。
-    // 連同它後面那個換行一起拿掉 —— 註解在 Razor 裡自成一行，只刪註解會留下
-    // 一個本機不可能產生的空行，讓 Level A 的 byte 比對每一頁都失敗。
-    id: 'astro-strips-main-comment',
-    apply: (html) => html.replace('<!--main-->\n', ''),
-  },
-];
-
-const applyExemptions = (html) => EXEMPTIONS.reduce((h, e) => e.apply(h), html);
-const domSig = (html) => serialize(parse(html));
-
 /**
  * 刻意分歧：舊站的行為不值得重現，而且**永遠**不會與 golden 相符。
  * 跟 EXEMPTIONS 不同 —— 那是「輸出幾乎一樣、差在無渲染影響的細節」，
@@ -99,19 +54,6 @@ const domSig = (html) => serialize(parse(html));
 const DIVERGENCES = new Map([
   ['/Error/Validation', '舊站從未實作（404 黃頁）。新站回 403 原地渲染，見 docs/06-admin-spec.md §7'],
 ]);
-
-/** 找出兩個字串第一個不同的位置，並附上上下文。 */
-function firstDiff(a, b) {
-  const n = Math.min(a.length, b.length);
-  let i = 0;
-  while (i < n && a[i] === b[i]) i++;
-  const from = Math.max(0, i - 70);
-  return {
-    index: i,
-    golden: JSON.stringify(a.slice(from, i + 70)),
-    local: JSON.stringify(b.slice(from, i + 70)),
-  };
-}
 
 // ── 執行 ──────────────────────────────────────────────
 const pages = ONLY.length
@@ -166,16 +108,16 @@ for (const p of pages) {
     if (!b) {
       const d = firstDiff(gSig, lSig);
       console.log(`      DOM 第一處差異 @${d.index}`);
-      console.log(`      golden ${d.golden}`);
-      console.log(`      本機   ${d.local}`);
+      console.log(`      golden ${d.expected}`);
+      console.log(`      本機   ${d.actual}`);
     }
   }
 
   if (SHOW_A && b && !a) {
     const d = firstDiff(golden, local);
     console.log(`      [A] 第一處 byte 差異 @${d.index}`);
-    console.log(`      golden ${d.golden}`);
-    console.log(`      本機   ${d.local}`);
+    console.log(`      golden ${d.expected}`);
+    console.log(`      本機   ${d.actual}`);
   }
 }
 

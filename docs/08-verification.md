@@ -98,6 +98,19 @@ Playwright 在 375 / 768 / 1440 三個寬度，同時對正式站與本機截圖
 
 這是全站唯一一處「沒有 oracle、從原始碼推理」的地方。
 
+**Phase 4 的做法**（`npm run parity:contact`）：拿 `tests/golden/Home-Contact.html`（真的 GET 回應）當底，套上 MVC 重新渲染的三條變換規則產生期望值，寫進 `tests/derived/` 並進版控，再對本機發 POST 比 DOM。
+
+| 情境 | 期望 |
+|---|---|
+| 全部空白 | 200，五個欄位都是 `input-validation-error` + 對應繁中訊息 |
+| Email 格式錯誤 | 200，只有 Email 有錯，其餘值回填 |
+| 姓名只有空白 | 200，`Required` 對字串是 `Trim().Length != 0` |
+| 欄位合法但 captcha 失敗 | 200，值全部回填、**沒有任何錯誤標示** |
+
+⚠️ **產生器與被測程式是同一個人的同一份推理**，測試綠不代表推理對。防線是 `tests/derived/` 進版控 —— 改產生器就要重讀那份 diff，不能只看測試結果。
+
+**沒涵蓋到的分支**：驗證通過 + captcha 通過 → 302 到 `/` 並寄信。需要真的 reCAPTCHA token，本機驗不了，**Phase 7 soak 用輪替後的 key 實際走一次**。
+
 ### 5.2 內容漂移
 
 見 §2 的資料快照綁定。緩解了，但沒有消除 —— 這是快照式基準的固有性質。
