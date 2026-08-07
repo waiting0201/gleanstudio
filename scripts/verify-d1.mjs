@@ -89,6 +89,31 @@ for (const typeId of [...new Set(query('SELECT DISTINCT ArticleTypeID t FROM Art
   check(typeId.slice(0, 8), JSON.stringify(got) === JSON.stringify(want), `${got.length} 篇`);
 }
 
+/**
+ * ⚠️ 只驗「排出來的順序對不對」是不夠的。
+ *
+ * 實測過一個真實情境：遠端資料庫套了 migration 但**沒有跑補值**，
+ * LegacyTypeOrder 整欄都是 0，而 SQLite 對並列列的處理**碰巧**給出正確順序 ——
+ * 上面那個檢查於是對一個半套的資料庫按了綠燈。
+ *
+ * 巧合不是保證，這正是 ADR-012 一開始就拒絕依賴的東西。
+ * 所以這裡直接驗「值本身有沒有被填」：產生器給的就是 1..N，少一個都不行。
+ */
+console.log('\n順序欄位的值');
+const ranks = (rows, col) => rows.map((r) => r[col]).sort((a, b) => a - b);
+const isOneToN = (v) => v.every((n, i) => n === i + 1);
+
+const artRanks = ranks(query('SELECT LegacyOrder FROM Articles'), 'LegacyOrder');
+check('Articles.LegacyOrder 是 1..N', isOneToN(artRanks), `${artRanks.length} 筆`);
+
+for (const typeId of [...new Set(query('SELECT DISTINCT ArticleTypeID t FROM Articles').map((r) => r.t))]) {
+  const v = ranks(query(`SELECT LegacyTypeOrder FROM Articles WHERE ArticleTypeID = '${typeId}'`), 'LegacyTypeOrder');
+  check(`${typeId.slice(0, 8)} 的 LegacyTypeOrder 是 1..N`, isOneToN(v), `${v.length} 篇`);
+}
+
+const projRanks = ranks(query('SELECT LegacyOrder FROM Projects'), 'LegacyOrder');
+check('Projects.LegacyOrder 是 1..N', isOneToN(projRanks), `${projRanks.length} 筆`);
+
 // ── 3. 富文本完整性（UTF-8 中文 + HTML 經 JSON 再經 SQL 字面值）──
 // 逐字比對，不比長度 —— 理由見檔頭的 LENGTH() 警告
 console.log('\n富文本完整性');
