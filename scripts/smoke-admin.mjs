@@ -34,6 +34,24 @@ const check = (label, ok, note = '') => {
 };
 
 /**
+ * 伺服器死掉與斷言失敗是兩件事，訊息要能分辨。
+ *
+ * CI 上遇過一次 `wrangler dev` 在跑到一半崩潰（stdout 只留一個空的 ERROR），
+ * 結果表現成「沒有 CSRF token 被擋」這一項失敗 —— 看起來像 CSRF 壞了，
+ * 其實是伺服器已經不在了。無法重現，見 docs/08-verification.md §9。
+ */
+async function assertAlive(where) {
+  try {
+    await fetch(BASE + '/backend/Main/Login', { signal: AbortSignal.timeout(5000) });
+  } catch (e) {
+    console.error(`\n💥 ${where} 之後連不上 ${BASE} —— **伺服器掛了，不是斷言失敗**。`);
+    console.error(`   ${e.message}`);
+    console.error('   去看 wrangler 的詳細 log（CI 會印，本機在 /tmp/gleanstudio-wrangler.log）。');
+    process.exit(2);
+  }
+}
+
+/**
  * 帳密來源：CI 用環境變數（帳號由 scripts/bootstrap-admin.mjs 現場建），
  * 本機沿用 gitignored 的匯出檔。兩邊都不把密碼印出來。
  */
@@ -99,6 +117,7 @@ try {
   cookie = noCookie;
 
   r = await post('/api/admin/articles/delete', new URLSearchParams({ ArticleID: 'x' }));
+  if (r.status !== 403) await assertAlive('未帶 CSRF 的刪除');
   check('沒有 CSRF token 被擋', r.status === 403);
 
   // 真的撤掉一個權限來測那條鏈，測完還原。

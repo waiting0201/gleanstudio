@@ -171,7 +171,8 @@ node scripts/verify-media.mjs [--remote]
 - [x] `scripts/bootstrap-admin.mjs` —— 取代舊系統寫死的 `weypro` 後門（[06-admin-spec](06-admin-spec.md) §4）
 - [x] `deploy-preview.yml` / `deploy-production.yml`，migration 排在 build 之前
 - [x] `scripts/check-deploy-config.mjs` —— 部署前守門，見下方
-- [ ] **在 GitHub 上真的跑一次** —— 目前只在本機逐步驗證過
+- [x] **在 GitHub 上真的跑一次** —— 第三次全綠（前兩次各抓到一個本機測不出來的問題）
+- [ ] **`smoke:admin` 在 CI 上不穩定** —— `wrangler dev` 崩潰過一次，無法重現，見 [08-verification](08-verification.md) §9
 - [ ] Cloudflare API token（**含 D1 與 R2** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
 - [ ] 建 preview 的 D1 / R2 / KV，把 `wrangler.jsonc` 裡的 placeholder 換掉
 - [ ] Worker secrets 已設定

@@ -239,6 +239,23 @@ miniflare 的檔名是內部雜湊，不是 database id 或名稱的 sha256（�
 
 ---
 
+## 9. 已知的不穩定：CI 上的 `wrangler dev` 崩潰過一次
+
+**2026-08-07，第二次 CI。** `wrangler dev` 在服務完一個請求之後就死了，stdout 只留一個空的 `[ERROR]` 與 wrangler 的通用崩潰提示。表現出來是 `smoke:admin` 的「沒有 CSRF token 被擋」失敗 —— **看起來像 CSRF 壞了，其實是伺服器已經不在了**。
+
+第三次跑（中間只加了 log，沒有改任何行為）就全綠。**所以它沒有被修好，只是沒有重現。**
+
+**一個尚未證實的懷疑**：`smoke-admin.mjs` 會在 `wrangler dev` 執行中另外開 `wrangler d1 execute --local`，兩個行程同時碰同一個 miniflare SQLite 檔。macOS 容忍，Linux 的檔案鎖與 WAL 行為不同。這符合「先成功好幾次、後來才爆」的形狀，但**沒有證據**，不要當成結論。
+
+已經做的：
+
+- CI 失敗時會印出 `~/.config/.wrangler/logs/*.log`，下次發生就有堆疊
+- `smoke:admin` 在斷言失敗時會先確認伺服器還活著，訊息明確區分兩者
+
+**還沒做**：真正的修法（如果懷疑成立）是讓煙霧測試不要跟 dev server 搶同一個檔 —— setup 的寫入移到啟動 dev 之前，權限撤銷改走後台自己的 Admins 表單，只留唯讀的斷言。**在有堆疊之前不要動手**，那會是拿猜測換掉一個能用的測試。
+
+---
+
 ## 8. 擷取工具本身踩過的坑
 
 **golden 檔名不能只靠大小寫區分。** macOS 的 APFS 預設不分大小寫，所以 `Home-About.html` 與 `home-about.html` 是同一個檔 —— `/Home/About` 與 `/home/about` 的擷取結果互相覆蓋，而這兩條正是用來驗證大小寫行為的。等於把要驗的東西自己抹掉，還會讓移植端看到假的失敗（「golden 說連結是 `/home/About`」）。
