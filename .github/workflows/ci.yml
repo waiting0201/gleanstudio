@@ -84,4 +84,12 @@ jobs:
 
       - name: 失敗時附上 wrangler log
         if: failure()
-        run: tail -100 /tmp/wrangler.log
+        run: |
+          echo "── wrangler dev 的 stdout ──"
+          tail -60 /tmp/wrangler.log || true
+          echo
+          echo "── wrangler 自己的詳細 log（崩潰堆疊在這裡）──"
+          for f in ~/.config/.wrangler/logs/*.log; do
+            echo "▸ $f"
+            tail -80 "$f" || true
+          done
