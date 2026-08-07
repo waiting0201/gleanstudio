@@ -22,6 +22,8 @@ jobs:
     environment:
       name: production           # ← 已設 required reviewer，且限定 master 分支
       url: ${{ steps.deploy.outputs.deployment-url }}
+    outputs:
+      url: ${{ steps.deploy.outputs.deployment-url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -112,7 +114,18 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci
 
-      # parity 打**已部署的**網址，不是本機。這是唯一能證明線上輸出仍與
-      # 舊站一致的檢查。見 docs/08-verification.md §6
+      # parity 打**這一次剛部署出來的**網址。
+      #
+      # ⚠️ 前一版寫的是 `vars.PRODUCTION_URL || 'https://gleanstudio.com.tw'`，
+      #    而那個變數沒設 —— 等於拿 golden 去比對**舊站自己**，必然全綠。
+      #    最後一道檢查會變成一個什麼都沒驗的綠勾。
+      - name: 確認拿到部署網址
+        run: |
+          if [ -z "${{ needs.deploy.outputs.url }}" ]; then
+            echo "::error::拿不到部署網址 —— 不要用預設值頂替，那會變成比對舊站"
+            exit 1
+          fi
+          echo "將對 ${{ needs.deploy.outputs.url }} 跑 parity"
+
       - name: parity 打線上
-        run: npm run parity -- --base ${{ vars.PRODUCTION_URL || 'https://gleanstudio.com.tw' }}
+        run: npm run parity -- --base ${{ needs.deploy.outputs.url }}
