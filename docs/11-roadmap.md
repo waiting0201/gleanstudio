@@ -191,8 +191,8 @@ node scripts/verify-media.mjs [--remote]
 - [x] `production` environment —— required reviewer + 限定 `master` 分支
 - [x] **決定不做 preview 環境**（[07-deployment](07-deployment.md) §2）—— 多環境在這個 stack 上有安靜的失敗模式，而 CI 每個 PR 跑完整 parity 比 preview 網址有用
 - [ ] Cloudflare API token（**要含 D1** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
-- [ ] `wrangler kv namespace create SESSION`，把 `wrangler.jsonc` 的 placeholder 換掉
-- [ ] Worker secrets 已設定
+- [x] `wrangler kv namespace create SESSION` —— 已建（`5d3e4b47…`），`check-deploy-config` 全綠
+- [x] Worker secrets 已設定 —— ⚠️ **用的是舊值，不是輪替後的**，見 Phase 7 的前置條件
 - [ ] Phase 7 開始時把 `deploy-production.yml` 改成 `push: branches: [master]`
 
 **踩到一個安靜的坑**（[07-deployment](07-deployment.md) §2）：
@@ -202,6 +202,13 @@ node scripts/verify-media.mjs [--remote]
 ---
 
 ## Phase 7 — staging soak
+
+**開始之前必須先處理**（[09-known-issues](09-known-issues.md) §2 狀態更新）：
+
+- [ ] **輪替 reCAPTCHA 與 SendGrid key** —— 目前設的是舊程式碼裡的原值，等於沒清償
+- [ ] **決定 §3.1 的收件人** —— key 設好了，一部署聯絡表單就會真的開始寄信，
+      而收件人是訪客自己填的信箱。舊站很可能從未真的寄出，新站會。
+      要嘛先修收件人，要嘛先 `wrangler secret delete SENDGRID_API_KEY`
 
 - [ ] 部署到 `gleanstudio.workers.dev`（或 `new.gleanstudio.com.tw`），**使用正式資料**
 - [ ] parity 套件打**已部署的 URL**，不只本機

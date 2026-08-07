@@ -29,8 +29,9 @@
 **Level B parity 31/31（gating 全綠）、Level A 29/31**。`/Upload/*` 的 R2 路由與大小寫 middleware 都好了。
 剩下的 2 頁 Level A 差異是 Astro 序列化器的正規化行為，已審閱並接受（[docs/08](docs/08-verification.md) §7a）。
 
-**Phase 4 程式完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠。
-**卡在 key 輪替** —— `RECAPTCHA_SECRET` 沒設就是每一筆送出都被判定驗證碼錯誤。
+**Phase 4 完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠，
+Worker secret 已設定 —— ⚠️ **但用的是舊程式碼裡的原值，不是輪替後的新值**。
+Phase 7 之前必須輪替，並決定 §3.1 的收件人（一部署就會真的開始寄信給訪客本人）。
 
 **Phase 6 CI 完成**（2026-08-07）。GitHub Actions 上 `guard` + `verify` 兩個 job 全綠 ——
 parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30，**都是在 Linux 上驗的**。

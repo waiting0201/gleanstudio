@@ -46,7 +46,7 @@
   // 本機 wrangler dev 不看 id，miniflare 自己建；**部署前要先建遠端 namespace**：
   //   wrangler kv namespace create SESSION
   // 再把回傳的 id 填進來。
-  // ⚠️ 還沒建。部署之前先跑 `wrangler kv namespace create SESSION`，把回傳的 id 填進來。
+  // 後台 session（docs/06-admin-spec.md §2）。2026-08-07 建立。
   // 沒有它整個 /backend/* 都會 500 —— middleware 對每個後台請求都寫 CSRF token。
-  "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }]
+  "kv_namespaces": [{ "binding": "SESSION", "id": "5d3e4b4705c04d26a5be945ca4ff0990" }]
 }
