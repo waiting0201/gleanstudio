@@ -1,0 +1,167 @@
+---
+/**
+ * 富文本編輯器。刻意做得很小 —— 三個人一個月用幾次，不值得扛一套編輯器框架。
+ *
+ * 它存在的**主要理由不是排版，是擋 base64**：舊後台的 Summernote 把貼上的圖片
+ * 直接內嵌進 Articles.Description，現況最大一篇 1.73 MB，而 D1 的單列上限是
+ * 2 MB —— 只剩 13% 餘裕，再貼一張圖就寫不進去。
+ * 所以這裡攔截貼上與拖入，把圖片送去 R2，插入 /Upload/… 的連結。
+ * 見 docs/06-admin-spec.md §8、docs/09-known-issues.md 1.13
+ *
+ * document.execCommand 已被標記為 deprecated，但所有瀏覽器都還支援，而且
+ * 替代品（自己維護 selection 與 undo stack）對這個用量來說是嚴重的過度投資。
+ */
+interface Props {
+  name: string;
+  value: string;
+  /** 沒有 ID 就不能插圖 —— R2 的路徑要用它 */
+  articleId?: string;
+}
+const { name, value, articleId = '' } = Astro.props;
+---
+<div class="rich" data-article-id={articleId}>
+  <div class="flex flex-wrap items-center gap-1 border border-b-0 border-bench-deep bg-bench px-2 py-1.5">
+    <button type="button" data-cmd="bold" class="rich-tool" title="粗體">B</button>
+    <button type="button" data-cmd="italic" class="rich-tool italic" title="斜體">I</button>
+    <button type="button" data-cmd="insertUnorderedList" class="rich-tool" title="項目清單">• 清單</button>
+    <button type="button" data-cmd="createLink" class="rich-tool" title="加連結">連結</button>
+    <button type="button" data-cmd="removeFormat" class="rich-tool" title="清除格式">清除格式</button>
+    <span class="mx-1 h-4 w-px bg-bench-deep"></span>
+    <button type="button" data-insert-image class="rich-tool" disabled={!articleId}
+      title={articleId ? '插入圖片' : '要先儲存一次才能插入圖片'}>插入圖片</button>
+    <span class="flex-1"></span>
+    <button type="button" data-toggle-source class="rich-tool">原始碼</button>
+  </div>
+
+  <div contenteditable="true" role="textbox" aria-multiline="true" aria-label="內文"
+       class="rich-body" set:html={value}></div>
+
+  <textarea name={name} class="rich-source hidden" aria-label="內文原始碼">{value}</textarea>
+
+  <input type="file" accept="image/*" class="hidden" data-file>
+  <p class="field-hint" data-rich-status></p>
+</div>
+
+<style>
+  .rich-tool {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    color: var(--color-ink-soft);
+  }
+  .rich-tool:hover:not(:disabled) { border-color: var(--color-bench-deep); background: var(--color-paper); }
+  .rich-tool:disabled { opacity: 0.4; cursor: not-allowed; }
+  .rich-body, .rich-source {
+    display: block;
+    width: 100%;
+    min-height: 22rem;
+    max-height: 40rem;
+    overflow-y: auto;
+    padding: 1rem;
+    background: var(--color-paper);
+    border: 1px solid var(--color-bench-deep);
+    font-family: var(--font-record);
+    line-height: 1.9;
+  }
+  .rich-source { font-family: var(--font-instrument); font-size: 0.8125rem; line-height: 1.7; }
+  .rich-body:focus, .rich-source:focus {
+    outline: none;
+    border-color: var(--color-gild);
+    box-shadow: 0 0 0 3px var(--color-gild-wash);
+  }
+  .rich-body :global(img) { max-width: 100%; height: auto; }
+  .rich-body:empty::before {
+    content: '從這裡開始寫。圖片可以直接貼上或拖進來。';
+    color: var(--color-ink-faint);
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.rich').forEach((root) => {
+    const body = root.querySelector<HTMLElement>('.rich-body')!;
+    const source = root.querySelector<HTMLTextAreaElement>('.rich-source')!;
+    const status = root.querySelector<HTMLElement>('[data-rich-status]')!;
+    const file = root.querySelector<HTMLInputElement>('[data-file]')!;
+    const articleId = root.dataset.articleId ?? '';
+    let sourceMode = false;
+
+    const sync = () => { if (!sourceMode) source.value = body.innerHTML; };
+    body.addEventListener('input', sync);
+    body.closest('form')?.addEventListener('submit', sync);
+
+    root.querySelectorAll<HTMLButtonElement>('[data-cmd]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.dataset.cmd!;
+        if (cmd === 'createLink') {
+          const url = prompt('連結網址');
+          if (!url) return;
+          document.execCommand('createLink', false, url);
+        } else {
+          document.execCommand(cmd);
+        }
+        body.focus();
+        sync();
+      });
+    });
+
+    root.querySelector<HTMLButtonElement>('[data-toggle-source]')?.addEventListener('click', () => {
+      sourceMode = !sourceMode;
+      if (sourceMode) {
+        source.value = body.innerHTML;
+      } else {
+        body.innerHTML = source.value;
+      }
+      source.classList.toggle('hidden', !sourceMode);
+      body.classList.toggle('hidden', sourceMode);
+    });
+
+    // ── 圖片：一律走 R2，永遠不內嵌 ──────────────────────
+    async function upload(f: File) {
+      if (!articleId) {
+        status.textContent = '要先儲存一次才能插入圖片 —— 圖片要存在這篇文章的資料夾底下。';
+        return;
+      }
+      status.textContent = '上傳中…';
+      const fd = new FormData();
+      fd.set('file', f);
+      fd.set('ArticleID', articleId);
+      const csrf = body.closest('form')?.querySelector<HTMLInputElement>('input[name="__csrf"]');
+      if (csrf) fd.set('__csrf', csrf.value);
+
+      const res = await fetch('/api/admin/articles/photo', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({ error: '上傳失敗。' }));
+      if (!res.ok) { status.textContent = data.error ?? '上傳失敗。'; return; }
+
+      body.focus();
+      document.execCommand('insertHTML', false, `<img src="${data.url}" alt="">`);
+      sync();
+      status.textContent = `已插入 ${data.url}`;
+    }
+
+    root.querySelector<HTMLButtonElement>('[data-insert-image]')?.addEventListener('click', () => file.click());
+    file.addEventListener('change', () => { if (file.files?.[0]) upload(file.files[0]); file.value = ''; });
+
+    // 貼上：有圖片就攔下來上傳，其餘只貼純文字（不要把 Word 的整包樣式帶進來）
+    body.addEventListener('paste', (e) => {
+      const items = [...(e.clipboardData?.items ?? [])];
+      const img = items.find((i) => i.type.startsWith('image/'));
+      if (img) {
+        e.preventDefault();
+        const f = img.getAsFile();
+        if (f) upload(f);
+        return;
+      }
+      e.preventDefault();
+      document.execCommand('insertText', false, e.clipboardData?.getData('text/plain') ?? '');
+      sync();
+    });
+
+    body.addEventListener('dragover', (e) => e.preventDefault());
+    body.addEventListener('drop', (e) => {
+      const f = e.dataTransfer?.files?.[0];
+      if (f?.type.startsWith('image/')) { e.preventDefault(); upload(f); }
+    });
+  });
+</script>

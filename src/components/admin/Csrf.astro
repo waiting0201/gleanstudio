@@ -1,0 +1,11 @@
+---
+/**
+ * 每個變更表單都要有。少一個，Hono 那條鏈就會回 403。
+ *
+ * token 是 src/middleware.ts 發的 —— **不能在這裡發**，元件渲染期間的
+ * session.set() 會被丟掉。見 src/lib/auth/csrf.ts
+ */
+import { CSRF_FIELD } from '../../lib/auth/csrf';
+const token = Astro.locals.csrf ?? '';
+---
+<input type="hidden" name={CSRF_FIELD} value={token}>

@@ -25,7 +25,8 @@
     "build": "astro build",
     "preview": "./scripts/dev-cycle.sh",
     "parity": "node scripts/parity-diff.mjs",
-    "parity:contact": "node scripts/parity-contact.mjs"
+    "parity:contact": "node scripts/parity-contact.mjs",
+    "smoke:admin": "node scripts/smoke-admin.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -38,6 +39,7 @@
   "dependencies": {
     "@astrojs/cloudflare": "^14.2.0",
     "astro": "^7.2.0",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.1"
   }
 }

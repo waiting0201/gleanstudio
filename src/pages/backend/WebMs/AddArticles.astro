@@ -1,0 +1,22 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import ArticleForm from '../../../components/admin/ArticleForm.astro';
+import { requirePermission } from '../../../lib/auth/session';
+import { getArticleTypes } from '../../../db/queries';
+
+export const prerender = false;
+
+const guard = await requirePermission(Astro, 'WebMs/AddArticles');
+if ('response' in guard) return guard.response;
+
+const articleTypes = await getArticleTypes();
+---
+<Admin title="新增文章" session={guard.session}>
+<Flash />
+<h1 class="record-title text-2xl">新增文章</h1>
+<p class="eyebrow mt-1">儲存之後會立刻出現在公開網站的 /Home/Articles。</p>
+<div class="mt-8">
+  <ArticleForm articleTypes={articleTypes} />
+</div>
+</Admin>

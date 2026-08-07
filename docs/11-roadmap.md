@@ -132,12 +132,19 @@ node scripts/verify-media.mjs [--remote]
 - [x] 403 原地渲染，`/Error/Validation` 回 403
 - [x] `weypro` 後門與 `AdminID = 888` 從未被移植進來
 
-**待辦 —— 內容維護**
+**已完成 —— 變更的基礎建設與第一個實體**
 
-- [ ] 7 個實體 CRUD + 排序
-- [ ] 上傳走 `media.ts`，magic byte 驗證
-- [ ] 所有變更操作有 CSRF token，刪除是 POST
-- [ ] 富文本編輯器擋 base64 內嵌（[06-admin-spec](06-admin-spec.md) §8 —— 最大一篇已用掉 87% 的 D1 單列額度）
+- [x] Hono 掛在 `/api/admin/*`，middleware 鏈 **session → CSRF → 權限** 定義一次
+- [x] CSRF double-submit token 綁 session，登入與換密碼表單也帶
+- [x] 刪除是 POST（舊站是 `[HttpGet]`）
+- [x] `src/lib/media.ts` —— magic bytes 驗證、10 MB 上限、檔名慣例不變、寫新的再刪舊的
+- [x] 富文本編輯器擋 base64 內嵌，圖片走 R2（`src/components/admin/RichText.astro`）
+- [x] **文章** 的列表 / 新增 / 修改 / 刪除，新文章的 `LegacyOrder` 與 `LegacyTypeOrder` 都接在最後
+- [x] `npm run smoke:admin` —— 18 項端到端，會真的建一筆再刪掉，跑完 parity 仍然全綠
+
+**待辦 —— 其餘 6 個實體**
+
+- [ ] ArticleTypes / Services / Teams / Projects / Abouts / Admins 的 CRUD + 排序
 - [ ] **部署前要先建遠端 KV namespace**：`wrangler kv namespace create SESSION`，再把 id 填進 `wrangler.jsonc`
 
 **過程中發現**

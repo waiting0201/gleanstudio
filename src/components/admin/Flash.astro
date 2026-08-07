@@ -1,0 +1,18 @@
+---
+/**
+ * 變更操作完成後帶回來的一則訊息。
+ *
+ * 讀取與清除都在 src/middleware.ts —— 在元件裡 session.set() 會被丟掉，
+ * 訊息就永遠清不掉。見 src/lib/auth/csrf.ts
+ */
+const flash = Astro.locals.flash;
+---
+{flash && (
+  <p
+    role="status"
+    class:list={[
+      'mb-6 border-l-2 px-3 py-2 text-sm',
+      flash.tone === 'stop' ? 'border-oxide bg-oxide-wash text-oxide' : 'border-brass bg-gild-wash text-ink',
+    ]}
+  >{flash.text}</p>
+)}

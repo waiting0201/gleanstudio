@@ -30,8 +30,9 @@
 **Phase 4 程式完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠。
 **卡在 key 輪替** —— `RECAPTCHA_SECRET` 沒設就是每一筆送出都被判定驗證碼錯誤。
 
-**Phase 5 進行中**（後台）。設計系統、登入、KV session、權限註冊表、403 都好了；
-**7 個實體的 CRUD 還沒做**。介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
+**Phase 5 進行中**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
+富文本（擋 base64）、以及**文章**的完整 CRUD 都好了 —— `npm run smoke:admin` 18 項全綠。
+**其餘 6 個實體的 CRUD 還沒做**。介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -74,6 +75,7 @@ npm run golden             # 從正式站擷取 golden 基準 → tests/golden/
 npm run verify:d1
 npm run verify:media
 npm run verify:permissions # 權限註冊表 ↔ Lims 資料一致（30 個路由）
+npm run smoke:admin        # 後台端到端（會真的建一筆文章再刪掉，跑完資料回原狀）
 
 # 前台（已可用）
 npm run dev                # astro dev
@@ -132,6 +134,7 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - **Razor 的 `@x` 不等於 Astro 的 `{x}`** —— 前者把 160–255 的字元編成 `&#nnn;`。要 byte parity 就用 `set:html={htmlEncode(x)}`（`src/lib/format.ts`）
 - **Tailwind 只透過 Vite plugin 掛，不要加 Astro integration** —— integration 會注入全域樣式，前台每頁多一個 `<link>`，parity 立刻掉。`src/styles/admin.css` 只能被 `src/layouts/Admin.astro` import（[docs/06](docs/06-admin-spec.md) §11）
 - **後台的等寬「儀表層」只放拉丁字母與數字** —— 中文小標籤用 `.eyebrow`
+- **`session.set()` 不能寫在元件裡** —— 回應 header 已送出，寫入會被靜默丟掉。CSRF token 與 flash 都在 `src/middleware.ts` 處理，元件只從 `Astro.locals` 讀（[docs/06](docs/06-admin-spec.md) §11）
 
 ---
 

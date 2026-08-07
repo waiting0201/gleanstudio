@@ -9,6 +9,8 @@
  *    之前就處理掉了，middleware 看不到。見 docs/09-known-issues.md
  */
 import { defineMiddleware } from 'astro:middleware';
+import { ensureCsrfToken } from './lib/auth/csrf';
+import { FLASH_KEY, type Flash } from './api/app';
 
 const CANONICAL = new Map(
   [
@@ -20,6 +22,21 @@ const CANONICAL = new Map(
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const path = ctx.url.pathname.replace(/\/+$/, '') || '/';
+
+  // ── 後台：CSRF token 與 flash 訊息 ─────────────────────
+  // ⚠️ 這兩件事**一定要在這裡做，不能在元件裡做**。元件渲染時 header 已經
+  //    送出去了，session.set() 會被 Astro 丟掉（只留一行 warning）——
+  //    token 會渲染得出來但沒存進 session，於是每一次 POST 都 403；
+  //    flash 則是永遠清不掉。兩個都不會讓頁面看起來壞掉。
+  if (path.startsWith('/backend')) {
+    ctx.locals.csrf = await ensureCsrfToken(ctx.session as never);
+    const flash = (await ctx.session?.get(FLASH_KEY)) as Flash | undefined;
+    if (flash) {
+      ctx.locals.flash = flash;
+      ctx.session?.delete(FLASH_KEY);
+    }
+  }
+
   const canonical = CANONICAL.get(path.toLowerCase());
   if (!canonical || canonical === path) return next();
 

@@ -273,6 +273,19 @@ integration 會注入一份全域樣式，**前台每一頁的 `<head>` 都會�
 
 現在的做法：`src/styles/admin.css` 只被 `src/layouts/Admin.astro` import，Astro 就只把它注進有用到的頁面。改 import 位置之前先跑 `npm run preview`。
 
+### session 寫入的坑 ⚠️ 這個會靜默壞掉
+
+**`session.set()` 只能在 middleware 或頁面 frontmatter 裡呼叫，不能在元件裡。**
+
+元件渲染時回應的 header 已經送出去了，Astro 會丟一行 warning 然後把寫入丟掉。後果：
+
+| 寫在元件裡的 | 看起來 | 實際上 |
+|---|---|---|
+| CSRF token | token 正常渲染在表單裡 | session 裡沒有 → **每一次 POST 都 403** |
+| 清除 flash | 頁面正常顯示訊息 | 沒清掉 → **訊息永遠不會消失** |
+
+兩個都不會讓頁面看起來壞掉，只有變更操作會靜默失敗。現在 `src/middleware.ts` 在 `/backend/*` 的請求上發 token、讀取並清除 flash，元件只從 `Astro.locals` 讀。
+
 ### session 設定的坑
 
 **不要自己設 `session.driver`。** `@astrojs/cloudflare` 只有在 `session.driver` **沒被設定**時才會幫你接上 KV（binding 預設叫 `SESSION`），而且是用 `sessionDrivers.cloudflareKVBinding({ binding })` 把 binding 名稱包進去的。

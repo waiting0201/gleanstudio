@@ -8,7 +8,9 @@
  */
 import { env } from 'cloudflare:workers';
 import Admin from '../../../layouts/Admin.astro';
+import Csrf from '../../../components/admin/Csrf.astro';
 import { verifyPassword } from '../../../lib/auth/password';
+import { verifyCsrf } from '../../../lib/auth/csrf';
 import { SESSION_KEY, type AdminSession } from '../../../lib/auth/session';
 
 export const prerender = false;
@@ -24,6 +26,12 @@ if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   username = String(form.get('username') ?? '').trim();
   const password = String(form.get('password') ?? '');
+
+  // 登入本身不改資料，但強迫登入（forced login）也是 CSRF 的一種。
+  // middleware 已經幫匿名 session 發了 token，加這道幾乎沒有成本。
+  if (!(await verifyCsrf(Astro.session as never, form.get('__csrf')))) {
+    return new Response('表單已過期。請重新整理頁面再登入一次。', { status: 403 });
+  }
 
   const admin = await env.DB.prepare(
     `SELECT AdminID, Name, Username, PasswordHash, IsSuperAdmin, MustChangePassword
@@ -67,6 +75,7 @@ if (Astro.request.method === 'POST') {
     </div>
 
     <form method="post" class="record p-7" novalidate>
+      <Csrf />
       {error && (
         <p role="alert" class="mb-5 border-l-2 border-oxide bg-oxide-wash px-3 py-2 text-sm text-oxide">
           {error}
