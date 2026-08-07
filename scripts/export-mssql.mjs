@@ -27,6 +27,9 @@ const TABLES = [
   { name: 'Articles',     orderBy: 'ArticleID',     guid: ['ArticleID','ArticleTypeID'], date: ['CreateDate'], content: true },
   { name: 'Services',     orderBy: 'ServiceID',     guid: ['ServiceID','ArticleTypeID'], date: [], content: true  },
   { name: 'Teams',        orderBy: 'TeamID',        guid: ['TeamID'],                    date: [], content: true  },
+  // /Home/Project 的分組順序同樣不從這裡來 —— 舊站沒有 ORDER BY，顯示順序是
+  // 實體順序，ROW_NUMBER 掃描序實測重現不了。由 capture-golden.mjs 從正式站
+  // 的 Project 頁解析後寫進 projects-order.json。見 docs/04-data-model.md §5
   { name: 'Projects',     orderBy: 'ProjectID',     guid: ['ProjectID'],                 date: [], content: true  },
   { name: 'Abouts',       orderBy: 'AboutID',       guid: [],                            date: [], content: true  },
 ];

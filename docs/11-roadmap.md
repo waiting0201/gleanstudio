@@ -66,13 +66,14 @@ node scripts/verify-media.mjs [--remote]
 
 **第一個看得見的里程碑** —— 做完就能在 `wrangler dev` 跑出完整前台。
 
-**目前 parity：Level B 6/32**（已移植的頁面全綠）。跑 `npm run preview` 會 build → 重啟 wrangler → 跑 parity。
+**目前 parity：Level B 20/32**。跑 `npm run preview` 會 build → 重啟 wrangler → 跑 parity。
 
 - [x] `src/layouts/Site.astro` + 4 個 partial 元件（Styles / Header / Footer / Scripts）
 - [x] Astro 專案骨架、Drizzle schema、D1 查詢層
 - [x] `scripts/parity-diff.mjs`（Level A/B + 資料快照綁定 + 明列豁免）
-- [x] 已移植：`/`、`/Home/Index`、`/Home/About`、`/Home/Team`、`/Home/Gallery`
-- [ ] 待移植：`/Home/Services`、`/Home/Service`、`/Home/Project`、`/Home/Contact`、`/Home/Articles`、`/Home/ArticleDetail`
+- [x] 已移植且全綠：`/`、`/Home/Index`、`About`、`Team`、`Gallery`、`Services`、`Service`（×3 分類）、`ArticleDetail`（×9 篇）
+- [ ] `/Home/Project` —— 已移植，但**分組順序尚未對齊**。Type/Place/Title 層已從正式站取得順序，`<li>`（SubTitle）層仍有差異
+- [ ] 待移植：`/Home/Contact`、`/Home/Articles`（含 Pager）
 - [ ] `src/components/Pager.astro` 逐字重現（含 bug，[03-url-contract](03-url-contract.md) §5.1）
 - [ ] `/` 與 `/Home/Index` 輸出 byte-identical
 - [ ] `src/middleware.ts` 大小寫 rewrite

@@ -1,0 +1,64 @@
+---
+// ← Views/Home/Project.cshtml
+// 舊站在 controller 建三層巢狀匿名型別，view 因為匿名型別是 internal 而用反射讀。
+// 這裡用一般的巢狀結構，輸出的 HTML 必須相同。
+// 分組順序跟著資料列的出現順序，不是字典序（EF GroupBy 的行為）。
+import Site from '../../layouts/Site.astro';
+import { getArticleTypes, getProjectGroups } from '../../db/queries';
+
+const [articleTypes, groups] = await Promise.all([getArticleTypes(), getProjectGroups()]);
+---
+<Site title="案例展示 - 禾勤藝術有限公司" articleTypes={articleTypes}>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center py-4">
+            <img src="/Content/images/logo.png">
+        </div>
+    </div>
+
+    <!--Our Project-->
+    <div class="row justify-content-center">
+        <div class="col-11">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center">
+                    <div class="news-sublist my-4">
+                        <ul class="nav justify-content-center">
+                            <li class="nav-item">
+                                <a class="nav-link disabled active" aria-current="page" href="/Home/Project">服務實績</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Home/Articles">近期專案</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-12 text-center mb-4">
+                    <div class="text-title mt-4">Our Project</div>
+                </div>
+                <div class="col-12">
+{groups.map((g) => (<Fragment>                        <div class="py-3">
+                            <h2 class="text-center mb-4">【{g.type}】</h2>
+
+                            <div class="row">
+{g.places.map((pl) => (<Fragment>                                    <div class="col-md-6 col-12 pb-2">
+                                        <div class="list-group">
+                                            <div class="list-group-item">
+                                                <h5 class="mb-1">{pl.place}</h5>
+{pl.titles.map((ti) => (<Fragment>                                                    <p class="mb-1 fw-bold">{ti.title}</p>
+                                                            <ul>
+{ti.projects.map((pr) => (<Fragment>                                                                    <li>{pr.subTitle}</li>
+</Fragment>))}                                                            </ul>
+</Fragment>))}                                            </div>
+                                        </div>
+                                    </div>
+</Fragment>))}                            </div>
+                        </div>
+
+                    
+</Fragment>))}                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</Site>

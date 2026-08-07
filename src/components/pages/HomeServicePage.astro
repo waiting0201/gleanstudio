@@ -1,0 +1,67 @@
+---
+// ← Views/Home/Service.cshtml
+// ArticleTypeID 為 null 時取 Sort 最小的那筆（舊站 FirstOrDefault）。
+// ⚠️ 每 3 個 Services 項目要硬切一列 —— 舊站用 @Html.Raw 輸出不成對的
+//   </div><div …>，這裡也必須產生同樣的結構。見 docs/03-url-contract.md §5.2
+import Site from '../../layouts/Site.astro';
+import { getArticleTypes, getServicesByType } from '../../db/queries';
+import { getGuid } from '../../lib/query';
+
+const articleTypes = await getArticleTypes();
+const requested = getGuid(Astro.url, 'ArticleTypeID');
+const type = requested
+  ? articleTypes.find((t) => t.articleTypeId === requested)
+  : articleTypes[0];
+
+// 舊站對不存在的分類會 NRE → 500 黃頁。刻意分歧，回 404。
+// 見 docs/09-known-issues.md 4.1b
+if (!type) return new Response(null, { status: 404 });
+
+const services = await getServicesByType(type.articleTypeId);
+
+// 每 3 個一列
+const rows: typeof services[] = [];
+for (let i = 0; i < services.length; i += 3) rows.push(services.slice(i, i + 3));
+---
+<Site title={`${type.title} - 禾勤藝術有限公司`} articleTypes={articleTypes}>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center py-4">
+            <img src="/Content/images/logo.png">
+        </div>
+    </div>
+
+    <!--OUR SERVICE-->
+    <div class="row justify-content-center">
+        <div class="col-10">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center mb-5">
+                    <div class="text-title mt-5">Our Service</div>
+                </div>
+                <div class={`${type.bgClass} text-white service-title p-5`}>
+                    <div class="justify-content-center d-lg-flex">
+                        <div class="col-auto">
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="font-32">{type.title}</div>
+                            <div class="font-20 text-uppercase">
+                                <Fragment set:html={type.subTitle} />
+                            </div>
+                        </div>
+                        <div class="col-lg-8 ps-lg-5">
+                            <Fragment set:html={type.description} />
+                        </div>
+                    </div>
+                </div>
+                <div class="d-lg-flex row justify-content-between g-0 mt-4">
+{(rows.length ? rows : [[]]).map((row, ri) => (<Fragment>{ri > 0 && (<Fragment set:html={'</div><div class="d-lg-flex row justify-content-between g-0 mt-4">'} />)}{row.map((s) => (<Fragment>                    <div class="service-pic">
+                        <img src={`/Upload/Services/${s.serviceId}/${s.photo}`} class="img-fluid">
+                        <div class="info">維護客戶隱私文物狀況<br>馬賽克處理</div>
+                    </div>
+                    <div class="text-center font-14">{s.title}</div>
+</Fragment>))}</Fragment>))}                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</Site>

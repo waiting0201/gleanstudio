@@ -120,7 +120,7 @@ export interface ProjectGroup {
 }
 
 export async function getProjectGroups(): Promise<ProjectGroup[]> {
-  const rows = await db().select().from(s.projects);
+  const rows = await db().select().from(s.projects).orderBy(asc(s.projects.legacyOrder));
 
   // 分組順序必須跟著 EF 的 GroupBy 走 —— 也就是資料列本身的出現順序，
   // 不是字典序。所以用 Map 保留插入順序，不要排序。
@@ -140,7 +140,8 @@ export async function getProjectGroups(): Promise<ProjectGroup[]> {
       place,
       titles: [...titles].map(([title, projects]) => ({
         title,
-        projects: projects.sort((a, b) => a.sort - b.sort),
+        // LegacyOrder 已編碼正式站的實際 <li> 順序，見 docs/04-data-model.md §5
+        projects: projects.sort((a, b) => a.legacyOrder - b.legacyOrder),
       })),
     })),
   }));

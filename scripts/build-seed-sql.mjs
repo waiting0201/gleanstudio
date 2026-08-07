@@ -99,6 +99,7 @@ const [lims, admins, adminLims, articleTypes, articles, services, teams, project
 
 const hashes = JSON.parse(await readFile(`${IN}/admin-hashes.json`, 'utf8'));
 const legacyOrder = JSON.parse(await readFile(`${IN}/legacy-order.json`, 'utf8')).order;
+const projectOrder = JSON.parse(await readFile(`${IN}/projects-order.json`, 'utf8')).order;
 
 const adminRows = admins.map((a) => {
   const h = hashes[a.AdminID];
@@ -128,7 +129,9 @@ add(`Articles（${articles.length} 列，Description 分段 append）`, art.stat
 
 add('Services', insertRows('Services', ['ServiceID', 'ArticleTypeID', 'Title', 'Photo', 'Sort'], services));
 add('Teams', insertRows('Teams', ['TeamID', 'Title', 'Summary', 'Name', 'EnName', 'Photo', 'Sort'], teams));
-add('Projects', insertRows('Projects', ['ProjectID', 'Type', 'Place', 'Title', 'SubTitle', 'Sort'], projects));
+add('Projects', insertRows('Projects',
+  ['ProjectID', 'Type', 'Place', 'Title', 'SubTitle', 'Sort', 'LegacyOrder'],
+  projects.map((r) => ({ ...r, LegacyOrder: projectOrder[`${r.Type}|${r.Place}|${r.Title}|${r.SubTitle ?? ''}`] ?? 0 }))));
 add('Abouts', insertRows('Abouts', ['AboutID', 'Description', 'Photo'], abouts));
 
 const sql = parts.join('\n');

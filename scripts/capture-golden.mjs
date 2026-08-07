@@ -114,7 +114,32 @@ console.log('\n── 文章列表（同時取得顯示順序）──');
 const articleOrder = await crawlArticleOrder();
 console.log(`  → 共 ${articleOrder.length} 篇，順序已記錄`);
 
-// 3. 分類：從首頁的 Service 連結取得
+// 3. Project 的分組順序 —— 同樣只能從 oracle 取
+// 舊站 /Home/Project 沒有 ORDER BY，顯示順序是 SQL Server 的實體順序，
+// 而 ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) 實測重現不了它。
+// 見 docs/04-data-model.md §5
+console.log('\n── Project 分組順序 ──');
+const projectHtml = (await readFile(`${OUT}/${slugFor('/Home/Project')}`)).toString('utf8');
+const projectOrder = {};
+{
+  // 粒度必須到 SubTitle（<li>）。Title 之內的 <li> 順序在舊站是
+  // OrderBy(Sort)，但 Sort 並列時又落回實體順序 —— 一樣只能從 oracle 取。
+  let rank = 0;
+  let type = null, place = null, title = null;
+  const re = /<h2 class="text-center mb-4">【([^<]*)】<\/h2>|<h5 class="mb-1">([^<]*)<\/h5>|<p class="mb-1 fw-bold">([^<]*)<\/p>|<li>([^<]*)<\/li>/g;
+  let m;
+  while ((m = re.exec(projectHtml))) {
+    if (m[1] !== undefined) { type = m[1]; place = null; title = null; }
+    else if (m[2] !== undefined) { place = m[2]; title = null; }
+    else if (m[3] !== undefined) { title = m[3]; }
+    else if (m[4] !== undefined && type && place && title) {
+      projectOrder[`${type}|${place}|${title}|${m[4]}`] = ++rank;
+    }
+  }
+  console.log(`  → ${rank} 筆 (Type|Place|Title|SubTitle)`);
+}
+
+// 4. 分類：從首頁的 Service 連結取得
 console.log('\n── 分類頁 ──');
 const homeHtml = (await readFile(`${OUT}/root.html`)).toString('utf8');
 const typeIds = [...new Set(
@@ -125,11 +150,11 @@ for (const id of typeIds) {
   await capture(`/Home/Articles?ArticleTypeID=${id}`);
 }
 
-// 4. 每篇文章的詳細頁
+// 5. 每篇文章的詳細頁
 console.log('\n── 文章詳細頁 ──');
 for (const id of articleOrder) await capture(`/Home/ArticleDetail?ArticleID=${id}`);
 
-// 5. 邊界情境 —— 這些是刻意探測舊站在異常輸入下的行為
+// 6. 邊界情境 —— 這些是刻意探測舊站在異常輸入下的行為
 console.log('\n── 邊界情境 ──');
 const NONEXISTENT = '00000000-0000-0000-0000-000000000000';
 await capture(`/Home/Articles?p=999`,                      { note: '超出範圍的頁碼' });
@@ -152,6 +177,14 @@ await writeFile(`${EXPORT_DIR}/legacy-order.json`,
     note: '從正式站 /Home/Articles 的實際顯示順序取得。CreateDate 並列時的順序' +
           '無法從資料庫推導，見 docs/04-data-model.md §5',
     order: legacyOrder,
+  }, null, 2) + '\n', 'utf8');
+
+await writeFile(`${EXPORT_DIR}/projects-order.json`,
+  JSON.stringify({
+    capturedAt: new Date().toISOString(),
+    note: '/Home/Project 的分組順序，key 是 Type|Place|Title|SubTitle。舊站沒有 ORDER BY，' +
+          '顯示順序無法從資料庫推導，見 docs/04-data-model.md §5',
+    order: projectOrder,
   }, null, 2) + '\n', 'utf8');
 
 // ── manifest ─────────────────────────────────────────────

@@ -24,7 +24,7 @@
 ## 現在做到哪
 
 **Phase 3 進行中**（前台移植）。Astro 專案骨架、版型、資料層、parity 工具都好了；
-11 個頁面移植了 5 個，**Level B parity 6/32**。待移植：Services、Service、Project、Contact、Articles、ArticleDetail、Pager。
+**Level B parity 20/32**。Project 的分組順序尚未對齊；Contact 與 Articles（含 Pager）尚未移植。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---

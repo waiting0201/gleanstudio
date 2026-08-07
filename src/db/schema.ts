@@ -89,7 +89,12 @@ export const projects = sqliteTable('Projects', {
   title: text('Title').notNull(),
   subTitle: text('SubTitle'),
   sort: integer('Sort').notNull().default(0),
-}, (t) => [index('idx_projects_group').on(t.type, t.place, t.title, t.sort)]);
+  // 相容性欄位：舊站分組順序 = SQL Server 掃描順序，見 docs/04-data-model.md §5
+  legacyOrder: integer('LegacyOrder').notNull().default(0),
+}, (t) => [
+  index('idx_projects_group').on(t.type, t.place, t.title, t.sort),
+  index('idx_projects_legacyorder').on(t.legacyOrder),
+]);
 
 export const abouts = sqliteTable('Abouts', {
   aboutId: integer('AboutID').primaryKey(),   // 非 autoincrement，程式一律用 1
