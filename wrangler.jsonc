@@ -4,8 +4,20 @@
   "compatibility_date": "2026-08-01",
   "observability": { "enabled": true },
 
-  // main / assets 由 @astrojs/cloudflare 在 build 時寫進 dist/，這裡不重複宣告。
-  // 完整設定見 docs/07-deployment.md §1
+  // adapter v14 走 @cloudflare/vite-plugin，會在建置「之前」解析 main，
+  // 所以不能指向還沒產生的 dist/_worker.js（會出現 "main field doesn't point
+  // to an existing file"）。指向 adapter 的 entrypoint，由它在建置時接上實際產物。
+  "main": "@astrojs/cloudflare/entrypoints/server",
+
+  // ⚠️ directory 必須是 dist/client，**指向 dist 會把 dist/server/ 的伺服器
+  //    程式碼當成靜態檔案公開送出**。
+  // 這裡不設 html_handling —— 前台契約要求 /Home/About/ 回 200 且不轉址
+  //（docs/03-url-contract.md §3.3），而我們的靜態資產只有 /Content 與 /Scripts，
+  // 沒有 HTML，動它只會多出風險。
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist/client"
+  },
 
   "vars": {
     // 這兩個本來就印在網頁原始碼裡，是公開值，不是密鑰

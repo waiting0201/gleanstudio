@@ -153,6 +153,18 @@ environment: production（需要人工核准）
 
 ---
 
+### 機密防護關卡
+
+`ci.yml` 的第一個 job 是 `guard`，`verify` 依賴它。**這個 repo 是 public**，任何 commit 都對全世界公開。舊系統的明碼憑證躺在 `reference/`（gitignored），這一關確保它們不會因為某次 `git add -f`、`.gitignore` 被改、或有人把值抄進文件而外洩。
+
+檢查項目：`reference/` 沒有檔案進版控、`.dev.vars` / `.env` / `Admins.json` / `admin-hashes.json` 不在版控裡、以及帶值的密碼指派、連線字串、SendGrid key 格式。
+
+⚠️ **檢查規則刻意不寫死任何實際憑證字串** —— 檢查指令本身若含祕密，就是另一次外洩。用形狀比對，不用值比對。（`tsurumaru` 專案實際犯過這個錯，見它的 `docs/06-verification.md`。）
+
+2026-08-07 手動掃描時，發現三份文件轉錄了舊系統的後門密碼、四處轉錄了正式站 Azure SQL 的主機與帳號 —— 這一關就是為了不要再靠人記得掃。
+
+---
+
 ## 3. Secrets 與變數
 
 ### GitHub repository secrets
@@ -162,13 +174,32 @@ environment: production（需要人工核准）
 | `CLOUDFLARE_API_TOKEN` | 見下方權限說明 |
 | `CLOUDFLARE_ACCOUNT_ID` | |
 
-⚠️ **API token 要自訂，不能用內建範本。** Cloudflare 文件裡那個「Edit Cloudflare Workers」範本**不包含 D1 與 R2**，這是第一次部署最常見的失敗原因。需要的權限：
+⚠️ **API token 要自訂，不能直接用內建範本。** 「Edit Cloudflare Workers」範本**不包含 D1**，這是第一次部署最常見的失敗原因。
 
-- Workers Scripts: Edit
-- D1: Edit
-- Workers R2 Storage: Edit
-- Workers KV Storage: Edit
-- Account Settings: Read
+以那個範本為基礎，加上 D1：
+
+| 權限 | 用途 |
+|---|---|
+| Account → Workers Scripts → Edit | 部署 Worker |
+| Account → D1 → Edit | 套用 migration |
+| Account → Account Settings → Read | wrangler 解析帳號 |
+
+範圍限縮到**這一個帳號**。
+
+**不需要** R2 與 KV 的權限 —— CI 不碰它們：圖片由 `scripts/upload-r2.mjs` 手動上傳，KV namespace 由人手動建立一次。綁定是靠 id，部署時不需要對應的權限。
+
+### token 錯誤難以分辨 —— CI 先預檢
+
+wrangler 對「token 字串無效」與「token 有效但權限不足」**都回 `Invalid access token [code: 9109]`**，光看日誌分不出是哪一種。
+
+兩支 deploy workflow 在動用 wrangler 之前先做三件事：
+
+1. 長度與空白檢查 —— 貼上時被截斷或夾帶換行是最常見的原因
+   （重設用 `printf '%s' '<token>' | gh secret set CLOUDFLARE_API_TOKEN`，避免尾端換行）
+2. 打 `/user/tokens/verify` 判斷 token 字串本身有沒有效
+3. 打 `/accounts/{id}/d1/database` 判斷這個 token 讀不讀得到這個帳號的 D1
+
+這樣錯誤訊息會直接說是哪一關，不用猜。作法取自 `tsurumaru` 專案 —— 那邊已經部署成功並踩過這個坑。
 
 ### Worker secrets
 

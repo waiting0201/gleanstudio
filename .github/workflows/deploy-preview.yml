@@ -31,12 +31,57 @@ jobs:
 
       - run: npm ci
 
+      # wrangler 對「token 字串無效」與「token 有效但權限不足」都回
+      # Invalid access token [code: 9109]，光看日誌分不出來。先用 Cloudflare 的
+      # 驗證端點把兩者分開，省去猜測。
+      - name: 檢查 API token
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -uo pipefail
+          if [ -z "${TOKEN:-}" ]; then echo "::error::CLOUDFLARE_API_TOKEN 未設定"; exit 1; fi
+
+          # 貼上時被截斷或夾帶換行是最常見的原因
+          len=${#TOKEN}
+          stripped=$(printf '%s' "$TOKEN" | tr -d '[:space:]')
+          if [ "$len" -ne "${#stripped}" ]; then
+            echo "::error::token 含空白或換行 —— 重設時用 printf '%s' '<token>' | gh secret set CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+          if [ "$len" -lt 30 ]; then
+            echo "::error::token 只有 ${len} 個字元，看起來被截斷了"
+            exit 1
+          fi
+
+          status=$(curl -s -o /tmp/verify.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${TOKEN}" \
+            https://api.cloudflare.com/client/v4/user/tokens/verify)
+          if [ "$status" != "200" ]; then
+            echo "::error::token 本身無效（驗證端點回 HTTP ${status}）。請重新產生並更新 secret。"
+            sed 's/"[a-zA-Z0-9_-]\{20,\}"/"***"/g' /tmp/verify.json
+            exit 1
+          fi
+
+          # token 字串沒問題，再確認它讀得到這個帳號的 D1
+          status=$(curl -s -o /tmp/acct.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database")
+          if [ "$status" != "200" ]; then
+            echo "::error::token 有效，但存取帳號 ${ACCOUNT} 的 D1 失敗（HTTP ${status}）。"
+            echo "::error::權限要含 Workers Scripts→Edit、D1→Edit、Account Settings→Read，且 Account Resources 要包含這個帳號。"
+            sed 's/"[a-zA-Z0-9_-]\{20,\}"/"***"/g' /tmp/acct.json
+            exit 1
+          fi
+          echo "✅ token 有效且讀得到帳號的 D1"
+
+
       # migration 在 build 與部署之前 —— 新程式碼永遠不會遇到舊 schema。
       # 推論：每個 migration 都必須與**當下已部署的** Worker 向後相容。
       #
       # 這裡讀的是根 wrangler.jsonc（明確指定），所以 --env preview 是對的。
       - name: 套用 preview 的 migration
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -57,7 +102,7 @@ jobs:
 
       - name: 上傳版本
         id: upload
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

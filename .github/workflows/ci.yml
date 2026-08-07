@@ -15,7 +15,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # 這個 repo 是 public，任何 commit 都對全世界公開。
+  # 舊系統的明碼憑證躺在 reference/（已被 .gitignore 排除），這一關確保它們
+  # 不會因為某次 git add -f、.gitignore 被改、或有人把值抄進文件而外洩。
+  #
+  # ⚠️ 檢查規則**刻意不寫死任何實際憑證字串** —— 檢查指令本身若含祕密，
+  #    就是另一次外洩。用形狀比對，不用值比對。
+  guard:
+    name: 機密防護
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 確認機密未進版控
+        run: |
+          set -uo pipefail
+          fail=0
+
+          if [ -n "$(git ls-files reference)" ]; then
+            echo "::error::reference/ 下有檔案進入版控 —— 該目錄含舊系統明碼憑證，必須保持排除"
+            git ls-files reference | head -20
+            fail=1
+          fi
+
+          for f in .dev.vars .env data/export/Admins.json data/export/admin-hashes.json; do
+            if [ -n "$(git ls-files "$f")" ]; then
+              echo "::error::$f 不應進入版控"
+              fail=1
+            fi
+          done
+
+          # 帶值的密碼指派與連線字串。
+          # ⚠️ 要 -i —— .NET 的設定檔寫的是 `Password=` / `Server=tcp:`，
+          #    少了它這兩條規則等於不存在（實測驗證過）。
+          if git grep -nIEi "(password|pwd)=[^ ;\"'|)]{4,}" -- . ':!*.md'; then
+            echo "::error::偵測到疑似密碼指派"
+            fail=1
+          fi
+          if git grep -nIEi "(data source|server)=tcp:" -- . ; then
+            echo "::error::偵測到疑似資料庫連線字串"
+            fail=1
+          fi
+          # 服務供應商的 key 格式
+          if git grep -nIE "SG\.[A-Za-z0-9_-]{16,}" -- . ; then
+            echo "::error::偵測到疑似 SendGrid API key"
+            fail=1
+          fi
+
+          [ $fail -eq 0 ] && echo "✅ 未發現機密外洩" || exit 1
+
   verify:
+    needs: guard
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
