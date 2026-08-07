@@ -124,7 +124,9 @@
 
 步驟見 [07-deployment](07-deployment.md) §4。
 
-**前置：DNS 換手**（[12-dns-cutover](12-dns-cutover.md)）—— 獨立於開發，**可以現在就做**，不必等前面階段完成。做完時網站還在 Azure，訪客無感。
+**前置：DNS 換手**（[12-dns-cutover](12-dns-cutover.md)）—— **等 Phase 7 soak 通過之後才做**。開發期間新站跑在 `workers.dev`，不動正式網域。做完時網站還在 Azure，訪客無感。
+
+⚠️ 有 ≥24 小時的 TTL 前置期，**至少留 3 個工作天**，不要排在切換當天。
 
 - [ ] Cloudflare zone 已建立（**Add a site**，不是 Transfer domain —— [Cloudflare Registrar 不支援 .tw](https://developers.cloudflare.com/registrar/top-level-domains/)）
 - [ ] HiNet 完整 DNS 記錄已匯出並與盤點結果對照

@@ -155,7 +155,9 @@ environment: production（需要人工核准）
 
 ## 4. 切換（Phase 8）
 
-**前置條件：DNS 已經在 Cloudflare 手上。** 這是獨立的一件事，走 [12-dns-cutover](12-dns-cutover.md)，而且應該**提早很久**完成 —— 它有 24 小時的 TTL 前置期，也可能卡在 HiNet 的介面。DNS 換手做完時網站還在 Azure，訪客無感。
+**前置條件：DNS 已經在 Cloudflare 手上。** 這是獨立的一件事，走 [12-dns-cutover](12-dns-cutover.md)，**排在 Phase 7 soak 通過之後**。開發期間新站跑在 `workers.dev`，不必動到正式網域。
+
+DNS 換手做完時網站還在 Azure，訪客無感 —— 但它有 ≥24 小時的 TTL 前置期，**至少留 3 個工作天**，不要排在切換當天。
 
 1. 確認 [12-dns-cutover](12-dns-cutover.md) 的檢查清單全綠，且 TTL 已降到 60 秒
 2. 對編輯者宣告內容凍結，停用舊後台（Azure App Service 停機或 IP 限制 `/backend`）
