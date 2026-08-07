@@ -1,0 +1,113 @@
+---
+// ← Views/Home/Index.cshtml
+import Site from '../../layouts/Site.astro';
+import { getArticleTypes, getAbout, getLatestArticlePerType } from '../../db/queries';
+import { formatDate } from '../../lib/format';
+
+const [articleTypes, about, latest] = await Promise.all([
+  getArticleTypes(),
+  getAbout(),
+  getLatestArticlePerType(),
+]);
+---
+<Site title="禾勤藝術有限公司" articleTypes={articleTypes}>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center py-4">
+            <img src="/Content/images/logo.png">
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="card-group">
+{articleTypes.map((t) => (<Fragment>            <div class="card">
+                <div class={`card-body ${t.bgClass} text-white`}>
+                    <h5 class="card-title">{t.title}</h5>
+                    <h6 class="card-text text-uppercase">
+                        <Fragment set:html={t.subTitle} />
+                    </h6>
+                    <p class="card-text pt-4">{t.summary}</p>
+                </div>
+                <img src={`/Upload/ArticleTypes/${t.articleTypeId}/${t.photo}`} class="img-fluid">
+            </div>
+</Fragment>))}        </div>
+    </div>
+    <!--News-->
+    <div class="row justify-content-center">
+        <div class="col-12 text-center mb-4">
+            <div class="text-title-index mt-5">Recent art News</div>
+            <small class="text-uppercase">Get Latest Updates and News</small>
+        </div>
+        <div class="row">
+{latest.map((a) => (<Fragment>            <div class="col-md-4 news-list">
+                <div class="text-center cursor" onclick={`location.href='/Home/ArticleDetail?ArticleID=${a.articleId}';`}>
+                    <img src={`/Upload/Articles/${a.articleId}/${a.photo}`} class="img-fluid">
+                    <div class="news-text">
+                        <div class="news-text-label">{a.typeTitle}</div>
+                        <div class="font-20 text-black">{a.title}</div>
+                        <small><i>{formatDate(a.createDate)}</i></small>
+                        <div class="font-17 text-decoration-underline cursor mt-3 more-btn">
+                            <a href={`/Home/ArticleDetail?ArticleID=${a.articleId}`}>More</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+</Fragment>))}        </div>
+        <div class="col-12">
+            <div class="bg-btn mx-auto more-btn"><a href="/Home/Articles">View all art news</a></div>
+        </div>
+    </div>
+
+    <!--discover GLEAN STIDIO-->
+    <div class="row art justify-content-center">
+        <div class="col-lg-6 col-md-10">
+            <small class="text-uppercase">Who we are</small>
+            <div class="text-title-index-2 mb-3">
+                Discover<span class="font-21 gray-700 ps-100 font-type-body">禾勤藝術<br></span>
+                Glean Studio
+            </div>
+            <div class="link cursor" onclick="location.href='/Home/About';">
+                <div class="link-title">關於禾勤</div>
+                <div class="fong-18 gray-small">About us<img src="/Content/images/svg/arrow.svg" class="img-fluid ps-sm-2 ps-lg-5">
+                </div>
+            </div>
+            <div class="link cursor" onclick="location.href='/Home/Services';">
+                <div class="link-title">專業服務項目</div>
+                <div class="fong-18 gray-small">Services<img src="/Content/images/svg/arrow.svg" class="img-fluid ps-sm-2 ps-lg-5">
+                </div>
+            </div>
+            <div class="link cursor" onclick="location.href='/Home/Project';">
+                <div class="link-title">案例展示</div>
+                <div class="fong-18 gray-small">Projects<img src="/Content/images/svg/arrow.svg" class="img-fluid ps-sm-2 ps-lg-5">
+                </div>
+            </div>
+            <div class="link cursor" onclick="location.href='/Home/Contact';">
+                <div class="link-title">聯絡我們</div>
+                <div class="fong-18 gray-small">Contact<img src="/Content/images/svg/arrow.svg" class="img-fluid ps-sm-2 ps-lg-5">
+                </div>
+            </div>
+            <div class="d-flex mt-5 more-btn">
+                <div class="flex-column">
+                    <div><a href="https://www.facebook.com/share/18XchFAZvj/?mibextid=wwXIfr" target="_blank"><img src="/Content/images/svg/ic-r-fb.svg"></a></div>
+                    <div class="my-3">
+                        <spna class="font-12 text-g">Facebook</spna>
+                    </div>
+                </div>
+                <div class="flex-column mx-sm-3 mx-md-3 mx-lg-4">
+                    <div><a href="https://www.instagram.com/glean.art.1218?igsh=cTBrdzRia202dGNh" target="_blank"><img src="/Content/images/svg/ic-r-ig.svg"></a></div>
+                    <div class="my-3">
+                        <spna class="font-12 text-p">Instagram</spna>
+                    </div>
+                </div>
+                <div class="flex-column">
+                    <div><a href="javascript:;"><img src="/Content/images/svg/ic-r-yt.svg"></a></div>
+                    <div class="my-3">
+                        <spna class="font-12 text-r-primary">Youtube</spna>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 col-md-10 text-lg-end px-0"><img src={`/Upload/Abouts/${about!.aboutId}/${about!.photo}`} class="img-fluid"></div>
+    </div>
+</div>
+</Site>

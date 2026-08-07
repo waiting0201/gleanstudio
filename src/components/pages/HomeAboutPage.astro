@@ -1,0 +1,33 @@
+---
+// ← Views/Home/About.cshtml —— 整頁內容就是 Abouts.Description 一個富文本欄位
+import Site from '../../layouts/Site.astro';
+import { getArticleTypes, getAbout } from '../../db/queries';
+
+const [articleTypes, about] = await Promise.all([getArticleTypes(), getAbout()]);
+---
+<Site title="關於禾勤 - 禾勤藝術有限公司" articleTypes={articleTypes}>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center py-4">
+            <img src="/Content/images/logo.png">
+        </div>
+    </div>
+
+    <!--News content-->
+    <div class="row justify-content-center">
+        <div class="col-11">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center mb-4">
+                    <div class="text-title mt-5">About Us</div>
+                </div>
+                <div class="col-12 text-center">
+                    <div class="about">
+                        
+                        <span><Fragment set:html={about!.description} /></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</Site>

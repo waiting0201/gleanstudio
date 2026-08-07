@@ -1,0 +1,7 @@
+---
+// /Home/Index —— 與 / 輸出必須 byte-identical（實測正式站兩者相同）。
+// 兩個 route 檔共用同一個整頁元件，見 docs/10-decisions.md ADR-004
+import HomeIndexPage from '../../components/pages/HomeIndexPage.astro';
+export const prerender = false;
+---
+<HomeIndexPage />

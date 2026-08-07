@@ -1,0 +1,60 @@
+---
+// ← Views/Home/Gallery.cshtml
+// ⚠️ 整頁是寫死的 placeholder（三張圖 + 假標題），舊站就是這樣。
+// 也沒有任何導覽連結。見 docs/09-known-issues.md 1.5 / 1.6
+import Site from '../../layouts/Site.astro';
+import { getArticleTypes } from '../../db/queries';
+
+const articleTypes = await getArticleTypes();
+---
+<Site title="文物修復放大鏡 - 禾勤藝術有限公司" articleTypes={articleTypes}>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center py-4">
+            <img src="/Content/images/logo.png">
+        </div>
+    </div>
+
+    <!--content-->
+    <div class="row justify-content-center">
+        <div class="col-11">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center mb-4">
+                    <div class="text-title mt-5">Online Gallery</div>
+                </div>
+                <div class="col-12 text-center">
+                    <div class="my-5">
+                        <div class="font-34 text-black mb-3">遊走千年史古模樣文物-文物名稱</div>
+                        <span class='zoom cursor' id='ex1'>
+                            <img src="/Content/images/gallery-pic-1.jpg" class="img-fluid w-100" alt="...">
+                        </span>
+                    </div>
+                    <div class="my-5">
+                        <div class="font-34 text-black mb-3">遊走千年史古模樣文物-文物名稱</div>
+                        <span class='zoom cursor' id='ex2'>
+                            <img src="/Content/images/gallery-pic-2.jpg" class="img-fluid w-100" alt="...">
+                        </span>
+                    </div>
+                    <div class="my-5">
+                        <div class="font-34 text-black mb-3">遊走千年史古模樣文物-文物名稱</div>
+                        <span class='zoom cursor' id='ex3'>
+                            <img src="/Content/images/gallery-pic-3.jpg" class="img-fluid w-100" alt="...">
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<Fragment slot="scripts">
+    <script is:inline src="/Scripts/jquery.zoom.js"></script>
+    <script is:inline>
+        $(function () {
+            $('#ex1').zoom();
+            $('#ex2').zoom();
+            $('#ex3').zoom();
+        });
+    </script>
+</Fragment>
+</Site>

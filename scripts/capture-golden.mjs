@@ -28,7 +28,16 @@ const DELAY_MS = Number(arg('--delay', '250'));
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** URL → 檔名。查詢字串裡的 GUID 只留前 8 碼，檔名才讀得懂。 */
+/**
+ * URL → 檔名。查詢字串裡的 GUID 只留前 8 碼，檔名才讀得懂。
+ *
+ * ⚠️ 大小寫不足以區分檔名。macOS 的 APFS 預設不分大小寫，所以
+ * `Home-About.html` 與 `home-about.html` 仍然是同一個檔 —— /Home/About 與
+ * /home/about 的擷取結果會互相覆蓋，而這兩條正是用來驗證大小寫行為的。
+ * 因此在「忽略大小寫後會撞名」時，補上路徑雜湊後綴。
+ */
+const usedSlugs = new Map();   // lowercase slug → 原始 path
+
 function slugFor(path) {
   const [p, q] = path.split('?');
   let s = p.replace(/^\//, '').replace(/\//g, '-') || 'root';
@@ -40,7 +49,14 @@ function slugFor(path) {
     }
     s += '__' + parts.join('_');
   }
-  return s.toLowerCase() + '.html';
+  const key = s.toLowerCase();
+  const owner = usedSlugs.get(key);
+  if (owner !== undefined && owner !== path) {
+    s += '~' + sha256(path).slice(0, 6);
+  } else {
+    usedSlugs.set(key, path);
+  }
+  return s + '.html';
 }
 
 const fetched = [];

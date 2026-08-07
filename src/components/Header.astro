@@ -1,0 +1,71 @@
+---
+// ← Views/Shared/_Header.cshtml
+// 「專業服務項目」下拉選單由 ArticleTypes 驅動（舊站是 BaseController 全域注入）。
+// YouTube 連結是 javascript:; —— 舊站就沒有，照抄。
+// Gallery 與 Team 的連結在舊站被註解掉，所以這裡也沒有，見 docs/09-known-issues.md 1.6
+// ⚠️「首頁」的 active 是寫死的 —— 每一頁都亮著，不是依當前頁面判斷。
+//   golden 各頁都驗證過，照抄。
+import type { ArticleType } from '../db/queries';
+
+interface Props {
+  articleTypes: ArticleType[];
+}
+const { articleTypes } = Astro.props;
+---
+<!--nav-->
+<div class="container-fluid">
+    <div class="row justify-content-center border-bottom">
+        <div class="col-lg-10 col-md-12">
+            <nav class="navbar navbar-expand-lg navbar-light">
+                <div class="container-fluid">
+                    <div class="nav-icon">
+                        <a href="https://www.facebook.com/share/18XchFAZvj/?mibextid=wwXIfr" target="_blank"><img src="/Content/images/svg/ic-fb.svg" class="cursor"></a>
+                        <a href="https://www.instagram.com/glean.art.1218?igsh=cTBrdzRia202dGNh" target="_blank"><img src="/Content/images/svg/ic-ig.svg" class="px-3 cursor"></a>
+                        <a href="javascript:;"><img src="/Content/images/svg/ic-yt.svg" class="cursor"></a>
+                    </div>
+
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                        <div class="box">
+                            <div id="hamburger-1" class="hamburger">
+                                <span class="line"></span>
+                                <span class="line"></span>
+                                <span class="line"></span>
+                            </div>
+                        </div>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                <a class="nav-link active" aria-current="page" href="/">首頁</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Home/About">關於禾勤</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="javascript:;" id="navbarAboutDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">專業服務項目</a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarAboutDropdownMenuLink">
+{articleTypes.map((t) => (<Fragment>                                        <li><a class="dropdown-item" href={`/Home/Service?ArticleTypeID=${t.articleTypeId}`}>{t.title}</a></li>
+</Fragment>))}                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="javascript:;" id="navbarAboutDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">案例展示</a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarAboutDropdownMenuLink">
+                                    <li><a class="dropdown-item" href="/Home/Project">服務實績</a></li>
+                                    <li><a class="dropdown-item" href="/Home/Articles">近期專案</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Home/Contact">聯絡我們</a>
+                            </li>
+                            
+                        </ul>
+                    </div>
+                    <div class="mobile-display">
+                        <a href="/Home/Contact"><img src="/Content/images/svg/ic-mail.svg" class="px-1 cursor"></a>
+                    </div>
+                </div>
+
+            </nav>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,52 @@
+---
+// ← Views/Shared/_Layout.cshtml
+//
+// 逐字保留兩個舊站怪癖（markup 已凍結，見 docs/09-known-issues.md）：
+//   1.3  <html lang="en"> 但內容是繁體中文
+//   1.9  keywords / description 全站固定，只有 <title> 逐頁變化
+import Styles from '../components/Styles.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Scripts from '../components/Scripts.astro';
+import type { ArticleType } from '../db/queries';
+
+interface Props {
+  title: string;
+  articleTypes: ArticleType[];
+}
+const { title, articleTypes } = Astro.props;
+
+// ⚠️ 舊站每頁 body 都以 <!--main--> 開頭，但 Astro 的編譯器會丟掉版型層的
+// HTML 註解。已試過四種寫法（直接寫、獨立元件、set:html、Astro.slots.render
+// 後前綴）全部無效 —— 元件模板「開頭且後面接元素」的註解才會保留，這也是
+// Header/Footer/Scripts 的註解留得下來的原因。
+// 這是唯一一處明列豁免的 markup 差異，見 docs/08-verification.md §7。
+
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="robots" content="all,follow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <meta name="keywords" content="禾勤藝術有限公司,文物修復,物件研究詮釋,展覽策劃,展場設計">
+    <meta name="description" content="禾勤藝術藉著持續的創新與改善，培養負責、主動積極且有效率的工作團隊，提昇公司競爭力。">
+<Styles />
+</head>
+
+<body>
+
+
+<Header articleTypes={articleTypes} />
+
+    
+<slot />
+<Footer />
+<Scripts />
+
+    
+<slot name="scripts" />
+</body>
+</html>

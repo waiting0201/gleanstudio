@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-08-07T04:51:24.564Z",
+  "capturedAt": "2026-08-07T06:03:30.732Z",
   "origin": "https://gleanstudio.com.tw",
   "note": "從正式站 /Home/Articles 的實際顯示順序取得。CreateDate 並列時的順序無法從資料庫推導，見 docs/04-data-model.md §5",
   "order": {

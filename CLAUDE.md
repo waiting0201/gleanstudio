@@ -23,8 +23,8 @@
 
 ## 現在做到哪
 
-**Phase 2 完成。** golden 基準已擷取（35 頁進版控），資料與媒體已進 D1 + R2，本機與遠端都驗證通過。
-**Phase 3（前台移植）可以開始** —— 還沒有 Astro 專案，`astro.config.mjs` 與 `src/` 尚未建立。
+**Phase 3 進行中**（前台移植）。Astro 專案骨架、版型、資料層、parity 工具都好了；
+11 個頁面移植了 5 個，**Level B parity 6/32**。待移植：Services、Service、Project、Contact、Articles、ArticleDetail、Pager。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -66,12 +66,12 @@ npm run golden             # 從正式站擷取 golden 基準 → tests/golden/
 npm run verify:d1
 npm run verify:media
 
-# Phase 3 之後才會有
+# 前台（已可用）
 npm run dev                # astro dev
-npm run preview            # astro build && wrangler dev —— parity 驗證一律用這個
 npm run build
-npm run parity             # 三層比對；npm run parity -- /Home/About 可指定單頁
-npm run types              # wrangler types（產物需進版控）
+npm run preview            # build → 重啟 wrangler dev → 跑 parity（一律用這個驗證）
+npm run parity             # 只跑比對；npm run parity -- /Home/About 指定單頁
+                           # 加 --level a 看 byte 差異細節
 ```
 
 舊資料庫在本機 Docker 容器 `sqlserver`（`localhost:1433`，資料庫 `gleanstudio`）。
@@ -113,6 +113,7 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - 文件與 UI 文案寫繁體中文
 - `astro.config.mjs` 必須設 `compressHTML: false`
 - `Articles` 排序一律 `ORDER BY CreateDate DESC, LegacyOrder` —— 有兩組日期並列
+- **`wrangler dev` 不會可靠地重載新 build 的 chunk** —— 改完一定要重啟，用 `npm run preview`
 - **不要用 `LENGTH()` 比對內容完整性** —— 它數 code point，JS `.length` 數 UTF-16 單位，內文有 🔗 就會差 1。要比就比整串或雜湊
 
 ---

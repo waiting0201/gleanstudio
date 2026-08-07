@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-08-07T04:51:24.567Z",
+  "capturedAt": "2026-08-07T06:03:30.734Z",
   "origin": "https://gleanstudio.com.tw",
   "dataDigest": "dd7e2482cc4ce6731d1baf1b8f4362d057a0aea95c4d9456aa339dee9d663768",
   "articleOrder": [
@@ -29,7 +29,7 @@
     },
     {
       "path": "/Home/Index",
-      "slug": "home-index.html",
+      "slug": "Home-Index.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 15908,
@@ -37,7 +37,7 @@
     },
     {
       "path": "/Home/About",
-      "slug": "home-about.html",
+      "slug": "Home-About.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9574,
@@ -45,7 +45,7 @@
     },
     {
       "path": "/Home/Team",
-      "slug": "home-team.html",
+      "slug": "Home-Team.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 8688,
@@ -53,7 +53,7 @@
     },
     {
       "path": "/Home/Gallery",
-      "slug": "home-gallery.html",
+      "slug": "Home-Gallery.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9283,
@@ -61,7 +61,7 @@
     },
     {
       "path": "/Home/Project",
-      "slug": "home-project.html",
+      "slug": "Home-Project.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 43679,
@@ -69,7 +69,7 @@
     },
     {
       "path": "/Home/Services",
-      "slug": "home-services.html",
+      "slug": "Home-Services.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9827,
@@ -77,7 +77,7 @@
     },
     {
       "path": "/Home/Service",
-      "slug": "home-service.html",
+      "slug": "Home-Service.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9362,
@@ -85,7 +85,7 @@
     },
     {
       "path": "/Home/Contact",
-      "slug": "home-contact.html",
+      "slug": "Home-Contact.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 13785,
@@ -93,7 +93,7 @@
     },
     {
       "path": "/Home/Articles?p=1",
-      "slug": "home-articles__p-1.html",
+      "slug": "Home-Articles__p-1.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 16592,
@@ -102,7 +102,7 @@
     },
     {
       "path": "/Home/Articles?p=2",
-      "slug": "home-articles__p-2.html",
+      "slug": "Home-Articles__p-2.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 13498,
@@ -110,7 +110,7 @@
     },
     {
       "path": "/Home/Service?ArticleTypeID=ff829f70-4d55-4f55-aa1f-750c050d2be0",
-      "slug": "home-service__articletypeid-ff829f70.html",
+      "slug": "Home-Service__articletypeid-ff829f70.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9362,
@@ -118,7 +118,7 @@
     },
     {
       "path": "/Home/Articles?ArticleTypeID=ff829f70-4d55-4f55-aa1f-750c050d2be0",
-      "slug": "home-articles__articletypeid-ff829f70.html",
+      "slug": "Home-Articles__articletypeid-ff829f70.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 16605,
@@ -126,7 +126,7 @@
     },
     {
       "path": "/Home/Service?ArticleTypeID=6a3f74fd-82d1-4102-86f6-55eec9fb662d",
-      "slug": "home-service__articletypeid-6a3f74fd.html",
+      "slug": "Home-Service__articletypeid-6a3f74fd.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9029,
@@ -134,7 +134,7 @@
     },
     {
       "path": "/Home/Articles?ArticleTypeID=6a3f74fd-82d1-4102-86f6-55eec9fb662d",
-      "slug": "home-articles__articletypeid-6a3f74fd.html",
+      "slug": "Home-Articles__articletypeid-6a3f74fd.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 11301,
@@ -142,7 +142,7 @@
     },
     {
       "path": "/Home/Service?ArticleTypeID=d6c3abfd-9f01-4e88-93a9-a1ff0661e357",
-      "slug": "home-service__articletypeid-d6c3abfd.html",
+      "slug": "Home-Service__articletypeid-d6c3abfd.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 8967,
@@ -150,7 +150,7 @@
     },
     {
       "path": "/Home/Articles?ArticleTypeID=d6c3abfd-9f01-4e88-93a9-a1ff0661e357",
-      "slug": "home-articles__articletypeid-d6c3abfd.html",
+      "slug": "Home-Articles__articletypeid-d6c3abfd.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 11273,
@@ -158,7 +158,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=96aaa3f5-b7db-4416-ab14-2877ed239219",
-      "slug": "home-articledetail__articleid-96aaa3f5.html",
+      "slug": "Home-ArticleDetail__articleid-96aaa3f5.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 132941,
@@ -166,7 +166,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=2c22a9d8-61fa-457a-b354-aaae97281e90",
-      "slug": "home-articledetail__articleid-2c22a9d8.html",
+      "slug": "Home-ArticleDetail__articleid-2c22a9d8.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 214676,
@@ -174,7 +174,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=e016d09a-6f46-48fa-ae30-6ed329ad1a46",
-      "slug": "home-articledetail__articleid-e016d09a.html",
+      "slug": "Home-ArticleDetail__articleid-e016d09a.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 8833,
@@ -182,7 +182,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=18cacc7a-4bde-43f0-a490-c4e1897dc97a",
-      "slug": "home-articledetail__articleid-18cacc7a.html",
+      "slug": "Home-ArticleDetail__articleid-18cacc7a.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 855109,
@@ -190,7 +190,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=51e3bd0a-ea80-4eb9-9cc8-3e4e00b01cff",
-      "slug": "home-articledetail__articleid-51e3bd0a.html",
+      "slug": "Home-ArticleDetail__articleid-51e3bd0a.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9267,
@@ -198,7 +198,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=21b3941f-4095-4006-822c-45942c21338e",
-      "slug": "home-articledetail__articleid-21b3941f.html",
+      "slug": "Home-ArticleDetail__articleid-21b3941f.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 448903,
@@ -206,7 +206,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=4772b8a8-9912-4769-bacf-18d176e0061a",
-      "slug": "home-articledetail__articleid-4772b8a8.html",
+      "slug": "Home-ArticleDetail__articleid-4772b8a8.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 1450828,
@@ -214,7 +214,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=22acb62c-0b58-498b-8b7b-3e6f95b37653",
-      "slug": "home-articledetail__articleid-22acb62c.html",
+      "slug": "Home-ArticleDetail__articleid-22acb62c.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 1387664,
@@ -222,7 +222,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=d6d01a97-2da1-45da-b620-f859981e4826",
-      "slug": "home-articledetail__articleid-d6d01a97.html",
+      "slug": "Home-ArticleDetail__articleid-d6d01a97.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 1818152,
@@ -230,7 +230,7 @@
     },
     {
       "path": "/Home/Articles?p=999",
-      "slug": "home-articles__p-999.html",
+      "slug": "Home-Articles__p-999.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 10258,
@@ -239,7 +239,7 @@
     },
     {
       "path": "/Home/Articles?p=0",
-      "slug": "home-articles__p-0.html",
+      "slug": "Home-Articles__p-0.html",
       "status": 500,
       "contentType": "text/html; charset=utf-8",
       "bytes": 8946,
@@ -248,7 +248,7 @@
     },
     {
       "path": "/Home/Articles?p=abc",
-      "slug": "home-articles__p-abc.html",
+      "slug": "Home-Articles__p-abc.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 16592,
@@ -257,7 +257,7 @@
     },
     {
       "path": "/Home/Articles?ArticleTypeID=00000000-0000-0000-0000-000000000000",
-      "slug": "home-articles__articletypeid-00000000.html",
+      "slug": "Home-Articles__articletypeid-00000000.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 10130,
@@ -266,7 +266,7 @@
     },
     {
       "path": "/Home/ArticleDetail?ArticleID=00000000-0000-0000-0000-000000000000",
-      "slug": "home-articledetail__articleid-00000000.html",
+      "slug": "Home-ArticleDetail__articleid-00000000.html",
       "status": 500,
       "contentType": "text/html; charset=utf-8",
       "bytes": 8580,
@@ -275,7 +275,7 @@
     },
     {
       "path": "/Home/Service?ArticleTypeID=00000000-0000-0000-0000-000000000000",
-      "slug": "home-service__articletypeid-00000000.html",
+      "slug": "Home-Service__articletypeid-00000000.html",
       "status": 500,
       "contentType": "text/html; charset=utf-8",
       "bytes": 8590,
@@ -284,7 +284,7 @@
     },
     {
       "path": "/home/about",
-      "slug": "home-about.html",
+      "slug": "home-about~1a8370.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9574,
@@ -293,7 +293,7 @@
     },
     {
       "path": "/Home/About/",
-      "slug": "home-about-.html",
+      "slug": "Home-About-.html",
       "status": 200,
       "contentType": "text/html; charset=utf-8",
       "bytes": 9574,
@@ -302,7 +302,7 @@
     },
     {
       "path": "/Error/Validation",
-      "slug": "error-validation.html",
+      "slug": "Error-Validation.html",
       "status": 404,
       "contentType": "text/html; charset=utf-8",
       "bytes": 3245,
