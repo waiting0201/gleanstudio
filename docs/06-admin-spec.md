@@ -265,6 +265,24 @@ putEntityPhoto(
 
 ---
 
+## 10a. 實體層：一份定義，不要複製七遍
+
+舊系統把同一段 CRUD 在 `WebMsController` 裡寫了七遍，上傳那段也複製了七次。
+
+新系統用 `src/lib/admin/entities.ts` 的宣告式定義餵給共用的列表、表單與 Hono handler。要加一個實體是加一筆定義。
+
+**但不是所有東西都塞得進去。** 這三個各有各的形狀，硬塞只會讓抽象變形：
+
+| 實體 | 為什麼獨立 |
+|---|---|
+| `Articles` | 富文本、**兩個**排序相容性欄位、日期 |
+| `Projects` | 87 筆要分頁；`LegacyOrder` 釘住 `/Home/Project` 的四層分組順序 |
+| `Admins` | 密碼雜湊、`AdminLims` 權限勾選 |
+
+判準：**共用層要能讓每個成員都變簡單。** 一旦要為某個實體在共用層加特例分支，那個實體就該獨立出去。
+
+---
+
 ## 11. Tailwind 的接法 ⚠️
 
 **只透過 `@tailwindcss/vite` 掛上，不要加 Astro 的 tailwind integration。**

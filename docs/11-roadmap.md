@@ -142,9 +142,15 @@ node scripts/verify-media.mjs [--remote]
 - [x] **文章** 的列表 / 新增 / 修改 / 刪除，新文章的 `LegacyOrder` 與 `LegacyTypeOrder` 都接在最後
 - [x] `npm run smoke:admin` —— 18 項端到端，會真的建一筆再刪掉，跑完 parity 仍然全綠
 
-**待辦 —— 其餘 6 個實體**
+- [x] **ArticleTypes / Services / Teams / Abouts** —— 一份宣告式定義（`src/lib/admin/entities.ts`）餵給共用的列表、表單與 API。舊系統把這段 CRUD 寫了七遍
+- [x] 上下移動排序，`Sort*` 對應到 `update` 權限（舊系統的對應表根本沒涵蓋 `Sort*`）
+- [x] `npm run smoke:admin` 擴充到 31 項
 
-- [ ] ArticleTypes / Services / Teams / Projects / Abouts / Admins 的 CRUD + 排序
+**待辦 —— 兩個形狀不一樣的實體**
+
+- [ ] **Projects**（87 筆）—— 需要分頁與搜尋，而且它的 `LegacyOrder` 釘住了 `/Home/Project` 的四層分組順序，新增/刪除都要一併維護
+- [ ] **Admins** —— 密碼重設與權限勾選，牽涉 `AdminLims`
+- [ ] Abouts 的圖片欄位在公開站沒有被引用過（`/Home/About` 只用 Description）—— 要確認是不是該拿掉
 - [ ] **部署前要先建遠端 KV namespace**：`wrangler kv namespace create SESSION`，再把 id 填進 `wrangler.jsonc`
 
 **過程中發現**

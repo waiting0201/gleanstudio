@@ -1,0 +1,16 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import EntityList from '../../../components/admin/EntityList.astro';
+import { loadEntity, listRows } from '../../../lib/admin/load';
+
+export const prerender = false;
+
+const loaded = await loadEntity(Astro, 'Services', 'list');
+if ('response' in loaded) return loaded.response;
+const rows = await listRows(loaded.def);
+---
+<Admin title={loaded.def.label} session={loaded.session}>
+<Flash />
+<EntityList def={loaded.def} rows={rows} may={loaded.may} />
+</Admin>

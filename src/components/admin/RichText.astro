@@ -14,12 +14,14 @@
 interface Props {
   name: string;
   value: string;
+  /** 實體名稱，決定圖片上傳的端點與 R2 的路徑 */
+  entity: string;
   /** 沒有 ID 就不能插圖 —— R2 的路徑要用它 */
-  articleId?: string;
+  recordId?: string;
 }
-const { name, value, articleId = '' } = Astro.props;
+const { name, value, entity, recordId = '' } = Astro.props;
 ---
-<div class="rich" data-article-id={articleId}>
+<div class="rich" data-entity={entity} data-record-id={recordId}>
   <div class="flex flex-wrap items-center gap-1 border border-b-0 border-bench-deep bg-bench px-2 py-1.5">
     <button type="button" data-cmd="bold" class="rich-tool" title="粗體">B</button>
     <button type="button" data-cmd="italic" class="rich-tool italic" title="斜體">I</button>
@@ -27,8 +29,8 @@ const { name, value, articleId = '' } = Astro.props;
     <button type="button" data-cmd="createLink" class="rich-tool" title="加連結">連結</button>
     <button type="button" data-cmd="removeFormat" class="rich-tool" title="清除格式">清除格式</button>
     <span class="mx-1 h-4 w-px bg-bench-deep"></span>
-    <button type="button" data-insert-image class="rich-tool" disabled={!articleId}
-      title={articleId ? '插入圖片' : '要先儲存一次才能插入圖片'}>插入圖片</button>
+    <button type="button" data-insert-image class="rich-tool" disabled={!recordId}
+      title={recordId ? '插入圖片' : '要先儲存一次才能插入圖片'}>插入圖片</button>
     <span class="flex-1"></span>
     <button type="button" data-toggle-source class="rich-tool">原始碼</button>
   </div>
@@ -84,7 +86,8 @@ const { name, value, articleId = '' } = Astro.props;
     const source = root.querySelector<HTMLTextAreaElement>('.rich-source')!;
     const status = root.querySelector<HTMLElement>('[data-rich-status]')!;
     const file = root.querySelector<HTMLInputElement>('[data-file]')!;
-    const articleId = root.dataset.articleId ?? '';
+    const entity = root.dataset.entity ?? '';
+    const recordId = root.dataset.recordId ?? '';
     let sourceMode = false;
 
     const sync = () => { if (!sourceMode) source.value = body.innerHTML; };
@@ -119,18 +122,18 @@ const { name, value, articleId = '' } = Astro.props;
 
     // ── 圖片：一律走 R2，永遠不內嵌 ──────────────────────
     async function upload(f: File) {
-      if (!articleId) {
-        status.textContent = '要先儲存一次才能插入圖片 —— 圖片要存在這篇文章的資料夾底下。';
+      if (!recordId) {
+        status.textContent = '要先儲存一次才能插入圖片 —— 圖片要放在這筆記錄自己的資料夾底下。';
         return;
       }
       status.textContent = '上傳中…';
       const fd = new FormData();
       fd.set('file', f);
-      fd.set('ArticleID', articleId);
+      fd.set('id', recordId);
       const csrf = body.closest('form')?.querySelector<HTMLInputElement>('input[name="__csrf"]');
       if (csrf) fd.set('__csrf', csrf.value);
 
-      const res = await fetch('/api/admin/articles/photo', { method: 'POST', body: fd });
+      const res = await fetch(`/api/admin/${entity}/photo`, { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({ error: '上傳失敗。' }));
       if (!res.ok) { status.textContent = data.error ?? '上傳失敗。'; return; }
 

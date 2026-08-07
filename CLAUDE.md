@@ -32,7 +32,9 @@
 
 **Phase 5 進行中**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
 富文本（擋 base64）、以及**文章**的完整 CRUD 都好了 —— `npm run smoke:admin` 18 項全綠。
-**其餘 6 個實體的 CRUD 還沒做**。介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
+ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層。
+**還差 Projects（87 筆、要分頁）與 Admins（密碼與權限勾選）**。
+介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---

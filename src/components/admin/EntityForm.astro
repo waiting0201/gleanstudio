@@ -1,0 +1,80 @@
+---
+/** 共用的表單。欄位由 src/lib/admin/entities.ts 的定義決定。 */
+import Csrf from './Csrf.astro';
+import RichText from './RichText.astro';
+import type { EntityDef } from '../../lib/admin/entities';
+
+interface Props {
+  def: EntityDef;
+  row?: Record<string, any>;
+}
+const { def, row } = Astro.props;
+const isNew = !row;
+const id = row ? String(row[def.idColumn]) : '';
+const photo = def.media ? row?.[def.media.photoColumn] : null;
+---
+<form method="post" action={`/api/admin/${def.key}/save`} enctype="multipart/form-data">
+  <Csrf />
+  {row && <input type="hidden" name="id" value={id}>}
+
+  <div class="record p-6">
+    {def.fields.map((f) => (
+      <div class="mb-5">
+        <label class="field-label" for={f.column}>{f.label}{f.required && <span class="text-oxide"> ＊</span>}</label>
+
+        {f.kind === 'text' && (
+          <input class="field-input" id={f.column} name={f.column} type="text"
+                 value={row?.[f.column] ?? ''} required={f.required} autocomplete="off">
+        )}
+
+        {f.kind === 'textarea' && (
+          <textarea class="field-input" id={f.column} name={f.column} rows="3" required={f.required}
+          >{row?.[f.column] ?? ''}</textarea>
+        )}
+
+        {f.kind === 'select' && (
+          <select class="field-input" id={f.column} name={f.column} required={f.required}>
+            {f.options?.map((o) => (
+              <option value={o.value} selected={String(row?.[f.column] ?? '') === o.value}>{o.label}</option>
+            ))}
+          </select>
+        )}
+
+        {f.kind === 'richtext' && (
+          <RichText name={f.column} value={row?.[f.column] ?? ''} entity={def.key} recordId={id} />
+        )}
+
+        {f.hint && <span class="field-hint">{f.hint}</span>}
+      </div>
+    ))}
+
+    {def.media && (
+      <div class="mb-1">
+        <label class="field-label" for={def.media.photoColumn}>圖片</label>
+        <input class="field-input" id={def.media.photoColumn} name={def.media.photoColumn}
+               type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+        <span class="field-hint">
+          {photo ? '不選就沿用目前這張。' : 'JPEG / PNG / GIF / WebP，10 MB 以內。'}
+        </span>
+        {photo && (
+          <div class="mt-4 flex items-start gap-4">
+            <img src={`/Upload/${def.media.entity}/${id}/${photo}`} alt="" width="120"
+                 class="border border-bench-deep" loading="lazy">
+            <div>
+              <div class="eyebrow">目前的圖</div>
+              <div class="instrument mt-1 text-ink-faint">{photo}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+
+  <div class="mt-6 flex flex-wrap items-center gap-3">
+    <button type="submit" class="btn btn-primary">{isNew ? `新增${def.label}` : '儲存變更'}</button>
+    {def.singleton === undefined && <a href={`/backend/WebMs/${def.key}`} class="btn btn-quiet">取消</a>}
+    {row && (
+      <a class="live-face ml-auto" href={def.liveUrl(row)} target="_blank" rel="noopener">{def.liveUrl(row)} ↗</a>
+    )}
+  </div>
+</form>

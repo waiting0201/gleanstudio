@@ -1,0 +1,18 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import EntityForm from '../../../components/admin/EntityForm.astro';
+import { loadEntity } from '../../../lib/admin/load';
+
+export const prerender = false;
+
+const loaded = await loadEntity(Astro, 'ArticleTypes', 'add');
+if ('response' in loaded) return loaded.response;
+const { def, session } = loaded;
+---
+<Admin title={`新增${def.label}`} session={session}>
+<Flash />
+<h1 class="record-title text-2xl">新增{def.label}</h1>
+<p class="eyebrow mt-1">儲存之後會立刻出現在 {def.publicNote}。</p>
+<div class="mt-8"><EntityForm def={def} /></div>
+</Admin>

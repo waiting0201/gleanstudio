@@ -1,0 +1,25 @@
+---
+/**
+ * 「關於禾勤」只有一筆（AboutID = 1），所以沒有列表 —— 直接就是表單。
+ * 這是 EntityDef.singleton 的用途。
+ */
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import EntityForm from '../../../components/admin/EntityForm.astro';
+import { loadEntity, getRow } from '../../../lib/admin/load';
+
+export const prerender = false;
+
+const loaded = await loadEntity(Astro, 'Abouts', 'list');
+if ('response' in loaded) return loaded.response;
+const { def, session } = loaded;
+
+const row = await getRow(def, String(def.singleton));
+if (!row) return new Response('Abouts 沒有 AboutID = 1 的資料列。', { status: 500 });
+---
+<Admin title={def.label} session={session}>
+<Flash />
+<h1 class="record-title text-2xl">{def.label}</h1>
+<p class="eyebrow mt-1">顯示在 {def.publicNote}。只有這一筆，沒有新增或刪除。</p>
+<div class="mt-8"><EntityForm def={def} row={row} /></div>
+</Admin>

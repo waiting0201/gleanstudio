@@ -74,7 +74,7 @@ const dateValue = article ? article.createDate.slice(0, 10) : new Date().toISOSt
 
     <div class="mt-6">
       <label class="field-label">內文</label>
-      <RichText name="Description" value={article?.description ?? ''} articleId={article?.articleId} />
+      <RichText name="Description" value={article?.description ?? ''} entity="Articles" recordId={article?.articleId} />
     </div>
   </div>
 

@@ -1,0 +1,23 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import EntityForm from '../../../components/admin/EntityForm.astro';
+import { loadEntity, getRow } from '../../../lib/admin/load';
+
+export const prerender = false;
+
+const loaded = await loadEntity(Astro, 'ArticleTypes', 'edit');
+if ('response' in loaded) return loaded.response;
+const { def, session } = loaded;
+
+const id = Astro.url.searchParams.get('id') ?? '';
+const row = await getRow(def, id.toLowerCase());
+if (!row) return new Response('找不到這筆資料。', { status: 404 });
+---
+<Admin title={`修改：${row[def.listColumns[0]]}`} session={session}>
+<Flash />
+<div class="record-id">{String(row[def.idColumn]).slice(0, 8)}</div>
+<h1 class="record-title mt-1 text-2xl">{row[def.listColumns[0]]}</h1>
+<p class="eyebrow mt-1">儲存之後公開網站會立刻跟著改。</p>
+<div class="mt-8"><EntityForm def={def} row={row} /></div>
+</Admin>

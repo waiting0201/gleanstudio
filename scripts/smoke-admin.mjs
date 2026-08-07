@@ -55,6 +55,7 @@ const rowsTitled = (html, needle) =>
     .filter((m) => m[1].includes(needle)).length;
 
 let createdId = null;
+let createdServiceIds = [];
 
 try {
   console.log('\n登入與 session');
@@ -130,12 +131,83 @@ try {
   check('內嵌圖片被拒絕', (await get(`/backend/WebMs/EditArticles?ArticleID=${createdId}`)).includes('內嵌的圖'));
   check('內文沒有被寫進去',
     !d1(`SELECT Description d FROM Articles WHERE ArticleID='${createdId}'`, true)[0].d.includes('base64'));
+  // ── 共用實體層（ArticleTypes / Services / Teams / Abouts）──
+  console.log('\n共用實體層');
+  for (const [key, label] of [['ArticleTypes', '文章分類'], ['Services', '服務項目'], ['Abouts', '關於禾勤']]) {
+    const h = await get(`/backend/WebMs/${key}`);
+    check(`${key} 列表渲染`, h.includes(label) && !h.includes('未知的實體'));
+  }
+
+  // 這個管理員**沒有** Teams 權限（AdminLims 缺 LimID 7）——
+  // 那是舊資料的既有狀態，不是移植造成的。見 docs/09-known-issues.md 3.3
+  check('沒權限的實體被擋',
+    (await fetch(BASE + '/backend/WebMs/Teams', { headers: { cookie }, redirect: 'manual' }))
+      .headers.get('location') === '/backend/Forbidden');
+
+  // Services 目前 0 筆，拿它測完整的 CRUD 與排序，測完不留痕跡
+  const svc = async (title) => {
+    const f = new FormData();
+    f.set('__csrf', csrfOf(await get('/backend/WebMs/AddServices')));
+    f.set('ArticleTypeID', TYPE_ID);
+    f.set('Title', title);
+    return post('/api/admin/Services/save', f, true);
+  };
+
+  r = await svc(`${TEST_TITLE} A`);
+  check('新增服務項目', r.status === 303);
+  await svc(`${TEST_TITLE} B`);
+
+  let svcs = d1('SELECT ServiceID, Title, Sort FROM Services ORDER BY Sort, ServiceID', true);
+  createdServiceIds = svcs.map((x) => x.ServiceID);
+  check('兩筆都在，B 排最後', svcs.length === 2 && svcs.at(-1).Title.endsWith('B'), `Sort = ${svcs.map(x=>x.Sort).join(', ')}`);
+
+  const bId = svcs.at(-1).ServiceID;
+  r = await post('/api/admin/Services/sort',
+    new URLSearchParams({ __csrf: csrfOf(await get('/backend/WebMs/Services')), id: bId, dir: 'up' }));
+  svcs = d1('SELECT Title FROM Services ORDER BY Sort, ServiceID', true);
+  check('往上移一格', r.status === 303 && svcs[0].Title.endsWith('B'));
+
+  await post('/api/admin/Services/sort',
+    new URLSearchParams({ __csrf: csrfOf(await get('/backend/WebMs/Services')), id: bId, dir: 'up' }));
+  check('已經在最前面時擋下', /role="status"/.test(await get('/backend/WebMs/Services')));
+
+  const ef = new FormData();
+  ef.set('__csrf', csrfOf(await get(`/backend/WebMs/EditServices?id=${bId}`)));
+  ef.set('id', bId); ef.set('ArticleTypeID', TYPE_ID); ef.set('Title', '改過的名稱');
+  r = await post('/api/admin/Services/save', ef, true);
+  check('修改服務項目', r.status === 303
+    && d1(`SELECT Title t FROM Services WHERE ServiceID='${bId}'`, true)[0].t === '改過的名稱');
+
+  const bad = new FormData();
+  bad.set('__csrf', csrfOf(await get('/backend/WebMs/AddServices')));
+  bad.set('ArticleTypeID', TYPE_ID);
+  r = await post('/api/admin/Services/save', bad, true);
+  check('必填欄位空白被擋', /請填/.test(await get('/backend/WebMs/AddServices')));
+
+  r = await post('/api/admin/Services/delete',
+    new URLSearchParams({ __csrf: csrfOf(await get('/backend/WebMs/Services')), id: bId }));
+  check('刪除服務項目', r.status === 303
+    && d1('SELECT COUNT(*) n FROM Services', true)[0].n === 1);
+
+  // Abouts 是單筆 —— 把同樣的值存回去，確認往返不會改到內容
+  const beforeAbout = d1('SELECT Description d FROM Abouts WHERE AboutID = 1', true)[0].d;
+  const bf = new FormData();
+  bf.set('__csrf', csrfOf(await get('/backend/WebMs/Abouts')));
+  bf.set('Description', beforeAbout);
+  r = await post('/api/admin/Abouts/save', bf, true);
+  const afterAbout = d1('SELECT Description d FROM Abouts WHERE AboutID = 1', true)[0].d;
+  check('Abouts 存回原值不變形', r.status === 303 && afterAbout === beforeAbout);
+
 } finally {
   console.log('\n清理');
   if (createdId) {
     const html = await get('/backend/WebMs/Articles');
     await post('/api/admin/articles/delete', new URLSearchParams({ __csrf: csrfOf(html), ArticleID: createdId }));
     check('刪除', rowsTitled(await get('/backend/WebMs/Articles'), TEST_TITLE) === 0);
+  }
+  if (createdServiceIds.length) {
+    d1(`DELETE FROM Services WHERE ServiceID IN (${createdServiceIds.map((i) => `'${i}'`).join(', ')})`);
+    check('Services 已清空', d1('SELECT COUNT(*) n FROM Services', true)[0].n === 0);
   }
   d1('UPDATE Admins SET MustChangePassword = 1 WHERE AdminID = 1');
   check('MustChangePassword 已還原',

@@ -1,0 +1,98 @@
+---
+/** 共用的列表。形狀由 src/lib/admin/entities.ts 的定義決定。 */
+import Csrf from './Csrf.astro';
+import type { EntityDef } from '../../lib/admin/entities';
+
+interface Props {
+  def: EntityDef;
+  rows: Record<string, any>[];
+  may: { add: boolean; edit: boolean; delete: boolean };
+}
+const { def, rows, may } = Astro.props;
+const [titleCol, ...restCols] = def.listColumns;
+---
+<div class="flex flex-wrap items-baseline justify-between gap-4">
+  <div>
+    <h1 class="record-title text-2xl">{def.label}</h1>
+    <p class="eyebrow mt-1"><span class="instrument">{rows.length}</span> 筆 · 顯示在 {def.publicNote}</p>
+  </div>
+  {may.add && <a href={`/backend/WebMs/Add${def.key}`} class="btn btn-primary">新增{def.label}</a>}
+</div>
+
+{rows.length === 0 ? (
+  <div class="record mt-8 p-10 text-center">
+    <p class="text-sm text-ink-soft">還沒有任何{def.label}。</p>
+    {may.add && <a href={`/backend/WebMs/Add${def.key}`} class="btn btn-primary mt-5">新增第一筆</a>}
+  </div>
+) : (
+  <ul class="mt-8 space-y-px">
+    {rows.map((row, i) => (
+      <li class="record px-4 py-4">
+        <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+          <div class="flex min-w-0 flex-1 items-start gap-4">
+            {def.media && row[def.media.photoColumn] && (
+              <img src={`/Upload/${def.media.entity}/${row[def.idColumn]}/${row[def.media.photoColumn]}`}
+                   alt="" width="56" height="56" loading="lazy"
+                   class="h-14 w-14 shrink-0 border border-bench-deep object-cover">
+            )}
+            <div class="min-w-0">
+              <div class="record-id">{String(row[def.idColumn]).slice(0, 8)}</div>
+              <div class="record-title mt-0.5 text-lg">
+                {may.edit
+                  ? <a href={`/backend/WebMs/Edit${def.key}?id=${row[def.idColumn]}`}
+                       class="text-ink no-underline hover:text-brass">{row[titleCol]}</a>
+                  : row[titleCol]}
+              </div>
+              {restCols.filter((c) => row[c]).length > 0 && (
+                <div class="eyebrow mt-0.5 line-clamp-1">{restCols.map((c) => row[c]).filter(Boolean).join(' · ')}</div>
+              )}
+            </div>
+          </div>
+
+          <div class="flex shrink-0 flex-col items-end gap-2">
+            <a class="live-face" href={def.liveUrl(row)} target="_blank" rel="noopener"
+               title="在新分頁開啟公開頁面">{def.liveUrl(row).slice(0, 46)}{def.liveUrl(row).length > 46 ? '…' : ''} ↗</a>
+
+            <div class="flex items-center gap-2">
+              {def.sortable && may.edit && (
+                <form method="post" action={`/api/admin/${def.key}/sort`} class="flex items-center gap-1">
+                  <Csrf />
+                  <input type="hidden" name="id" value={row[def.idColumn]}>
+                  <button type="submit" name="dir" value="up" class="sort-btn" disabled={i === 0}
+                          aria-label={`把「${row[titleCol]}」往上移`}>↑</button>
+                  <button type="submit" name="dir" value="down" class="sort-btn" disabled={i === rows.length - 1}
+                          aria-label={`把「${row[titleCol]}」往下移`}>↓</button>
+                </form>
+              )}
+              {may.delete && (
+                <details class="text-right">
+                  <summary class="cursor-pointer list-none text-sm text-ink-faint hover:text-oxide">刪除</summary>
+                  <form method="post" action={`/api/admin/${def.key}/delete`} class="mt-2 flex items-center gap-2">
+                    <Csrf />
+                    <input type="hidden" name="id" value={row[def.idColumn]}>
+                    <span class="text-sm text-ink-soft">確定刪掉？公開頁面會立刻跟著改。</span>
+                    <button type="submit" class="btn btn-danger">刪除</button>
+                  </form>
+                </details>
+              )}
+            </div>
+          </div>
+        </div>
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .sort-btn {
+    padding: 0.125rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    background: transparent;
+    border: 1px solid var(--color-bench-deep);
+    color: var(--color-ink-soft);
+    cursor: pointer;
+  }
+  .sort-btn:hover:not(:disabled) { border-color: var(--color-gild); color: var(--color-brass); }
+  .sort-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>
