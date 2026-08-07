@@ -14,7 +14,7 @@ ADR 格式。每一則：**決定 / 背景 / 理由 / 代價**。
 
 **理由**：使用者明確決定（2026-08-07）。凍結讓「移植對不對」成為機械可驗證的問題 —— 有正式站當 oracle，byte diff 就是答案。若同時改網址與 markup，每一個差異都要人工判斷是「有意的改動」還是「移植出錯」，驗證成本會爆炸。
 
-**代價**：網址會一直醜下去；已知 markup bug 隨之上線；`ImportSeq` 這種只為 parity 存在的欄位。全部記在 [09-known-issues](09-known-issues.md)，留待第 9 階段清償。
+**代價**：網址會一直醜下去；已知 markup bug 隨之上線；`LegacyOrder` 這種只為 parity 存在的欄位。全部記在 [09-known-issues](09-known-issues.md)，留待第 9 階段清償。
 
 ---
 
@@ -162,15 +162,33 @@ KV 的最終一致性在這裡無關緊要：session 登入時寫一次，由同
 
 ---
 
-## ADR-012 新增 `Articles.ImportSeq` 釘住排序並列
+## ADR-012 新增 `Articles.LegacyOrder`，值從正式站輸出取得
 
-**決定**：新增 `ImportSeq INTEGER`，匯出時由 `ROW_NUMBER() OVER (ORDER BY (SELECT NULL))` 填入，所有 `Articles` 排序查詢加上 `, ImportSeq`。
+**決定**：新增 `LegacyOrder INTEGER`，由 `scripts/capture-golden.mjs` 逐頁爬 `/Home/Articles` 取得實際顯示順序後填入。所有 `Articles` 排序查詢加上 `, LegacyOrder`。
 
-**背景**：3 篇文章 `CreateDate` 都是 `2026-01-01`，落在 `/Home/Articles?p=2`。`ORDER BY CreateDate DESC` 對並列的順序在兩個引擎都未定義。正式站目前的順序**無法由任何欄位推導**（`ArticleID` 升降冪、`Photo` 時間戳都對不上），是 SQL Server 的實體掃描順序。
+**背景**：資料裡有**兩組** `CreateDate` 並列（2026-01-02 三篇跨分類、2026-01-01 三篇同分類），`ORDER BY CreateDate DESC` 對並列的順序在兩個引擎都未定義。
 
-**理由**：在 ADR-001 之下，parity 必須包含排序。這是唯一能忠實重現的做法。
+**曾經試過並否決的做法**：用 `ROW_NUMBER() OVER (ORDER BY (SELECT NULL))` 取 SQL Server 的實體掃描順序。**實測不成立** —— 它對 2026-01-01 那組碰巧吻合，對 2026-01-02 那組不吻合。掃描順序不等於 `ORDER BY` 的並列輸出順序。
 
-**代價**：一個純相容性的欄位。新後台寫入時要設 `MAX(ImportSeq) + 1`。markup 解凍後可移除，記在 [09-known-issues](09-known-issues.md) 3.5。
+**理由**：在 ADR-001 之下 parity 必須包含排序，而唯一可靠的來源是 oracle 本身。既然已經有 golden 擷取機制在爬正式站，順手把順序記下來的邊際成本是零。
+
+**副作用（重要）**：**Phase 1 因此成為 Phase 2 的硬前置**，不只是時效性建議 —— 沒有 golden 就沒有 `LegacyOrder`。
+
+**代價**：一個純相容性的欄位；每次重新擷取 golden 都要重算。新後台寫入時設 `MAX(LegacyOrder) + 1`。markup 解凍後可移除，記在 [09-known-issues](09-known-issues.md) 3.5。
+
+---
+
+## ADR-016 大型 `Description` 用分段 append 寫入 D1
+
+**決定**：seed 時先 `INSERT` 一個 `Description = ''` 的列，再用一連串 `UPDATE … SET Description = Description || '<段>'` 補完，每段跳脫後 ≤ 80 KB。
+
+**背景**：[D1 的單一 SQL 敘述上限是 100 KB](https://developers.cloudflare.com/d1/platform/limits/)，而 `Articles.Description` 內嵌了 Summernote 的 base64 圖片 —— **9 篇文章有 7 篇超過**，最大 1.73 MB。單一 INSERT 塞不進去。
+
+**理由**：分段 append 對 `--local` 與 `--remote` 都適用，不需要為了參數綁定改用 D1 REST API，也就不必為兩種環境維護兩套載入路徑。1.73 MB 那篇約 23 段，全部文章合計約 80 個敘述，成本可忽略。
+
+**否決「把 base64 圖片抽出來存 R2」**：那會把 `<img src="data:image/…">` 變成 `<img src="/Upload/…">`，渲染出的 HTML 就變了，違反 ADR-001。這件事本身該做（1.7 MB 的新聞頁對使用者很糟），但屬於 markup 變更，記在 [09-known-issues](09-known-issues.md) 留待第 9 階段。
+
+**要盯著的風險**：D1 單列上限 2 MB，現況最大 1.73 MB，**只剩 13% 餘裕**。編輯者在那篇文章再貼一張圖就會寫入失敗。後台要擋，見 [06-admin-spec](06-admin-spec.md) §8。
 
 ---
 

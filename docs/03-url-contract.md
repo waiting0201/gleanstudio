@@ -229,36 +229,70 @@ export default defineConfig({
 
 **新站不重現黃頁。** 建議回 **404**，並在 [09-known-issues](09-known-issues.md) 記為刻意分歧。理由：重現一個洩漏堆疊追蹤的錯誤頁沒有任何價值，而 404 是這個情境的正確語意。
 
-### 7.3 文章排序的並列風險 ⚠️
+### 7.3 文章排序的並列 —— 順序本身也是契約 ⚠️
 
-實測資料中有 **3 篇文章的 `CreateDate` 都是 `2026-01-01`**（同屬 `ff829f70-…` 分類）。`OrderByDescending(CreateDate)` 對並列的順序在 SQL Server 與 SQLite 都是未定義的。
+`/Home/Articles` 是跨分類的 `OrderByDescending(CreateDate)`，而資料裡有**兩組**並列（2026-08-07 實測）：2026-01-02 三篇（分屬不同分類）、2026-01-01 三篇（同分類）。並列順序在兩個引擎都未定義。
 
-這 3 篇正好落在 `/Home/Articles?p=2`。正式站目前的順序是：
+正式站目前的完整顯示順序（第 1 頁 6 筆、第 2 頁 3 筆）：
 
 ```
-4772b8a8-9912-4769-bacf-18d176e0061a
-22acb62c-0b58-498b-8b7b-3e6f95b37653
-d6d01a97-2da1-45da-b620-f859981e4826
+1  96aaa3f5-…   2026-07-20
+2  2c22a9d8-…   2026-05-18
+3  e016d09a-…   2026-01-15
+4  18cacc7a-…   2026-01-02  ┐
+5  51e3bd0a-…   2026-01-02  ├ 並列
+6  21b3941f-…   2026-01-02  ┘
+─────────────── 第 2 頁 ───────────────
+7  4772b8a8-…   2026-01-01  ┐
+8  22acb62c-…   2026-01-01  ├ 並列
+9  d6d01a97-…   2026-01-01  ┘
 ```
 
-**這個順序無法由任何欄位推導**（`ArticleID` 升冪、降冪、`Photo` 時間戳都對不上），它是 SQL Server 的實體掃描順序。
+**這個順序無法由任何欄位推導。** 曾經試過用 SQL Server 的實體掃描順序（`ROW_NUMBER() OVER (ORDER BY (SELECT NULL))`）—— 對 2026-01-01 那組碰巧吻合，對 2026-01-02 那組不吻合。
 
-**做法**：匯出時用 `ROW_NUMBER() OVER (ORDER BY (SELECT NULL))` 記下掃描順序，存進 D1 的 `ImportSeq` 欄位，查詢用 `ORDER BY CreateDate DESC, ImportSeq`。細節見 [04-data-model](04-data-model.md) §3。
+**做法：從 oracle 取。** `scripts/capture-golden.mjs` 逐頁爬 `/Home/Articles` 記下實際順序，寫進 `data/export/legacy-order.json`，seed 時填入 `Articles.LegacyOrder`，查詢用 `ORDER BY CreateDate DESC, LegacyOrder`。細節見 [04-data-model](04-data-model.md) §5。
 
-首頁「每個分類最新一篇」不受影響 —— 三個分類的最新日期都唯一。但**這個保證會隨資料改變**，`anomalies.json` 每次匯出都要重新檢查。
+**這使 Phase 1 成為 Phase 2 的硬前置** —— 沒有 golden 就沒有排序資料。
+
+首頁「每個分類最新一篇」目前不受影響（三個分類的最新日期都唯一），但這個保證會隨資料改變，`anomalies.json` 每次匯出都要重看。
 
 ---
 
 ## 8. golden fixture 清單
 
-`tests/golden/` 必須涵蓋（截至目前資料）：
+**已擷取（2026-08-07，共 35 頁 / 6.4 MB）** —— `npm run golden` 產生，內容在 `tests/golden/`。
 
-- 13 條無參數/固定參數 URL
-- `/Home/Articles?p=1`、`?p=2`
-- `/Home/Articles?ArticleTypeID={guid}` × 3 個分類
-- `/Home/ArticleDetail?ArticleID={guid}` × 9 篇文章
-- `/Home/Service?ArticleTypeID={guid}` × 3 個分類
+| 類別 | 頁數 | 狀態碼 |
+|---|---|---|
+| 固定路徑（`/`、`/Home/Index`、About、Team、Gallery、Project、Services、Service、Contact） | 9 | 200 |
+| `/Home/Articles?p=1`、`?p=2` | 2 | 200 |
+| `/Home/Service?ArticleTypeID={guid}` × 3 分類 | 3 | 200 |
+| `/Home/Articles?ArticleTypeID={guid}` × 3 分類 | 3 | 200 |
+| `/Home/ArticleDetail?ArticleID={guid}` × 9 篇 | 9 | 200 |
+| 邊界情境（見 §9） | 9 | 200 × 5、500 × 3、404 × 1 |
 
-約 30 頁 × ~16 KB ≈ 500 KB，直接進版控。**進版控是重點** —— 基準必須能在 diff 裡被審閱。
+⚠️ **實際大小是 6.4 MB，不是原本估的 500 KB。** 原因是 `Articles.Description` 內嵌了 Summernote 的 base64 圖片，最大一頁 1.78 MB。這也連帶影響 D1 的寫入方式，見 [04-data-model](04-data-model.md) §5a。
+
+直接進版控。**進版控是重點** —— 基準必須能在 diff 裡被審閱。但要誠實承認：那幾個 1 MB 級的 base64 單行檔案，人類實際上審不動，只有工具讀得了。
 
 擷取與重新 baseline 的規則見 [08-verification](08-verification.md)。
+
+---
+
+## 9. 邊界情境實測結果
+
+2026-08-07 對正式站探測。這些**不在**「畫面完全不變」的承諾裡 —— 有些是舊站的當機，重現它們沒有價值。
+
+| URL | 舊站 | 新站 | 說明 |
+|---|---|---|---|
+| `/Home/Articles?p=999` | **200** | 200 | 空列表 + 分頁器。要重現 |
+| `/Home/Articles?p=abc` | **200** | 200 | model binding 回退成 `p=1`，輸出與 `?p=1` byte 相同。要重現 |
+| `/Home/Articles?ArticleTypeID=<不存在>` | **200** | 200 | 空列表。要重現 |
+| `/Home/Articles?p=0` | **500** | 建議 200（視為 `p=1`） | `ToPagedList(0, 6)` 丟例外。**刻意分歧** |
+| `/Home/ArticleDetail?ArticleID=<不存在>` | **500** | 建議 404 | `article.Title` 對 null 取值。**刻意分歧** |
+| `/Home/Service?ArticleTypeID=<不存在>` | **500** | 建議 404 | 同上，`articletype.Title`。**刻意分歧** |
+| `/home/about`（小寫） | **200** | 200 | IIS 大小寫不敏感，需 middleware，見 §3.3 |
+| `/Home/About/`（尾斜線） | **200** | 200 | 不轉址，`trailingSlash: 'ignore'` |
+| `/Error/Validation` | **404** | 403 | 舊站從未實作，見 [06-admin-spec](06-admin-spec.md) §7 |
+
+三個 500 的共通模式：**舊站對找不到的資料一律當機**，而 `customErrors="Off"` 讓它直接吐 ASP.NET 黃頁與完整堆疊追蹤。新站不重現黃頁 —— 那是資訊洩漏，不是行為。全部記在 [09-known-issues](09-known-issues.md) §4。

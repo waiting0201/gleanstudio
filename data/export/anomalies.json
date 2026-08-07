@@ -1,0 +1,17 @@
+[
+  {
+    "kind": "articles-duplicate-createdate",
+    "key": "2026-01-02T00:00:00.000Z",
+    "count": 3
+  },
+  {
+    "kind": "articles-duplicate-createdate",
+    "key": "2026-01-01T00:00:00.000Z",
+    "count": 3
+  },
+  {
+    "kind": "articles-duplicate-type-createdate",
+    "key": "ff829f70-4d55-4f55-aa1f-750c050d2be0|2026-01-01T00:00:00.000Z",
+    "count": 3
+  }
+]

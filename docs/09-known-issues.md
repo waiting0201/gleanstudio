@@ -24,6 +24,7 @@
 | 1.10 | 分頁器的 `<nav class="Page navigation example">` | `ContainerDivClasses` 設成三個 class | 是把 Bootstrap 範例的 `aria-label` 貼錯位置的產物 |
 | 1.11 | 分頁範圍邏輯拿 `PageSize`（6）當視窗大小 | [CustomPager.cs:43-45](../reference/old/Gleanstudio/Infrastructure/Paging/CustomPager.cs#L43-L45) | 目前只有 2 頁不會觸發。**文章超過 42 篇後輸出會變，golden 要重抓** |
 | 1.12 | `Content/images/` 13 MB 未最佳化，多數檔案沒被引用 | | 只搬實際引用到的 |
+| 1.13 | **文章內文內嵌 base64 圖片** | `Articles.Description`（Summernote） | 9 篇有 7 篇超過 100 KB，最大 **1.73 MB**。單一新聞頁 1.8 MB 對使用者很糟；也逼近 [D1 的 2 MB 單列上限](https://developers.cloudflare.com/d1/platform/limits/)。抽出來存 R2 會改變渲染的 HTML，所以現在不能動 —— 見 [ADR-016](10-decisions.md)、[04-data-model](04-data-model.md) §5a |
 
 ---
 
@@ -99,7 +100,7 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 
 **升級路徑**：改用 Workers Paid（$5/月）後切換到 `node:crypto` 的 scrypt。雜湊字串已帶演算法前綴，可在登入成功時漸進式重算。見 [06-admin-spec](06-admin-spec.md) §3。
 
-### 3.5 `Articles.ImportSeq` 是相容性欄位
+### 3.5 `Articles.LegacyOrder` 是相容性欄位
 
 為了釘住排序並列而存在（見 [04-data-model](04-data-model.md) §5），不是領域概念。等 1.1 的分頁 bug 被清償、markup 解凍之後，可以改用 `CreateDate DESC, ArticleID` 這種真正決定性的排序並移除它。
 
@@ -110,6 +111,8 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 | # | 情境 | 舊 | 新 | 理由 |
 |---|---|---|---|---|
 | 4.1 | `/Home/ArticleDetail?ArticleID=<不存在>` | 500 + ASP.NET 黃頁 | **404** | 重現一個洩漏堆疊追蹤的錯誤頁沒有價值，404 才是正確語意 |
+| 4.1b | `/Home/Service?ArticleTypeID=<不存在>` | **500** + 黃頁 | **404** | 同 4.1。Phase 1 探測時發現 |
+| 4.1c | `/Home/Articles?p=0` | **500** + 黃頁 | **200**（視為 `p=1`） | `ToPagedList(0, 6)` 丟例外。`?p=abc` 舊站已經是回退成 `p=1`，`?p=0` 沒有理由不一致 |
 | 4.2 | 後台權限不足 | 轉址到 `/Error/Validation`，而該路由不存在 → 404 | 原地渲染 **403** | 舊行為讓「沒權限」與「網址打錯」無法區分 |
 | 4.3 | 後台登出 | GET | **POST** | GET 登出可被 CSRF |
 | 4.4 | 後台刪除 | `[HttpGet]` | **POST + CSRF token** | 同上 |
@@ -134,3 +137,4 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 4. **1.3 `lang="en"`** —— 一個字元的修正
 5. **1.2 Bootstrap 版本錯配** —— 對齊到 5.1.1
 6. **1.5 / 1.6 Gallery 與 Team** —— 決定是要補內容、加導覽，還是直接下架
+7. **1.13 文章內嵌 base64 圖片** —— 抽到 R2 可讓最大的頁面從 1.8 MB 降到約 20 KB，但會動到 markup

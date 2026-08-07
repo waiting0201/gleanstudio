@@ -23,7 +23,8 @@
 
 ## 現在做到哪
 
-**Phase 0（harness 與文件）進行中。** 還沒有任何應用程式碼 —— `package.json`、`src/`、`wrangler.jsonc` 都尚未建立。
+**Phase 1 完成**（golden 基準已擷取，35 頁進版控）。**Phase 2（資料與媒體）可以開始。**
+還沒有 Astro 專案 —— `astro.config.mjs`、`wrangler.jsonc`、`src/` 都尚未建立。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -50,9 +51,13 @@
 
 ## 常用指令
 
-以下指令在 Phase 1 之後才會存在（Phase 0 只有文件）。
 
 ```bash
+# 已可用
+npm run export             # 從本機 SQL Server 匯出 → data/export/
+npm run golden             # 從正式站擷取 golden 基準 → tests/golden/
+
+# Phase 2 之後才會有
 npm run dev                # astro dev
 npm run preview            # astro build && wrangler dev —— parity 驗證一律用這個
 npm run build
@@ -61,7 +66,6 @@ npm run db:migrate:local   # wrangler d1 migrations apply gleanstudio --local
 npm run db:migrate:remote  # 同上 --remote
 npm run db:seed:local      # wrangler d1 execute … --file=db/seed/0001-data.sql
 
-npm run golden             # 從正式站擷取 golden 基準
 npm run parity             # 三層比對；npm run parity -- /Home/About 可指定單頁
 npm run types              # wrangler types（產物需進版控）
 ```
@@ -79,14 +83,16 @@ docs/              13 篇架構文件（繁體中文）
 reference/old/     舊 ASP.NET 系統 —— 唯讀，gitignored
 .claude/           settings.json + 2 個 skill
 
-以下在 Phase 1 之後才會出現：
+scripts/           export-mssql / capture-golden（已有）
+tests/golden/      從正式站抓的 HTML 基準（進版控，35 頁）
+data/              資料庫匯出 —— gitignored，只有 manifest 與 legacy-order 進版控
+
+以下在 Phase 2 之後才會出現：
 src/pages/         Astro 路由，檔名逐字對應舊網址（Home/About.astro → /Home/About）
 src/components/    版型元件；pages/ 子目錄放整頁元件
 src/db/            Drizzle schema + 查詢
 src/lib/           auth / media / contact / query 工具
 db/migrations/     D1 migration
-scripts/           匯出、seed、上傳、golden、parity
-tests/golden/      從正式站抓的 HTML 基準（進版控）
 public/Content/    從 reference/ 逐字複製的 CSS 與圖
 ```
 
@@ -100,6 +106,7 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - R2 key 用 `Upload/{Entity}/{ID}/{Photo}`，與舊路徑逐字相同
 - 文件與 UI 文案寫繁體中文
 - `astro.config.mjs` 必須設 `compressHTML: false`
+- `Articles` 排序一律 `ORDER BY CreateDate DESC, LegacyOrder` —— 有兩組日期並列
 
 ---
 

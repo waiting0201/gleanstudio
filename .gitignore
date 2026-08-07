@@ -14,6 +14,16 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.dev.vars
+
+# 資料庫匯出（含明碼管理員密碼）。manifest / anomalies / legacy-order 例外，見 docs/05
+# 逐層 unignore —— gitignore 對被排除的目錄不會再看裡面的否定規則
+data/*
+!data/export/
+data/export/*
+!data/export/manifest.json
+!data/export/anomalies.json
+!data/export/legacy-order.json
 
 # Node
 node_modules/

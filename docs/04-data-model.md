@@ -129,10 +129,10 @@ CREATE TABLE Articles (
   Photo         TEXT NOT NULL,
   Description   TEXT NOT NULL,
   CreateDate    TEXT NOT NULL,
-  ImportSeq     INTEGER NOT NULL DEFAULT 0    -- 新增，見 §5
+  LegacyOrder   INTEGER NOT NULL DEFAULT 0    -- 新增，見 §5
 ) STRICT;
-CREATE INDEX idx_articles_createdate      ON Articles(CreateDate DESC, ImportSeq);
-CREATE INDEX idx_articles_type_createdate ON Articles(ArticleTypeID, CreateDate DESC, ImportSeq);
+CREATE INDEX idx_articles_createdate      ON Articles(CreateDate DESC, LegacyOrder);
+CREATE INDEX idx_articles_type_createdate ON Articles(ArticleTypeID, CreateDate DESC, LegacyOrder);
 
 CREATE TABLE Services (
   ServiceID     TEXT PRIMARY KEY,
@@ -181,7 +181,7 @@ CREATE TABLE Abouts (
 | 新增 `Admins.IsSuperAdmin` | 取代寫死的 `AdminID = 888` 後門，改成可稽核、可撤銷的資料列 |
 | 新增 `Admins.MustChangePassword` | 強制既有管理員首次登入時改密碼，見 [05-migration-runbook](05-migration-runbook.md) §4 |
 | 新增 `Admins.CreatedAt` / `UpdatedAt` | 舊表沒有任何時間戳，稽核時無從追溯 |
-| 新增 `Articles.ImportSeq` | 釘住排序並列，見 §5 |
+| 新增 `Articles.LegacyOrder` | 釘住排序並列，見 §5 |
 | 新增 `uq_admins_username` | 舊系統只靠 client 端檢查，有 race |
 | 新增 `uq_lims_parent_key` | 讓權限查詢的精確比對可證明唯一。**若匯入時違反這個約束，那本身就是一個發現** |
 | 新增 8 個查詢用索引 | 舊資料庫**只有主鍵索引**，見 §4 |
@@ -206,7 +206,7 @@ SELECT * FROM ArticleTypes ORDER BY Sort;
 ```sql
 SELECT * FROM Articles
 WHERE (?1 IS NULL OR ArticleTypeID = ?1)
-ORDER BY CreateDate DESC, ImportSeq
+ORDER BY CreateDate DESC, LegacyOrder
 LIMIT 6 OFFSET ?2;
 ```
 
@@ -218,7 +218,7 @@ JOIN ArticleTypes t ON t.ArticleTypeID = a.ArticleTypeID
 WHERE a.ArticleID = (
   SELECT a2.ArticleID FROM Articles a2
   WHERE a2.ArticleTypeID = a.ArticleTypeID
-  ORDER BY a2.CreateDate DESC, a2.ImportSeq LIMIT 1)
+  ORDER BY a2.CreateDate DESC, a2.LegacyOrder LIMIT 1)
 ORDER BY t.Sort;
 ```
 
@@ -230,31 +230,90 @@ ORDER BY t.Sort;
 
 ---
 
-## 5. 排序並列 —— `ImportSeq` ⚠️
+## 5. 排序並列 —— `LegacyOrder` ⚠️
 
-**問題**：本機資料中有 3 篇文章的 `CreateDate` 都是 `2026-01-01 00:00:00`（同屬 `ff829f70-…` 分類）。`ORDER BY CreateDate DESC` 對並列列的順序在 SQL Server 與 SQLite 都是**未定義**的，而這 3 篇正好落在 `/Home/Articles?p=2`。
+**問題**：`/Home/Articles` 是 `ORDER BY CreateDate DESC`，而資料裡有**兩組**並列（2026-08-07 實測）：
 
-**正式站目前的順序**（2026-08-07 實測）：
+| CreateDate | 篇數 | 備註 |
+|---|---|---|
+| `2026-01-02` | 3 | **分屬不同分類** |
+| `2026-01-01` | 3 | 同屬 `ff829f70-…` |
+
+並列時的順序在 SQL Server 與 SQLite 都是**未定義**的。
+
+⚠️ **注意這兩個檢查不能合併**：列表是跨分類排序，所以影響它的是 **`CreateDate` 單獨並列**；而首頁的「每分類最新一篇」才需要看 `(ArticleTypeID, CreateDate)`。`anomalies.json` 兩種都會列。
+
+**曾經試過但行不通的做法**：用 `ROW_NUMBER() OVER (ORDER BY (SELECT NULL))` 取 SQL Server 的實體掃描順序。實測結果 —— 它對 2026-01-01 那組碰巧吻合，對 2026-01-02 那組**不吻合**。掃描順序不等於 `ORDER BY` 的並列輸出順序，這條路是死的。
+
+**正確做法：從 oracle 取順序。** 正式站的實際輸出就是唯一可靠的來源。`scripts/capture-golden.mjs` 逐頁爬 `/Home/Articles`，把跨頁的顯示順序寫進 `data/export/legacy-order.json`：
+
+```json
+{
+  "order": { "96aaa3f5-…": 1, "2c22a9d8-…": 2, "e016d09a-…": 3, "18cacc7a-…": 4, … }
+}
 ```
-4772b8a8-9912-4769-bacf-18d176e0061a
-22acb62c-0b58-498b-8b7b-3e6f95b37653
-d6d01a97-2da1-45da-b620-f859981e4826
+
+seed 建構時把這個名次寫進 `Articles.LegacyOrder`，所有涉及 `Articles` 排序的查詢都加 `, LegacyOrder` 作為次要排序。
+
+**這也意味著 Phase 1（golden 擷取）是 Phase 2（資料遷移）的前置**，不只是時效性考量 —— 沒有 golden 就沒有 `LegacyOrder`。
+
+**但書**：
+
+- `LegacyOrder` 只釘住擷取當下的順序。新文章由新後台寫入時設為 `MAX(LegacyOrder) + 1`
+- 它是為 parity 而存在的相容性欄位，不是領域概念。等 [09-known-issues](09-known-issues.md) 的分頁 bug 被清償、markup 解凍之後，可改用 `CreateDate DESC, ArticleID` 這種真正決定性的排序並移除它
+- **每次重新擷取都要重跑** —— 內容變動會改變名次
+
+**首頁目前安全**：三個分類的最新日期都唯一，`anomalies.json` 沒有 `homepage-latest-tie`。但這個保證會隨資料改變，每次匯出都要重看。
+
+---
+
+## 5a. D1 的大小限制 ⚠️ 會影響 seed 做法
+
+[D1 的平台限制](https://developers.cloudflare.com/d1/platform/limits/)裡有兩條直接影響這個專案：
+
+| 限制 | 值 | 我們的狀況 |
+|---|---|---|
+| 單一 SQL 敘述長度 | **100 KB** | ❌ **9 篇文章有 7 篇超過** |
+| 單一字串 / 單列大小 | 2 MB | ⚠️ 最大 1.73 MB，餘裕不多 |
+| 資料庫大小（免費方案） | 500 MB | ✓ 目前約 6 MB |
+
+原因：`Articles.Description` 是 Summernote 產生的 HTML，裡面**內嵌了 base64 圖片**。
+
+```
+1767 KB  base64 圖片 5 張   d6d01a97
+1408 KB  base64 圖片 4 張   4772b8a8
+1347 KB  base64 圖片 4 張   22acb62c
+ 826 KB  base64 圖片 4 張   18cacc7a
+ 430 KB  base64 圖片 2 張   21b3941f
+ 201 KB  base64 圖片 1 張   2c22a9d8
+ 122 KB  base64 圖片 1 張   96aaa3f5
+   1 KB                    51e3bd0a
+   0 KB                    e016d09a
+                總計 6.0 MB
 ```
 
-這個順序**無法由任何欄位推導** —— `ArticleID` 升冪、降冪、`Photo` 時間戳都對不上。它是 SQL Server 叢集索引的實體掃描順序。
+**所以「一個 INSERT 塞完一列」對 7 篇文章是不可能的。**
 
-**解法**：匯出時記下掃描順序，存進 `ImportSeq`：
+### 解法：分段 append
 
 ```sql
--- scripts/export-mssql.mjs 對 Articles 用這個查詢
-SELECT *, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS ImportSeq FROM Articles;
+INSERT INTO Articles (ArticleID, …, Description, …) VALUES ('…', …, '', …);
+UPDATE Articles SET Description = Description || '<第 1 段>' WHERE ArticleID = '…';
+UPDATE Articles SET Description = Description || '<第 2 段>' WHERE ArticleID = '…';
+…
 ```
 
-所有涉及 `Articles` 排序的查詢都加上 `, ImportSeq` 作為次要排序。
+每段控制在 **80 KB 以內**（跳脫後計算，留 20 KB 給敘述本身）。1.73 MB 的那篇約需 23 段，全部文章合計約 80 個敘述 —— 完全可接受。
 
-**但書**：`ImportSeq` 只釘住匯入當下的順序。新文章由新後台寫入時，`ImportSeq` 應設為 `MAX(ImportSeq) + 1`。這是為了 parity 而存在的相容性欄位，不是領域概念 —— 等 [09-known-issues](09-known-issues.md) 的分頁 bug 被清償、markup 解凍之後，可以考慮改用 `CreateDate DESC, ArticleID` 這種真正決定性的排序並移除它。
+這個做法對 `--local` 與 `--remote` 都適用，不需要改用 D1 REST API 的參數綁定，也就不必為兩種環境寫兩套。
 
-**每次匯出都要重新檢查並列狀況**（`anomalies.json` 會列出），因為並列若出現在「每個分類最新一篇」的最大值上，首頁也會受影響。目前三個分類的最新日期都唯一，所以首頁安全。
+### 為什麼不把 base64 圖片抽出來存 R2
+
+那會把 `<img src="data:image/…">` 變成 `<img src="/Upload/…">`，**渲染出來的 HTML 就變了**，違反 [ADR-001](10-decisions.md#adr-001-前台-html-與-url-完全凍結)。
+
+這件事本身是真的該修（1.7 MB 的新聞頁對使用者很糟），但它屬於 markup 變更，記在 [09-known-issues](09-known-issues.md) 留待第 9 階段。
+
+**另外要注意 2 MB 的單列上限**：現況最大 1.73 MB，只剩 13% 餘裕。編輯者在那篇文章再貼一張圖就會超過而寫入失敗。這一點要寫進後台的上傳限制，見 [06-admin-spec](06-admin-spec.md) §8。
 
 ---
 

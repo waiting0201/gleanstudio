@@ -203,6 +203,14 @@ putEntityPhoto(
 
 **檔名慣例刻意不動** —— 資料庫欄位格式因此不變，而且真要回退到舊系統，路徑仍然解析得到。
 
+### ⚠️ 富文本編輯器要擋 base64 內嵌
+
+舊後台的 Summernote 把貼上的圖片以 base64 直接內嵌進 `Articles.Description`。現況最大一篇 **1.73 MB**，而 [D1 的單列上限是 2 MB](https://developers.cloudflare.com/d1/platform/limits/) —— **只剩 13% 餘裕，再貼一張圖就會寫入失敗**。
+
+新後台的編輯器必須把貼上/拖入的圖片走 `putEntityPhoto()` 上傳到 R2 並插入 `/Upload/…` 連結，不要內嵌 base64。同時在儲存前檢查 `Description` 長度，超過 1.5 MB 就擋下並給出明確訊息。
+
+（既有的 7 篇 base64 文章維持原樣 —— 改寫它們會變更渲染出的 HTML，違反 [ADR-001](10-decisions.md)。見 [09-known-issues](09-known-issues.md) 1.13。）
+
 ---
 
 ## 9. CSRF

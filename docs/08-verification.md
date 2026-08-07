@@ -30,7 +30,7 @@ npx wrangler r2 object put gleanstudio-media/Upload/Abouts/1/20250502083239.jpg 
 
 `scripts/capture-golden.mjs` 對正式站爬一份固定 URL 清單，加上從資料庫匯出結果取得的每一個 `ArticleTypeID` 與 `ArticleID`，把**原始 bytes** 存進 `tests/golden/<slug>.html`，並記錄狀態碼與 headers。
 
-涵蓋範圍見 [03-url-contract](03-url-contract.md) §8：約 30 頁、~500 KB。
+涵蓋範圍見 [03-url-contract](03-url-contract.md) §8：**35 頁、6.4 MB**（比原估的 500 KB 大得多，因為文章內文有 base64 圖片）。
 
 **直接進版控，這是重點** —— 基準必須能在 diff 裡被審閱。自動覆寫 golden 等於沒有基準。
 
@@ -108,7 +108,7 @@ Playwright 在 375 / 768 / 1440 三個寬度，同時對正式站與本機截圖
 
 **不重現黃頁。** 新站回 **404**，記為刻意分歧，見 [09-known-issues](09-known-issues.md) §4。
 
-其他未探測的邊界：`?p=999`（超出範圍的頁碼）、`?ArticleTypeID=<不存在>`、格式錯誤的 GUID。這些**可以**對正式站探測，Phase 1 擷取 golden 時應該一併抓，不要留到移植完才發現行為不同。
+**Phase 1 已把邊界情境全部探測並收進 golden**，結果見 [03-url-contract](03-url-contract.md) §9。額外發現兩個舊站也會 500 的情境：`?p=0` 與 `/Home/Service?ArticleTypeID=<不存在>`。三個 500 都是同一個模式 —— 舊站對找不到的資料一律當機。
 
 ### 5.4 Workers Assets 的大小寫敏感度
 
@@ -118,7 +118,7 @@ Playwright 在 375 / 768 / 1440 三個寬度，同時對正式站與本機截圖
 
 ### 5.5 排序並列
 
-見 [04-data-model](04-data-model.md) §5。`ImportSeq` 釘住了目前這份資料的順序，但那是把觀察到的結果固定下來，不是從規則推導出來的。資料改變時要重新檢查。
+見 [04-data-model](04-data-model.md) §5。`LegacyOrder` 釘住了目前這份資料的順序，但那是把 oracle 觀察到的結果固定下來，不是從規則推導出來的。**資料一改就要重新擷取 golden 並重算**。
 
 ---
 

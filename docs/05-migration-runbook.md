@@ -57,11 +57,9 @@ MSSQL_URL='mssql://sa:PASSWORD@localhost:1433/gleanstudio?encrypt=false&trustSer
 
 **行為**：對 9 張表各做一次查詢，寫出 `data/export/<Table>.json` 與 `data/export/manifest.json`（記錄每張表的列數、每個檔的 SHA-256、ISO 時間戳）。
 
-**`Articles` 要特別處理** —— 必須帶出掃描順序，理由見 [04-data-model](04-data-model.md) §5：
+**`Articles` 的排序不從這裡來。** `CreateDate` 並列時的顯示順序無法從資料庫推導（試過 SQL Server 的掃描順序，實測不成立），必須由 **Phase 1 的 `capture-golden.mjs`** 從正式站輸出取得，寫進 `data/export/legacy-order.json`。理由見 [04-data-model](04-data-model.md) §5。
 
-```sql
-SELECT *, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS ImportSeq FROM Articles;
-```
+⚠️ **所以 Phase 1 是 Phase 2 的硬前置** —— 先擷取 golden，才有排序資料可用。
 
 **正規化就在這一層做完**，不要留到後面：
 
@@ -77,7 +75,9 @@ SELECT *, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS ImportSeq FROM Articles;
 
 | 檢查 | 為什麼重要 |
 |---|---|
-| 重複的 `(ArticleTypeID, CreateDate)` | 排序並列風險，見 [04-data-model](04-data-model.md) §5 |
+| 重複的 `CreateDate` | **列表**排序並列（跨分類），見 [04-data-model](04-data-model.md) §5 |
+| 重複的 `(ArticleTypeID, CreateDate)` | **首頁**「每分類最新一篇」的並列風險 |
+| `homepage-latest-tie` | 並列真的落在某分類的最大日期上 —— 首頁會受影響 |
 | 重複的 `Admins.Username` | 新 schema 有 `uq_admins_username`，會擋下 |
 | 違反 `(ParentID, Key)` 唯一的 `Lims` 列 | 新 schema 有 `uq_lims_parent_key`，會擋下 |
 | 孤兒外鍵 | STRICT + FK 會擋下 |
@@ -85,7 +85,7 @@ SELECT *, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS ImportSeq FROM Articles;
 
 **這個檔案要逐條讀過再往下走。** 每一條都是一個決定，不是警告。
 
-已知目前的內容：`ff829f70-…` 分類有 3 筆 `CreateDate = 2026-01-01` 的文章 —— 這正是 `ImportSeq` 存在的原因，不需要額外處理，但要確認它仍然只影響 `/Home/Articles?p=2` 而不影響首頁。
+2026-08-07 的實際內容是 3 筆：`2026-01-02` 三篇並列（跨分類）、`2026-01-01` 三篇並列（同分類）、以及後者在 `(ArticleTypeID, CreateDate)` 層級的重複。三筆都由 `LegacyOrder` 處理，不需要額外動作 —— 但要確認 **沒有出現 `homepage-latest-tie`**，那會影響首頁。
 
 ---
 
@@ -102,10 +102,11 @@ Lims → Admins → AdminLims → ArticleTypes → Articles → Services → Tea
 **三個容易踩的地雷**：
 
 1. **不要寫 `BEGIN TRANSACTION` / `COMMIT`** —— D1 的 import 會拒絕
-2. **每個 multi-VALUES `INSERT` 約 200 列一批。** `Articles.Description` 是 Summernote 產生的 `nvarchar(max)` HTML，很大；批次太大 D1 會回 "Statement too long"。總資料量很小（遠低於 5 GiB 的 `--file` 上限），所以這純粹是單一敘述長度的問題
+2. **`Articles` 必須分段寫入。** [D1 單一 SQL 敘述上限 100 KB](https://developers.cloudflare.com/d1/platform/limits/)，而 9 篇文章有 **7 篇的 `Description` 超過**（最大 1.73 MB，內嵌 Summernote 的 base64 圖片）。做法是先 `INSERT` 空字串再分段 `UPDATE … SET Description = Description || '<段>'`，每段跳脫後 ≤ 80 KB。見 [ADR-016](10-decisions.md)。其他表用 multi-VALUES 一批約 200 列即可
 3. **單引號要成對跳脫**，不要直接字串串接
 
 `Admins` 的 `PasswordHash` 來自 Step 4，**絕對不要寫入明碼**。
+`Articles.LegacyOrder` 來自 `data/export/legacy-order.json`（Phase 1 產生）。
 
 ---
 

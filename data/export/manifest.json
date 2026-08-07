@@ -1,0 +1,52 @@
+{
+  "exportedAt": "2026-08-07T04:50:59.764Z",
+  "source": "localhost:1433/gleanstudio",
+  "dataDigest": "dd7e2482cc4ce6731d1baf1b8f4362d057a0aea95c4d9456aa339dee9d663768",
+  "contentTables": [
+    "ArticleTypes",
+    "Articles",
+    "Services",
+    "Teams",
+    "Projects",
+    "Abouts"
+  ],
+  "files": {
+    "Lims": {
+      "rows": 9,
+      "sha256": "01887f3a32ad8d79dbdb20685ad2d4d29ddc09ebea0194fa9ef016bd973f3234"
+    },
+    "Admins": {
+      "rows": 1,
+      "sha256": "a8738ae08c88aea331aa6973adc82ab337d847595c6012aae48dab673d3da05b"
+    },
+    "AdminLims": {
+      "rows": 6,
+      "sha256": "1ffa41a96340f636558eb1a620ccf536395f82d5748d211bd5ac6d024820428e"
+    },
+    "ArticleTypes": {
+      "rows": 3,
+      "sha256": "c00ec689eaf4f26d2bf04fc10ad33127632f339ce2f79db8b6d16602ad64f725"
+    },
+    "Articles": {
+      "rows": 9,
+      "sha256": "fdbc35185c328ab66f8c72b40f13a9dd229378f3a3d2db2aefb49dbc792d13f2"
+    },
+    "Services": {
+      "rows": 0,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "Teams": {
+      "rows": 1,
+      "sha256": "ed31a7c8c03117fb48364e9c8d7cb7449458b094bd4cacca9334b7d72e29f55f"
+    },
+    "Projects": {
+      "rows": 87,
+      "sha256": "7ceb10e1259d7c8793f1967cec0fa59b8f23b8823f565f43972ab192d447ba0c"
+    },
+    "Abouts": {
+      "rows": 1,
+      "sha256": "96ea46ee72119743febc8bc47b6cea20c55b5fd6f9021d95ee0b7600985f2ab1"
+    }
+  },
+  "anomalyCount": 3
+}

@@ -2,7 +2,7 @@
 
 10 個階段。每一階段有明確的完成條件 —— 「做完了沒」應該是機械可答的問題，不是判斷題。
 
-**現況：Phase 0 進行中。**
+**現況：Phase 1 完成，Phase 2 可以開始。**
 
 ---
 
@@ -22,16 +22,17 @@
 
 ---
 
-## Phase 1 — golden 基準擷取 ⚠️ 優先
+## Phase 1 — golden 基準擷取 ✅ 完成（2026-08-07）
 
-**這一階段有時效性。舊後台每多上線一天，基準就多漂移一天。** 排在資料遷移之前。
+**有時效性**（舊後台每多上線一天基準就多漂移一天），**而且是 Phase 2 的硬前置** —— `Articles.LegacyOrder` 的值只能從這裡取得，見 [ADR-012](10-decisions.md)。
 
-- [ ] `scripts/capture-golden.mjs` 可用
-- [ ] `tests/golden/` 涵蓋 [03-url-contract](03-url-contract.md) §8 的全部項目（約 30 頁）
-- [ ] `manifest.json` 記錄狀態碼、headers、SHA-256、時間戳
-- [ ] **manifest 同時記錄當次資料庫匯出的 SHA-256**（[08-verification](08-verification.md) §2）
-- [ ] 邊界情境一併擷取：`?p=999`、`?ArticleTypeID=<不存在>`、格式錯誤的 GUID
-- [ ] golden 已進版控
+- [x] `scripts/capture-golden.mjs` 可用
+- [x] `tests/golden/` 涵蓋 [03-url-contract](03-url-contract.md) §8 全部項目（**35 頁 / 6.4 MB**）
+- [x] `manifest.json` 記錄狀態碼、headers、SHA-256、時間戳
+- [x] **manifest 記錄資料快照的 `dataDigest`**（[08-verification](08-verification.md) §2）
+- [x] 邊界情境全部探測，結果見 [03-url-contract](03-url-contract.md) §9
+- [x] `data/export/legacy-order.json` 已產生（文章顯示順序）
+- [x] golden 已進版控
 
 ---
 
@@ -40,7 +41,8 @@
 **不需要 Azure 存取** —— 資料與圖片本機都有且完整（[05-migration-runbook](05-migration-runbook.md) §0）。
 
 - [ ] `scripts/export-mssql.mjs` 從本機 Docker SQL Server 匯出 9 張表
-- [ ] `Articles` 帶出 `ImportSeq`（[04-data-model](04-data-model.md) §5）
+- [ ] `Articles.LegacyOrder` 由 Phase 1 的 `legacy-order.json` 填入（[04-data-model](04-data-model.md) §5）
+- [ ] 大型 `Description` 用分段 append 寫入，每段 ≤ 80 KB（[ADR-016](10-decisions.md)）
 - [ ] `data/export/manifest.json` 已進版控
 - [ ] **`data/export/anomalies.json` 已逐條讀過**
 - [ ] `db/migrations/0000_init.sql` 已補上 `STRICT` / `CHECK` / `DESC` 索引
@@ -166,11 +168,12 @@
 ## 相依關係
 
 ```
-Phase 0 ─┬─▶ Phase 1（有時效性，越早越好）
-         └─▶ Phase 2 ──▶ Phase 3 ──┬──▶ Phase 4 ──┐
-                          ▲         └──▶ Phase 5 ──┼──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8 ──▶ Phase 9
-                          │                        │
-                     需要 Phase 1 的 golden ────────┘
+Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──┬──▶ Phase 4 ──┐
+                                               └──▶ Phase 5 ──┼──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8 ──▶ Phase 9
+                                                              │
+                                  golden 供 Phase 3-7 驗證 ────┘
 ```
 
-Phase 4 與 Phase 5 可以並行。Phase 1 不依賴 Phase 2，而且**應該優先做** —— 它擷取的是一份會隨時間漂移的東西。
+**Phase 1 → Phase 2 是硬相依**，不只是排程建議：`Articles.LegacyOrder` 的值來自 Phase 1 從正式站擷取的顯示順序（[ADR-012](10-decisions.md)）。
+
+Phase 4 與 Phase 5 可以並行。

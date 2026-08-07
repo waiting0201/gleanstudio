@@ -1,0 +1,313 @@
+{
+  "capturedAt": "2026-08-07T04:51:24.567Z",
+  "origin": "https://gleanstudio.com.tw",
+  "dataDigest": "dd7e2482cc4ce6731d1baf1b8f4362d057a0aea95c4d9456aa339dee9d663768",
+  "articleOrder": [
+    "96aaa3f5-b7db-4416-ab14-2877ed239219",
+    "2c22a9d8-61fa-457a-b354-aaae97281e90",
+    "e016d09a-6f46-48fa-ae30-6ed329ad1a46",
+    "18cacc7a-4bde-43f0-a490-c4e1897dc97a",
+    "51e3bd0a-ea80-4eb9-9cc8-3e4e00b01cff",
+    "21b3941f-4095-4006-822c-45942c21338e",
+    "4772b8a8-9912-4769-bacf-18d176e0061a",
+    "22acb62c-0b58-498b-8b7b-3e6f95b37653",
+    "d6d01a97-2da1-45da-b620-f859981e4826"
+  ],
+  "articleTypeIds": [
+    "ff829f70-4d55-4f55-aa1f-750c050d2be0",
+    "6a3f74fd-82d1-4102-86f6-55eec9fb662d",
+    "d6c3abfd-9f01-4e88-93a9-a1ff0661e357"
+  ],
+  "pages": [
+    {
+      "path": "/",
+      "slug": "root.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 15908,
+      "sha256": "78981cd038db8f208965e2262d56be52189f592ffbe9564076c324ee1857cf7b"
+    },
+    {
+      "path": "/Home/Index",
+      "slug": "home-index.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 15908,
+      "sha256": "78981cd038db8f208965e2262d56be52189f592ffbe9564076c324ee1857cf7b"
+    },
+    {
+      "path": "/Home/About",
+      "slug": "home-about.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9574,
+      "sha256": "9c3da0eb8b901796c2ba2d4fd105338392faa94e5fc58a2ffc1e43b8d4a6f2ad"
+    },
+    {
+      "path": "/Home/Team",
+      "slug": "home-team.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 8688,
+      "sha256": "71ab162df87b5ebaec3352b70608eba1f308ab55711043c32bb16981ea731833"
+    },
+    {
+      "path": "/Home/Gallery",
+      "slug": "home-gallery.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9283,
+      "sha256": "6a511b530ba89d771f0375615ad49311ba6cbed525e03cc95ad029197bf1f8b2"
+    },
+    {
+      "path": "/Home/Project",
+      "slug": "home-project.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 43679,
+      "sha256": "0b47fc24d230175edffedb3016d7044629cc1a7277b5f24bea2e783400249499"
+    },
+    {
+      "path": "/Home/Services",
+      "slug": "home-services.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9827,
+      "sha256": "600a15289b7bc5b5068901eba4422614b5c2aedb251c6cf95b03848dc362311f"
+    },
+    {
+      "path": "/Home/Service",
+      "slug": "home-service.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9362,
+      "sha256": "3490a1c304196b4d56da42fe9c0edfd7ed2f42484641faa4204ba51da2052bbb"
+    },
+    {
+      "path": "/Home/Contact",
+      "slug": "home-contact.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 13785,
+      "sha256": "6b342b3fa95f99782534aa542ca53e5597dfd3a40b7a115fe410ebac153bf458"
+    },
+    {
+      "path": "/Home/Articles?p=1",
+      "slug": "home-articles__p-1.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 16592,
+      "sha256": "0c0e81c3120ab2f4c75f13ab0121e9635073cdc0f0da9952e2125048074bdcd7",
+      "note": "articles-page-1"
+    },
+    {
+      "path": "/Home/Articles?p=2",
+      "slug": "home-articles__p-2.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 13498,
+      "sha256": "04510a1e3d2529ce686ba4919f00415e4aa31a5408de34b0ceb1d4344861fd31"
+    },
+    {
+      "path": "/Home/Service?ArticleTypeID=ff829f70-4d55-4f55-aa1f-750c050d2be0",
+      "slug": "home-service__articletypeid-ff829f70.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9362,
+      "sha256": "3490a1c304196b4d56da42fe9c0edfd7ed2f42484641faa4204ba51da2052bbb"
+    },
+    {
+      "path": "/Home/Articles?ArticleTypeID=ff829f70-4d55-4f55-aa1f-750c050d2be0",
+      "slug": "home-articles__articletypeid-ff829f70.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 16605,
+      "sha256": "49fe575967ee55f5be1907188bcfa143c1a0bb21c02157ec24e46627fb8fef5c"
+    },
+    {
+      "path": "/Home/Service?ArticleTypeID=6a3f74fd-82d1-4102-86f6-55eec9fb662d",
+      "slug": "home-service__articletypeid-6a3f74fd.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9029,
+      "sha256": "bac89f27b546480cd5f59da67324ae0d5fb78fc5a8e6e6fc3af60848fdb2a09b"
+    },
+    {
+      "path": "/Home/Articles?ArticleTypeID=6a3f74fd-82d1-4102-86f6-55eec9fb662d",
+      "slug": "home-articles__articletypeid-6a3f74fd.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 11301,
+      "sha256": "804238976b2a6d7408b5936d4f1913b9aa5578208b98842fb120901b51ccf56b"
+    },
+    {
+      "path": "/Home/Service?ArticleTypeID=d6c3abfd-9f01-4e88-93a9-a1ff0661e357",
+      "slug": "home-service__articletypeid-d6c3abfd.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 8967,
+      "sha256": "62306742ee5b539b7114be25b384310ea44a499492e5c8206b4ad83e29ff69f1"
+    },
+    {
+      "path": "/Home/Articles?ArticleTypeID=d6c3abfd-9f01-4e88-93a9-a1ff0661e357",
+      "slug": "home-articles__articletypeid-d6c3abfd.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 11273,
+      "sha256": "eb20f5921744f382229ffcb0fb96747469afa0ff08f146ddf749f0b3caeecdc3"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=96aaa3f5-b7db-4416-ab14-2877ed239219",
+      "slug": "home-articledetail__articleid-96aaa3f5.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 132941,
+      "sha256": "86c0983a700094c00a85f13204552bf0ef1cbb36a47fd0ac02fea19134bc7dee"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=2c22a9d8-61fa-457a-b354-aaae97281e90",
+      "slug": "home-articledetail__articleid-2c22a9d8.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 214676,
+      "sha256": "7fe7dce3d293600ed4ac95dad2b8371aca8a4f67f4cb93a8342dac688a7174a1"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=e016d09a-6f46-48fa-ae30-6ed329ad1a46",
+      "slug": "home-articledetail__articleid-e016d09a.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 8833,
+      "sha256": "8424604740e325303f24cf1a391df86fb47f747269d14be15a543c4e71ad02f9"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=18cacc7a-4bde-43f0-a490-c4e1897dc97a",
+      "slug": "home-articledetail__articleid-18cacc7a.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 855109,
+      "sha256": "93fe3943b07ce2f334f398a511078afa9fc120891ec2e1bdad93461df2f0af2d"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=51e3bd0a-ea80-4eb9-9cc8-3e4e00b01cff",
+      "slug": "home-articledetail__articleid-51e3bd0a.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9267,
+      "sha256": "3db5fbfe863c5c344c3d3e376e69e25fc945af6544b302cdcaf156490f9e196e"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=21b3941f-4095-4006-822c-45942c21338e",
+      "slug": "home-articledetail__articleid-21b3941f.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 448903,
+      "sha256": "1c9f6ab24752d5170f2c2d2e087d6b2564879aaea43ff0d99fb2f012dd5464eb"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=4772b8a8-9912-4769-bacf-18d176e0061a",
+      "slug": "home-articledetail__articleid-4772b8a8.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 1450828,
+      "sha256": "930a343a6ca923c4f450d4c6e78bd1a1122199f6f10c819e6dd2008eb4333f68"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=22acb62c-0b58-498b-8b7b-3e6f95b37653",
+      "slug": "home-articledetail__articleid-22acb62c.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 1387664,
+      "sha256": "482c03aeadc3716fae1be5590377708c7ec80d29eb48878b694d487b0b1ff2bb"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=d6d01a97-2da1-45da-b620-f859981e4826",
+      "slug": "home-articledetail__articleid-d6d01a97.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 1818152,
+      "sha256": "c419b5ee9490d696e0cec240faa4a75a9bbefe7972159da082e0bb0688c2c59b"
+    },
+    {
+      "path": "/Home/Articles?p=999",
+      "slug": "home-articles__p-999.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 10258,
+      "sha256": "04ab27b69ca9d5cfcf48c251989572a9b4ff42dabf576dee99a7372b3c70aa10",
+      "note": "超出範圍的頁碼"
+    },
+    {
+      "path": "/Home/Articles?p=0",
+      "slug": "home-articles__p-0.html",
+      "status": 500,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 8946,
+      "sha256": "cde746b527e507c8e0a097a42597da1a2a02bdd43b91ae0ecb925422bd866506",
+      "note": "頁碼 0"
+    },
+    {
+      "path": "/Home/Articles?p=abc",
+      "slug": "home-articles__p-abc.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 16592,
+      "sha256": "0c0e81c3120ab2f4c75f13ab0121e9635073cdc0f0da9952e2125048074bdcd7",
+      "note": "頁碼非數字"
+    },
+    {
+      "path": "/Home/Articles?ArticleTypeID=00000000-0000-0000-0000-000000000000",
+      "slug": "home-articles__articletypeid-00000000.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 10130,
+      "sha256": "a3b63d5b35696ad5e22bdaab009ad2475013fc8caff0144950a618bb24413d4a",
+      "note": "不存在的分類"
+    },
+    {
+      "path": "/Home/ArticleDetail?ArticleID=00000000-0000-0000-0000-000000000000",
+      "slug": "home-articledetail__articleid-00000000.html",
+      "status": 500,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 8580,
+      "sha256": "333b060d67c533b15e6f2f616ee9d1b369eaacf42eb7c9b5fd530d064bde17f2",
+      "note": "不存在的文章 —— 舊站預期 500"
+    },
+    {
+      "path": "/Home/Service?ArticleTypeID=00000000-0000-0000-0000-000000000000",
+      "slug": "home-service__articletypeid-00000000.html",
+      "status": 500,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 8590,
+      "sha256": "150620c2afff726fb5e77c3fc0631d1c973118ff2b9f30a5970f857243f32966",
+      "note": "不存在的分類"
+    },
+    {
+      "path": "/home/about",
+      "slug": "home-about.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9574,
+      "sha256": "f34dd46f80e381d0dc534f0ee0831cd9956615660e8a9d6ac667aaf733029cba",
+      "note": "小寫路徑 —— IIS 不敏感，Astro 需 middleware"
+    },
+    {
+      "path": "/Home/About/",
+      "slug": "home-about-.html",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 9574,
+      "sha256": "9c3da0eb8b901796c2ba2d4fd105338392faa94e5fc58a2ffc1e43b8d4a6f2ad",
+      "note": "尾斜線"
+    },
+    {
+      "path": "/Error/Validation",
+      "slug": "error-validation.html",
+      "status": 404,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 3245,
+      "sha256": "e14176717991992a84acc8210d9dc2ceceaed771df061d743fd9e01541da5c9e",
+      "note": "舊站未實作，預期 404"
+    }
+  ]
+}
