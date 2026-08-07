@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   output: 'server',
@@ -17,4 +18,24 @@ export default defineConfig({
   compressHTML: false,
 
   build: { format: 'preserve' },
+
+  // 後台 session —— KV 而不是 JWT，因為需要伺服器端撤銷能力：
+  // 管理員被移除或權限被撤銷之後，一枚有效的 token 仍然能用到過期。
+  // 見 docs/06-admin-spec.md §2
+  // ⚠️ **不要自己設 driver。** @astrojs/cloudflare 只有在 session.driver 沒被
+  //    設定時才會幫你接上 KV（binding 預設就叫 SESSION），而且是用
+  //    sessionDrivers.cloudflareKVBinding({ binding }) 把 binding 名稱包進去的。
+  //    手寫 `driver: 'cloudflareKVBinding'` + 另一個 options 欄位不會走那條路，
+  //    driver 收到的 opts 是 undefined，登入當下就 500（讀 opts.base 炸掉）。
+  session: {
+    ttl: 8 * 60 * 60,
+    cookie: { name: 'gleanstudio_session', sameSite: 'lax', httpOnly: true, secure: true },
+  },
+
+  // ⚠️ Tailwind 只透過 Vite plugin 掛上，**不加 Astro 的 tailwind integration** ——
+  // integration 會注入一份全域樣式，前台每一頁的 <head> 都會多一個 <link>，
+  // 凍結的 markup 立刻掉。這裡改成只有 src/layouts/Admin.astro 去 import
+  // src/styles/admin.css，Astro 就只會把它注進有用到的頁面。
+  // 見 docs/06-admin-spec.md §11
+  vite: { plugins: [tailwindcss()] },
 });

@@ -221,7 +221,69 @@ putEntityPhoto(
 
 ---
 
-## 10. 完成條件
+## 10. 介面設計
+
+### 論點：前台是展廳，後台是工作室
+
+公開站的識別是鍍金漸層、Cinzel 羅馬碑刻大寫、儀式性的白 —— 那是展廳。
+修護師實際工作的地方剛好相反：**中性灰工作檯、色準光源**，因為中性環境是判斷文物真實色彩的前提。
+
+所以後台把品牌反過來用：**灰為地，青銅只留給兩件事** —— 記錄本身的身分，以及會改動公開站的那個動作。全站只有一種青銅按鈕。
+
+色票全部取自 `public/Content/css/style.css`，不是另外調的：
+
+| token | 值 | 出處 |
+|---|---|---|
+| `ink` | `#272726` | style.css:11960 的 body color |
+| `bench` | `#DCDDDA` | 攝影灰卡。**刻意不是米色** —— 那是展廳的顏色 |
+| `paper` | `#FFFFFF` | 記錄表面 |
+| `brass` | `#6E4B26` | style.css:12130 `.bg-btn` 漸層的深端 |
+| `gild` | `#B0954F` | style.css:12053 —— 前台 `.form-control:focus` 就是這個色 |
+| `oxide` | `#8A3324` | 氧化鐵紅。只用於破壞性操作 |
+
+### 字體：三層，其中一層只放拉丁字元
+
+| 角色 | 字體 | 用在 |
+|---|---|---|
+| 字標 | Cinzel | **只有頂欄那一處**。多用一次，工作室就變成展廳 |
+| 記錄 | Noto Serif TC | 記錄標題 —— 文物的聲音 |
+| 介面 | Noto Sans TC / 系統 CJK | 所有介面文案、標籤、說明 |
+| 儀表 | 等寬 + 字距 | ID、日期、筆數、檔名、**網址** |
+
+⚠️ **儀表層只放拉丁字母與數字。** 等寬字沒有好的中文字面，`letter-spacing` 套在 CJK 上更是直接難看。中文的小標籤用 `.eyebrow`。第一版把 `.instrument` 套到中文上，是自我檢查時抓出來的。
+
+個性來自襯線（文物）與等寬（記錄）的碰撞，不靠裝飾。
+
+### 簽名元素：每一列都印著它的公開網址
+
+整個專案存在的理由就是那個 byte-identical 的公開頁面。所以後台每一筆記錄旁邊都印著**它真正的、凍結的網址本身** —— 不是「看線上版」這種按鈕文案 —— 一點就在新分頁開啟。編輯者永遠不會忘記自己在動什麼。
+
+### 刻意的取捨
+
+- **儀表板不放任何統計數字。** 9 篇文章、1–3 個使用者，KPI 方格是演戲。首頁是「你能維護的區塊 + 各有幾筆」加上「最近的文章」
+- **左側導覽由實際權限產生**，不是寫死的選單。進不去的區塊不會出現 —— 這也讓 [09-known-issues](09-known-issues.md) 3.3（現任管理員沒有 Teams 權限）浮出來而不是被藏起來
+
+---
+
+## 11. Tailwind 的接法 ⚠️
+
+**只透過 `@tailwindcss/vite` 掛上，不要加 Astro 的 tailwind integration。**
+
+integration 會注入一份全域樣式，**前台每一頁的 `<head>` 都會多一個 `<link>`，凍結的 markup 立刻掉**。
+
+現在的做法：`src/styles/admin.css` 只被 `src/layouts/Admin.astro` import，Astro 就只把它注進有用到的頁面。改 import 位置之前先跑 `npm run preview`。
+
+### session 設定的坑
+
+**不要自己設 `session.driver`。** `@astrojs/cloudflare` 只有在 `session.driver` **沒被設定**時才會幫你接上 KV（binding 預設叫 `SESSION`），而且是用 `sessionDrivers.cloudflareKVBinding({ binding })` 把 binding 名稱包進去的。
+
+手寫 `driver: 'cloudflareKVBinding'` 再另外給一個 `options` 欄位不會走那條路 —— driver 收到的 `opts` 是 `undefined`，**登入當下就 500**（讀 `opts.base` 炸掉），而且 GET 頁面完全正常，只有寫 session 的那一刻才炸。
+
+`astro.config.mjs` 裡只給 `ttl` 與 `cookie`。
+
+---
+
+## 12. 完成條件
 
 - [ ] PBKDF2 登入可用，`MustChangePassword` 流程可走完
 - [ ] KV session 正常，登出真的清空

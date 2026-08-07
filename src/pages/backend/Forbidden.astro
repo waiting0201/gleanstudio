@@ -1,0 +1,26 @@
+---
+/**
+ * 403，**原地渲染不轉址**。
+ *
+ * 舊站權限不足時轉到 /Error/Validation，而那個路由從未被實作 —— 實測正式站
+ * 回 404。結果是「權限不足」與「網址打錯」在使用者眼中完全一樣。
+ * 見 docs/06-admin-spec.md §7
+ */
+import Admin from '../../layouts/Admin.astro';
+import { getSession } from '../../lib/auth/session';
+
+export const prerender = false;
+const session = await getSession(Astro);
+Astro.response.status = 403;
+---
+<Admin title="沒有權限" session={session}>
+<div class="record max-w-lg p-7">
+  <div class="record-id">403</div>
+  <h1 class="record-title mt-2 text-xl">這個區塊沒有開給你</h1>
+  <p class="mt-3 text-sm text-ink-soft">
+    你的帳號沒有這個區塊的權限。左側只會列出你能進的地方 ——
+    如果你認為這裡應該開放，請找管理者調整權限，改完立刻生效，不用重新登入。
+  </p>
+  <a href="/backend/Main/Index" class="btn btn-quiet mt-6">回到首頁</a>
+</div>
+</Admin>

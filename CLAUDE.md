@@ -27,11 +27,11 @@
 **Level B parity 31/31（gating 全綠）、Level A 29/31**。`/Upload/*` 的 R2 路由與大小寫 middleware 都好了。
 剩下的 2 頁 Level A 差異是 Astro 序列化器的正規化行為，已審閱並接受（[docs/08](docs/08-verification.md) §7a）。
 
-**Phase 4 程式完成**（聯絡表單 POST）。驗證、reCAPTCHA、寄信路徑都好了，
-`npm run parity:contact` 4 個情境全綠。**卡在 key 輪替** ——
-`RECAPTCHA_SECRET` 沒設就是每一筆送出都被判定驗證碼錯誤。
+**Phase 4 程式完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠。
+**卡在 key 輪替** —— `RECAPTCHA_SECRET` 沒設就是每一筆送出都被判定驗證碼錯誤。
 
-**下一步：輪替 reCAPTCHA / SendGrid key，人工審閱 `tests/derived/`，然後 Phase 5（後台）。**
+**Phase 5 進行中**（後台）。設計系統、登入、KV session、權限註冊表、403 都好了；
+**7 個實體的 CRUD 還沒做**。介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -73,6 +73,7 @@ npm run media:upload       # 圖片 → R2（加 :remote）
 npm run golden             # 從正式站擷取 golden 基準 → tests/golden/
 npm run verify:d1
 npm run verify:media
+npm run verify:permissions # 權限註冊表 ↔ Lims 資料一致（30 個路由）
 
 # 前台（已可用）
 npm run dev                # astro dev
@@ -129,6 +130,8 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - **不要用 `LENGTH()` 比對內容完整性** —— 它數 code point，JS `.length` 數 UTF-16 單位，內文有 🔗 就會差 1。要比就比整串或雜湊
 - **版型與頁面的空白是契約的一部分** —— `<Site>` 開標籤後換不換行逐頁不同，改之前先跑 `npm run parity -- <path> --level a`
 - **Razor 的 `@x` 不等於 Astro 的 `{x}`** —— 前者把 160–255 的字元編成 `&#nnn;`。要 byte parity 就用 `set:html={htmlEncode(x)}`（`src/lib/format.ts`）
+- **Tailwind 只透過 Vite plugin 掛，不要加 Astro integration** —— integration 會注入全域樣式，前台每頁多一個 `<link>`，parity 立刻掉。`src/styles/admin.css` 只能被 `src/layouts/Admin.astro` import（[docs/06](docs/06-admin-spec.md) §11）
+- **後台的等寬「儀表層」只放拉丁字母與數字** —— 中文小標籤用 `.eyebrow`
 
 ---
 

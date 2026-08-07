@@ -1,0 +1,103 @@
+---
+/**
+ * 登入。舊站是 SmartAdmin 佈景 + 明碼比對，這裡整個重做。
+ *
+ * 寫死的 `weypro` 後門（→ AdminID 888）**沒有相容層**，直接不存在。
+ * 超級使用者改由 Admins.IsSuperAdmin 這個真實、可稽核、可撤銷的欄位表示。
+ * 見 docs/06-admin-spec.md §4
+ */
+import { env } from 'cloudflare:workers';
+import Admin from '../../../layouts/Admin.astro';
+import { verifyPassword } from '../../../lib/auth/password';
+import { SESSION_KEY, type AdminSession } from '../../../lib/auth/session';
+
+export const prerender = false;
+
+const next = Astro.url.searchParams.get('next') ?? '/backend/Main/Index';
+// 只接受站內路徑 —— 不然 ?next=https://… 就是一個開放轉址
+const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/backend/Main/Index';
+
+let username = '';
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  username = String(form.get('username') ?? '').trim();
+  const password = String(form.get('password') ?? '');
+
+  const admin = await env.DB.prepare(
+    `SELECT AdminID, Name, Username, PasswordHash, IsSuperAdmin, MustChangePassword
+     FROM Admins WHERE Username = ?1`,
+  ).bind(username).first<{
+    AdminID: number; Name: string; Username: string;
+    PasswordHash: string; IsSuperAdmin: number; MustChangePassword: number;
+  }>();
+
+  // 帳號不存在時也跑一次雜湊比對，讓兩條路徑的耗時接近 ——
+  // 不然回應時間就是一個帳號列舉的側通道。
+  const ok = admin
+    ? await verifyPassword(password, admin.PasswordHash)
+    : await verifyPassword(password, 'pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+
+  if (ok && admin) {
+    // 換一組 session id —— 防 session fixation
+    await Astro.session?.regenerate();
+    const session: AdminSession = {
+      adminId: admin.AdminID,
+      username: admin.Username,
+      name: admin.Name,
+      isSuper: admin.IsSuperAdmin === 1,
+      mustChangePassword: admin.MustChangePassword === 1,
+    };
+    Astro.session?.set(SESSION_KEY, session);
+    return Astro.redirect(session.mustChangePassword ? '/backend/Main/ChangePassword' : safeNext, 302);
+  }
+
+  // 不區分「帳號不存在」與「密碼錯誤」
+  error = '帳號或密碼不對。再試一次，或請管理者重設密碼。';
+}
+---
+<Admin title="登入" bare>
+<main class="flex min-h-screen items-center justify-center px-5 py-16">
+  <div class="w-full max-w-sm">
+
+    <div class="mb-8">
+      <div class="font-display text-2xl tracking-[0.2em] text-ink">GLEAN</div>
+      <div class="eyebrow mt-1">禾勤藝術 · 內容後台</div>
+    </div>
+
+    <form method="post" class="record p-7" novalidate>
+      {error && (
+        <p role="alert" class="mb-5 border-l-2 border-oxide bg-oxide-wash px-3 py-2 text-sm text-oxide">
+          {error}
+        </p>
+      )}
+
+      <div class="mb-5">
+        <label class="field-label" for="username">帳號</label>
+        <input
+          class="field-input" id="username" name="username" type="text"
+          value={username} autocomplete="username" autofocus required
+          aria-invalid={error ? 'true' : undefined}
+        >
+      </div>
+
+      <div class="mb-7">
+        <label class="field-label" for="password">密碼</label>
+        <input
+          class="field-input" id="password" name="password" type="password"
+          autocomplete="current-password" required
+          aria-invalid={error ? 'true' : undefined}
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full justify-center">登入</button>
+    </form>
+
+    <p class="eyebrow mt-6">
+      忘記密碼請找管理者重設。這裡沒有自助重設。
+    </p>
+
+  </div>
+</main>
+</Admin>

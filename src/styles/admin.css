@@ -1,0 +1,211 @@
+/**
+ * 後台的設計系統。
+ *
+ * ⚠️ **只能被 src/layouts/Admin.astro import。**
+ * 前台的 HTML 是凍結的（docs/03-url-contract.md）—— 只要有一個前台頁面碰到
+ * 這個檔，Astro 就會在它的 <head> 塞一個 <link>，parity 立刻掉。
+ * 改 import 位置之前先跑 npm run preview。
+ *
+ * ── 設計論點 ────────────────────────────────────────────
+ * 前台是展廳，後台是工作室。
+ *
+ * 公開站的識別是鍍金漸層、Cinzel 羅馬碑刻大寫、儀式性的白。
+ * 修護師實際工作的地方剛好相反：中性灰工作檯、色準光源 —— 中性環境是
+ * 判斷文物真實色彩的前提。所以後台把品牌反過來用：灰為地，青銅只留給
+ * 兩件事 —— 記錄本身的身分，以及會改動公開站的那個動作。
+ *
+ * 色票全部取自 public/Content/css/style.css，不是另外調的。
+ */
+@import 'tailwindcss';
+
+@theme {
+  /* 品牌近黑 —— style.css:11960 的 body color */
+  --color-ink: #272726;
+  --color-ink-soft: #55534f;
+  --color-ink-faint: #8a8781;
+
+  /* 攝影灰卡。刻意不是米色 —— 那是展廳的顏色 */
+  --color-bench: #dcddda;
+  --color-bench-deep: #c8cac6;
+  --color-paper: #ffffff;
+
+  /* 品牌青銅。style.css:12130 的 .bg-btn 漸層兩端 */
+  --color-brass: #6e4b26;
+  --color-brass-lift: #8a6234;
+  /* style.css:12053 —— 前台 .form-control:focus 就是這個色，逐字沿用 */
+  --color-gild: #b0954f;
+  --color-gild-wash: #f3ecdc;
+
+  /* 氧化鐵紅。只用於破壞性操作 */
+  --color-oxide: #8a3324;
+  --color-oxide-wash: #f7ebe8;
+
+  --font-display: 'Cinzel', serif;
+  --font-record: 'Noto Serif TC', serif;
+  --font-ui: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --font-instrument: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+}
+
+@layer base {
+  html {
+    background: var(--color-bench);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
+    font-weight: 300;
+    /* CJK 在小字級需要更鬆的行高才讀得動 */
+    line-height: 1.8;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* 鍵盤焦點沿用前台的黃銅，讓後台跟前台是同一雙手做的 */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-gild);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* ── 儀表層 ───────────────────────────────────────────
+     ID、日期、筆數、檔名、**網址**。等寬 + 字距，跟內容的襯線體形成對比。
+     這個對比就是後台的個性來源，不靠裝飾。
+
+     ⚠️ **只放拉丁字母與數字。** 等寬字沒有好的中文字面，letter-spacing 套在
+     CJK 上更是直接難看。中文的小標籤用 .eyebrow。 */
+  .instrument {
+    font-family: var(--font-instrument);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+  }
+
+  /* 中文的小標籤 —— 儀表層的對應物，但用介面字，不加字距 */
+  .eyebrow {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--color-ink-faint);
+    line-height: 1.6;
+  }
+
+  /* ── 記錄卡 ─────────────────────────────────────────── */
+  .record {
+    background: var(--color-paper);
+    border: 1px solid var(--color-bench-deep);
+  }
+
+  /* 記錄的身分帶 —— 青銅只在這裡與主要動作出現 */
+  .record-id {
+    font-family: var(--font-instrument);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-brass);
+  }
+
+  .record-title {
+    font-family: var(--font-record);
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  /* ── 動作 ───────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+
+  /* 會改動公開站的動作 —— 全站只有這一種青銅按鈕 */
+  .btn-primary {
+    background: var(--color-brass);
+    color: var(--color-paper);
+  }
+  .btn-primary:hover { background: var(--color-brass-lift); }
+
+  .btn-quiet {
+    background: transparent;
+    border-color: var(--color-bench-deep);
+    color: var(--color-ink);
+  }
+  .btn-quiet:hover { background: var(--color-bench); }
+
+  .btn-danger {
+    background: transparent;
+    border-color: var(--color-oxide);
+    color: var(--color-oxide);
+  }
+  .btn-danger:hover { background: var(--color-oxide-wash); }
+
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ── 表單 ───────────────────────────────────────────── */
+  .field-label {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 0.375rem;
+  }
+
+  .field-input {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    background: var(--color-paper);
+    border: 1px solid var(--color-bench-deep);
+    color: var(--color-ink);
+    font-family: inherit;
+    font-size: 0.9375rem;
+  }
+  .field-input:focus {
+    outline: none;
+    border-color: var(--color-gild);
+    box-shadow: 0 0 0 3px var(--color-gild-wash);
+  }
+  .field-input[aria-invalid='true'] { border-color: var(--color-oxide); }
+
+  .field-error {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-oxide);
+  }
+
+  .field-hint {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-faint);
+  }
+
+  /* ── 簽名元素：公開面 ─────────────────────────────────
+     每一筆記錄旁邊都印著它真實的、凍結的公開網址 —— 不是「看線上版」這種
+     按鈕文案，是那條網址本身。整個專案就是為了讓那條網址的輸出一個 byte
+     都不變，後台不該讓編輯者忘記它在那裡。
+     網址是拉丁字元，所以它天生就屬於儀表層。 */
+  .live-face {
+    font-family: var(--font-instrument);
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: var(--color-ink-faint);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-bench-deep);
+    padding-bottom: 1px;
+    transition: color 120ms ease, border-color 120ms ease;
+  }
+  .live-face:hover {
+    color: var(--color-brass);
+    border-color: var(--color-gild);
+  }
+}

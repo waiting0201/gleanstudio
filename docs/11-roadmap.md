@@ -117,18 +117,33 @@ node scripts/verify-media.mjs [--remote]
 
 ---
 
-## Phase 5 — 後台重建
+## Phase 5 — 後台重建 🚧 進行中
 
-完成條件見 [06-admin-spec](06-admin-spec.md) §10：
+完成條件見 [06-admin-spec](06-admin-spec.md) §12。介面設計方向見同文件 §10。
 
-- [ ] PBKDF2 登入 + `MustChangePassword` 流程
-- [ ] KV session，登出真的清空
-- [ ] 權限註冊表 CI 斷言全綠
+**已完成 —— 驗證與外殼**
+
+- [x] 設計系統（Tailwind v4，`src/styles/admin.css`）。色票取自前台 CSS，不是另外調的
+- [x] Tailwind **沒有滲進凍結的前台**：接上之後 parity 仍是 Level B 31/31、Level A 29/31
+- [x] PBKDF2 登入 + `MustChangePassword` 強制換密碼流程（本機端到端跑過）
+- [x] KV session，登出真的 `destroy()`（實測登出後同一個 cookie 進不去）
+- [x] 權限註冊表 30 個路由 + CI 斷言：`npm run verify:permissions`
+- [x] 導覽列由**實際權限**產生 —— 實測現任管理員看不到「團隊成員」（3.3 浮出來了）
+- [x] 403 原地渲染，`/Error/Validation` 回 403
+- [x] `weypro` 後門與 `AdminID = 888` 從未被移植進來
+
+**待辦 —— 內容維護**
+
 - [ ] 7 個實體 CRUD + 排序
 - [ ] 上傳走 `media.ts`，magic byte 驗證
-- [ ] 所有變更操作有 CSRF，刪除是 POST
-- [ ] 403 原地渲染，`/Error/Validation` 不再 404
-- [ ] `weypro` 後門與 `AdminID = 888` 程式碼完全移除
+- [ ] 所有變更操作有 CSRF token，刪除是 POST
+- [ ] 富文本編輯器擋 base64 內嵌（[06-admin-spec](06-admin-spec.md) §8 —— 最大一篇已用掉 87% 的 D1 單列額度）
+- [ ] **部署前要先建遠端 KV namespace**：`wrangler kv namespace create SESSION`，再把 id 填進 `wrangler.jsonc`
+
+**過程中發現**
+
+- 舊系統的密碼只有 **6 個字元**。新的換密碼流程要求 12 字元，所以搬過來的密碼**沒有一組能當成新密碼重用** —— 這正是想要的結果
+- `@astrojs/cloudflare` 的 session 設定有個坑：自己設 `driver` 會讓登入當下 500，而 GET 完全正常。見 [06-admin-spec](06-admin-spec.md) §11
 
 ---
 

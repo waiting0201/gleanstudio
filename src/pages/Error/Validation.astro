@@ -1,0 +1,13 @@
+---
+/**
+ * 舊站程式碼裡殘留的硬編碼轉址目標。舊站從未實作它（實測 404）。
+ * 這裡回 403 讓任何殘留引用能優雅降級，語意也才對。
+ * 見 docs/06-admin-spec.md §7、docs/09-known-issues.md 4.2
+ */
+import Forbidden from '../backend/Forbidden.astro';
+export const prerender = false;
+// ⚠️ 狀態碼要在**頁面**設，不是在被引用的元件裡 —— Astro.response 是每頁一份，
+//    元件裡設不會生效（這一頁一度靜默回 200）。
+Astro.response.status = 403;
+---
+<Forbidden />

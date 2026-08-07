@@ -20,6 +20,7 @@
     "media:upload:remote": "node scripts/upload-r2.mjs --remote",
     "verify:d1": "node scripts/verify-d1.mjs",
     "verify:media": "node scripts/verify-media.mjs",
+    "verify:permissions": "node --experimental-strip-types scripts/verify-permissions.mjs",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "./scripts/dev-cycle.sh",
@@ -27,9 +28,11 @@
     "parity:contact": "node scripts/parity-contact.mjs"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "drizzle-kit": "^0.31.10",
     "mssql": "^11.0.1",
     "parse5": "^8.0.1",
+    "tailwindcss": "^4.3.3",
     "wrangler": "^4.119.0"
   },
   "dependencies": {

@@ -4,10 +4,7 @@
   "compatibility_date": "2026-08-01",
   "observability": { "enabled": true },
 
-  // Phase 3 建立 Astro 專案時補上：
-  //   "main": "@astrojs/cloudflare/entrypoints/server",
-  //   "assets": { "directory": "./dist", "binding": "ASSETS" },
-  //   "kv_namespaces": [{ "binding": "SESSION", "id": "…" }]
+  // main / assets 由 @astrojs/cloudflare 在 build 時寫進 dist/，這裡不重複宣告。
   // 完整設定見 docs/07-deployment.md §1
 
   "vars": {
@@ -24,5 +21,11 @@
       "migrations_dir": "db/migrations"
     }
   ],
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gleanstudio-media" }]
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gleanstudio-media" }],
+
+  // 後台 session（docs/06-admin-spec.md §2）。
+  // 本機 wrangler dev 不看 id，miniflare 自己建；**部署前要先建遠端 namespace**：
+  //   wrangler kv namespace create SESSION
+  // 再把回傳的 id 填進來。
+  "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }]
 }

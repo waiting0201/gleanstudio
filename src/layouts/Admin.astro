@@ -1,0 +1,84 @@
+---
+/**
+ * 後台版型。**唯一 import admin.css 的地方** —— 見那個檔開頭的警告。
+ *
+ * 頂欄是近黑的品牌色，內容區是中性灰工作檯。左側導覽由編輯者**實際的**
+ * 權限產生，不是寫死的選單：進不去的區塊就不會出現。
+ * 這也讓 09-known-issues 3.3（現任管理員沒有 Teams 權限）浮出來而不是被藏起來。
+ */
+import '../styles/admin.css';
+import type { AdminSession } from '../lib/auth/session';
+import { visibleNav } from '../lib/auth/session';
+
+interface Props {
+  title: string;
+  session?: AdminSession;
+  /** 沒有版型外框的頁面（登入、403） */
+  bare?: boolean;
+}
+const { title, session, bare = false } = Astro.props;
+const nav = bare ? [] : await visibleNav(session);
+const here = Astro.url.pathname;
+---
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>{title} — 禾勤藝術後台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Noto+Sans+TC:wght@300;400;500&family=Noto+Serif+TC:wght@500&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-bench text-ink">
+{bare ? (
+  <slot />
+) : (
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-ink text-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
+        <a href="/backend/Main/Index" class="flex items-baseline gap-3 text-white no-underline">
+          <span class="font-display text-lg tracking-[0.18em]">GLEAN</span>
+          <span class="eyebrow text-white/45">內容後台</span>
+        </a>
+        <div class="flex items-center gap-4">
+          <span class="eyebrow text-white/55">{session?.name ?? ''}</span>
+          <form method="post" action="/api/admin/logout">
+            <button type="submit" class="eyebrow bg-transparent text-white/70 hover:text-white cursor-pointer border-0 p-0">登出</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-5 py-8 md:flex-row">
+      <nav aria-label="後台區塊" class="md:w-44 md:shrink-0">
+        <ul class="flex flex-wrap gap-x-5 gap-y-1 md:block">
+          {nav.map((item) => {
+            const active = here.startsWith(item.href);
+            return (
+              <li>
+                <a
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  class:list={[
+                    'block border-l-2 py-1.5 pl-3 text-sm no-underline transition-colors',
+                    active
+                      ? 'border-brass font-normal text-ink'
+                      : 'border-transparent text-ink-soft hover:border-bench-deep hover:text-ink',
+                  ]}
+                >{item.label}</a>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <main class="min-w-0 flex-1">
+        <slot />
+      </main>
+    </div>
+  </div>
+)}
+</body>
+</html>
