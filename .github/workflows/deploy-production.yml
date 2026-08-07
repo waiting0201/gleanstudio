@@ -1,9 +1,14 @@
 # 正式部署。`environment: production` 讓 GitHub 擋在人工核准前面。
 name: Deploy production
 
+# ⚠️ 目前**只有手動觸發**。
+#
+# Cloudflare 那邊的資源還沒建齊（KV 的 SESSION 不存在，wrangler.jsonc 還有
+# placeholder），現在讓每次 push 都排一個待核准的部署只會累積雜訊。
+# Phase 7 soak 開始時改成：
+#   push:
+#     branches: [master]
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -14,7 +19,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production      # ← 需要人工核准
+    environment:
+      name: production           # ← 已設 required reviewer，且限定 master 分支
+      url: ${{ steps.deploy.outputs.deployment-url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -69,25 +76,24 @@ jobs:
           fi
           echo "✅ token 有效且讀得到帳號的 D1"
 
+      # 先建置再動資料庫：build 失敗的話資料庫完全沒被碰過。
+      # （tsurumaru 也是這個順序。）
+      - name: build
+        run: npm run build
 
-      # migration 一定在 build 與 deploy 之前。兩者之間有幾秒鐘，所以
-      # **每個 migration 都必須與當下已部署的 Worker 向後相容**。
+      - name: 確認綁定正確
+        run: node scripts/check-deploy-config.mjs --expect production
+
+
+      # 順序：build → migration → deploy。schema 先於程式碼。
+      # 這中間有一段時間是**新 schema 跑舊程式碼**，所以每個 migration
+      # 都必須向前相容。見 docs/07-deployment.md §2
       - name: 套用正式的 migration
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 migrations apply gleanstudio --remote --env production --config wrangler.jsonc
-
-      # ⚠️ 環境在 build 時用 CLOUDFLARE_ENV 決定，部署時**不要**加 --env。
-      #    理由見 deploy-preview.yml 的同一段註解與 docs/07-deployment.md §2
-      - name: build（綁 production）
-        env:
-          CLOUDFLARE_ENV: production
-        run: npm run build
-
-      - name: 確認綁定正確
-        run: node scripts/check-deploy-config.mjs --expect production
+          command: d1 migrations apply gleanstudio --remote
 
       - name: 部署
         uses: cloudflare/wrangler-action@v4

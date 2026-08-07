@@ -96,7 +96,17 @@ concurrency:
   cancel-in-progress: true
 ```
 
-### ⚠️ 環境是在 build 時決定的，不是部署時
+### 只有一個環境 —— 沒有 preview
+
+**決定（2026-08-07）**：`wrangler.jsonc` 沒有 `env` 區塊，頂層就是正式環境；沒有 `deploy-preview.yml`。
+
+理由是下面那一節 —— 多環境在這個 stack 上有一個安靜的失敗模式，而要正確處理它得引入 build 時的 `CLOUDFLARE_ENV`、額外的 D1 / R2 / KV、以及一支只對同 repo PR 有效的 workflow。這個專案（一個網站、三個編輯者）換不到那個複雜度。
+
+真正的驗證在別處：**CI 每個 PR 都會用乾淨的 D1 跑完整套 parity 與後台端到端**，那比一個 preview 網址有用。Phase 7 的 soak 則是直接部署到 `workers.dev` 用正式資料跑，也不需要 preview 環境。
+
+日後若真的要加，先讀下一節。
+
+### ⚠️ 環境是在 build 時決定的，不是部署時（若日後要加 preview）
 
 **這一段是踩過才知道的，而且失敗模式是安靜的。**
 
@@ -130,26 +140,23 @@ adapter 連 worker 名稱都會換掉（`gleanstudio` → `gleanstudio-preview`�
 
 **例外**：`d1 migrations apply` 讀的是根 `wrangler.jsonc`（那裡有 `env` 區塊），所以那一行**要**加 `--env preview`。為了不受 `.wrangler/deploy/config.json` 重導影響，明確加上 `--config wrangler.jsonc`，而且**排在 build 之前**。
 
-### `deploy-preview.yml` — PR
-
-實作見 `.github/workflows/deploy-preview.yml`。順序是 **migration → build（帶 `CLOUDFLARE_ENV`）→ 守門 → upload**。
-
-`versions upload` 產生一個 per-version 的 preview URL 而不動到線上流量，workflow 會把它貼成 PR comment（同一個 PR 只留一則，後續 push 就地更新）。
-
-⚠️ **fork 來的 PR 拿不到 secrets**，所以這支 workflow 只對同 repo 的 PR 有效。這件事要寫在這裡，而不是等別人踩到才發現。
-
-### `deploy-production.yml` — push 到 `main` + `workflow_dispatch`
+### `deploy-production.yml` — 目前只有 `workflow_dispatch`
 
 ```
-environment: production（需要人工核准）
-→ d1 migrations apply gleanstudio --remote --env production
-→ deploy --env production
+environment: production（required reviewer，且限定 master 分支）
+→ 檢查 API token
+→ build
+→ check-deploy-config.mjs --expect production
+→ d1 migrations apply gleanstudio --remote
+→ deploy
 → smoke job：parity 套件打線上 URL
 ```
 
-**migration 在 deploy 之前跑**，這樣新程式碼永遠不會遇到舊 schema。
+**目前刻意只有 `workflow_dispatch`。** Cloudflare 的資源還沒建齊，讓每次 push 都排一個待核准的部署只會累積雜訊。Phase 7 soak 開始時改成 `push: branches: [master]`。
 
-**推論**：兩個步驟之間有幾秒鐘，**每個 migration 都必須與當下已部署的 Worker 向後相容**。這條規則寫在這裡，不要當作口耳相傳的常識。
+**順序：build → migration → deploy。** 先建置再動資料庫 —— build 失敗的話資料庫完全沒被碰過。
+
+**推論**：migration 與 deploy 之間有一段時間是**新 schema 跑舊程式碼**，所以**每個 migration 都必須向前相容**。這條規則寫在這裡，不要當作口耳相傳的常識。
 
 ---
 

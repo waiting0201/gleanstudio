@@ -2,26 +2,22 @@
 /**
  * 部署前的守門：檢查 `astro build` 產生的 Worker 設定綁到了正確的資源。
  *
- *   node scripts/check-deploy-config.mjs --expect preview
  *   node scripts/check-deploy-config.mjs --expect production
  *
- * ⚠️ 這支存在的理由是一個**靜默**的失敗模式：
+ * 這個專案**只有一個環境**（wrangler.jsonc 沒有 env 區塊），所以這支主要在擋
+ * 兩件事：資源名稱被改錯，以及還沒填的 placeholder（KV 的 SESSION 沒填就部署，
+ * 整個 /backend/* 都會 500）。
  *
- * `@astrojs/cloudflare` 會把 wrangler.jsonc 攤平成 dist/server/wrangler.json，
- * 而且**不保留 `env` 區塊**。所以 `wrangler deploy --env preview` 不會報錯 ——
- * 它找不到那個環境，就直接退回頂層綁定，於是 PR 的 preview 部署會寫進
- * **正式的** D1 與 R2。
- *
- * 正確做法是 build 時給 `CLOUDFLARE_ENV=preview`，adapter 會解析出對應環境
- * （連 worker 名稱都會變成 gleanstudio-preview），部署時**不要**再加 --env。
- * 這支腳本就是確認那件事真的發生了。
+ * ⚠️ 日後若要加 preview 環境，先讀 docs/07-deployment.md §2：
+ * `@astrojs/cloudflare` 攤平設定時**不保留 env 區塊**，`wrangler deploy --env preview`
+ * 不會報錯，只會安靜地綁上正式資源。環境要在 build 時用 CLOUDFLARE_ENV 決定。
  */
 import { readFile } from 'node:fs/promises';
 
 const i = process.argv.indexOf('--expect');
 const expect = i !== -1 ? process.argv[i + 1] : null;
 if (!['preview', 'production'].includes(expect)) {
-  console.error('用法：node scripts/check-deploy-config.mjs --expect preview|production');
+  console.error('用法：node scripts/check-deploy-config.mjs --expect production');
   process.exit(1);
 }
 
@@ -66,7 +62,10 @@ check('main 有指定', !!cfg.main);
 
 if (failed) {
   console.error(`\n❌ ${failed} 項不通過，不要部署。`);
-  console.error('   build 時要給 CLOUDFLARE_ENV=' + expect + '，而且部署指令**不要**加 --env。');
+  if (placeholders.length) {
+    console.error('   還有 placeholder 沒填 —— 對應的 Cloudflare 資源還沒建。');
+    console.error('   KV：wrangler kv namespace create SESSION，再把 id 填進 wrangler.jsonc');
+  }
   console.error('   見 docs/07-deployment.md §2');
   process.exit(1);
 }

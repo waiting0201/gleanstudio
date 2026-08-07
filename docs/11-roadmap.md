@@ -188,9 +188,12 @@ node scripts/verify-media.mjs [--remote]
 
 加上本機正向測 guard 時發現的 `-i` 漏洞（三條規則只有一條會命中），這幾輪的產出是五個本來會潛伏的問題。
 - [ ] **`smoke:admin` 在 CI 上不穩定** —— `wrangler dev` 崩潰過一次，無法重現，見 [08-verification](08-verification.md) §9
-- [ ] Cloudflare API token（**含 D1 與 R2** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
-- [ ] 建 preview 的 D1 / R2 / KV，把 `wrangler.jsonc` 裡的 placeholder 換掉
+- [x] `production` environment —— required reviewer + 限定 `master` 分支
+- [x] **決定不做 preview 環境**（[07-deployment](07-deployment.md) §2）—— 多環境在這個 stack 上有安靜的失敗模式，而 CI 每個 PR 跑完整 parity 比 preview 網址有用
+- [ ] Cloudflare API token（**要含 D1** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
+- [ ] `wrangler kv namespace create SESSION`，把 `wrangler.jsonc` 的 placeholder 換掉
 - [ ] Worker secrets 已設定
+- [ ] Phase 7 開始時把 `deploy-production.yml` 改成 `push: branches: [master]`
 
 **踩到一個安靜的坑**（[07-deployment](07-deployment.md) §2）：
 

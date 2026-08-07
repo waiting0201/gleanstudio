@@ -1,6 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "gleanstudio",
+
+  // **只有一個環境。** 沒有 env 區塊，頂層就是正式環境。
+  //
+  // 這是刻意的：@astrojs/cloudflare 把設定攤平成 dist/server/wrangler.json 時
+  // 不保留 env 區塊，所以 `wrangler deploy --env preview` 不會報錯、只會安靜地
+  // 綁上頂層資源。要做多環境就得改用 build 時的 CLOUDFLARE_ENV，那是一整套
+  // 額外的複雜度。這個專案的規模不需要 —— 見 docs/07-deployment.md §2
   "compatibility_date": "2026-08-01",
   "observability": { "enabled": true },
 
@@ -39,48 +46,7 @@
   // 本機 wrangler dev 不看 id，miniflare 自己建；**部署前要先建遠端 namespace**：
   //   wrangler kv namespace create SESSION
   // 再把回傳的 id 填進來。
-  "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }],
-
-  // ⚠️ 這三個 id 都還沒建。部署之前要先跑：
-  //   wrangler d1 create gleanstudio-preview
-  //   wrangler r2 bucket create gleanstudio-media-preview
-  //   wrangler kv namespace create SESSION --preview
-  // 見 docs/07-deployment.md §1
-  "env": {
-    "preview": {
-      "vars": {
-        "GA_MEASUREMENT_ID": "G-G2CBNFFB3Q",
-        "RECAPTCHA_SITE_KEY": "6LdbNcwcAAAAAND-6LKK67EUEnk6I-9rFboJkV5M"
-      },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "gleanstudio-preview",
-          "database_id": "PLACEHOLDER_preview_d1",
-          "migrations_dir": "db/migrations"
-        }
-      ],
-      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gleanstudio-media-preview" }],
-      "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_preview_kv" }]
-    },
-    "production": {
-      "vars": {
-        "GA_MEASUREMENT_ID": "G-G2CBNFFB3Q",
-        "RECAPTCHA_SITE_KEY": "6LdbNcwcAAAAAND-6LKK67EUEnk6I-9rFboJkV5M"
-      },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "gleanstudio",
-          "database_id": "f311b46f-d288-4a5f-9bb8-38e5aea73558",
-          "migrations_dir": "db/migrations"
-        }
-      ],
-      "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gleanstudio-media" }],
-      "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }]
-
-      // Phase 8 才加上 route，開發期間跑在 workers.dev 不動正式網域：
-      // "routes": [{ "pattern": "gleanstudio.com.tw/*", "zone_name": "gleanstudio.com.tw" }]
-    }
-  }
+  // ⚠️ 還沒建。部署之前先跑 `wrangler kv namespace create SESSION`，把回傳的 id 填進來。
+  // 沒有它整個 /backend/* 都會 500 —— middleware 對每個後台請求都寫 CSRF token。
+  "kv_namespaces": [{ "binding": "SESSION", "id": "PLACEHOLDER_建立後填入" }]
 }
