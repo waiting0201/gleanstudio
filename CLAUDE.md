@@ -30,11 +30,11 @@
 **Phase 4 程式完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠。
 **卡在 key 輪替** —— `RECAPTCHA_SECRET` 沒設就是每一筆送出都被判定驗證碼錯誤。
 
-**Phase 5 進行中**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
-富文本（擋 base64）、以及**文章**的完整 CRUD 都好了 —— `npm run smoke:admin` 18 項全綠。
-ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層。
-**還差 Projects（87 筆、要分頁）與 Admins（密碼與權限勾選）**。
-介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
+**Phase 5 程式完成**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
+富文本（擋 base64），以及 **7 個實體的完整 CRUD** —— `npm run smoke:admin` 47 項全綠。
+ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層；
+Articles / Projects / Admins 各有自己的形狀（[docs/06](docs/06-admin-spec.md) §10a）。
+**部署前還要建遠端 KV namespace**，介面設計方向見 [docs/06](docs/06-admin-spec.md) §10。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -114,7 +114,10 @@ src/pages/         Astro 路由，檔名逐字對應舊網址（Home/About.astro
 src/middleware.ts  大小寫 rewrite
 src/components/    版型元件；pages/ 子目錄放整頁元件
 src/db/            Drizzle schema + 查詢
-src/lib/           format / query / contact 工具（auth / media 在 Phase 5）
+src/lib/           format / query / contact / media；auth/ 與 admin/ 是後台
+src/api/app.ts     Hono —— 後台所有變更操作（session → CSRF → 權限 一條鏈）
+src/layouts/       Site.astro（前台，空白是契約）+ Admin.astro（後台）
+src/styles/        admin.css —— **只能被 Admin.astro import**
 scripts/lib/       parity 與順序推導共用的解析邏輯
 public/Content/    從 reference/ 逐字複製的 CSS 與圖
 ```

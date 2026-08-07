@@ -1,0 +1,28 @@
+---
+import { env } from 'cloudflare:workers';
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import ProjectForm from '../../../components/admin/ProjectForm.astro';
+import { requirePermission } from '../../../lib/auth/session';
+import { existingValues } from '../../../lib/admin/projects';
+
+export const prerender = false;
+
+const guard = await requirePermission(Astro, 'WebMs/EditProjects');
+if ('response' in guard) return guard.response;
+
+const id = (Astro.url.searchParams.get('id') ?? '').toLowerCase();
+const row = await env.DB.prepare(
+  'SELECT ProjectID, Type, Place, Title, SubTitle, LegacyOrder FROM Projects WHERE ProjectID = ?1',
+).bind(id).first<{ ProjectID: string; Type: string; Place: string; Title: string; SubTitle: string | null; LegacyOrder: number }>();
+if (!row) return new Response('找不到這筆案例。', { status: 404 });
+
+const existing = await existingValues();
+---
+<Admin title={`修改：${row.SubTitle || row.Title}`} session={guard.session}>
+<Flash />
+<div class="record-id">#{row.LegacyOrder}</div>
+<h1 class="record-title mt-1 text-2xl">{row.SubTitle || row.Title}</h1>
+<p class="eyebrow mt-1">目前在 {row.Type} › {row.Place} › {row.Title} 底下。</p>
+<div class="mt-8"><ProjectForm row={row} existing={existing} /></div>
+</Admin>

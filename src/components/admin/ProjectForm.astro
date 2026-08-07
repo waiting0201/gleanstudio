@@ -1,0 +1,58 @@
+---
+/**
+ * 案例的表單。
+ *
+ * ⚠️ Type / Place / Title 是自由文字，而且**直接決定公開頁的分組標題** ——
+ * 打錯一個字就會多出一個只有一筆的分類。所以三個欄位都掛 datalist，
+ * 把現有的值直接列出來讓人挑，不要靠記憶重打。
+ */
+import Csrf from './Csrf.astro';
+
+interface Props {
+  row?: { ProjectID: string; Type: string; Place: string; Title: string; SubTitle: string | null; LegacyOrder: number };
+  existing: { types: string[]; places: string[]; titles: string[] };
+}
+const { row, existing } = Astro.props;
+const isNew = !row;
+
+const FIELDS = [
+  { name: 'Type', label: '分類', list: 'type-list', options: existing.types,
+    hint: '公開頁最外層的【標題】。打錯字會多出一個新分類。' },
+  { name: 'Place', label: '地點', list: 'place-list', options: existing.places,
+    hint: '分類底下的粗體地點名稱，通常是館所或宮廟。' },
+  { name: 'Title', label: '案名', list: 'title-list', options: existing.titles,
+    hint: '地點底下的案名。同一個案名底下可以有多個項目。' },
+] as const;
+---
+<form method="post" action="/api/admin/Projects/save">
+  <Csrf />
+  {row && <input type="hidden" name="id" value={row.ProjectID}>}
+
+  <div class="record p-6">
+    {FIELDS.map((f) => (
+      <div class="mb-5">
+        <label class="field-label" for={f.name}>{f.label}<span class="text-oxide"> ＊</span></label>
+        <input class="field-input" id={f.name} name={f.name} type="text" required
+               list={f.list} autocomplete="off" value={row?.[f.name] ?? ''}>
+        <span class="field-hint">{f.hint}</span>
+      </div>
+    ))}
+
+    <div>
+      <label class="field-label" for="SubTitle">項目</label>
+      <input class="field-input" id="SubTitle" name="SubTitle" type="text"
+             autocomplete="off" value={row?.SubTitle ?? ''}>
+      <span class="field-hint">公開頁上的一個 <span class="instrument">&lt;li&gt;</span>。</span>
+    </div>
+  </div>
+
+  <datalist id="type-list">{existing.types.map((v) => <option value={v}></option>)}</datalist>
+  <datalist id="place-list">{existing.places.map((v) => <option value={v}></option>)}</datalist>
+  <datalist id="title-list">{existing.titles.map((v) => <option value={v}></option>)}</datalist>
+
+  <div class="mt-6 flex flex-wrap items-center gap-3">
+    <button type="submit" class="btn btn-primary">{isNew ? '新增案例' : '儲存變更'}</button>
+    <a href="/backend/WebMs/Projects" class="btn btn-quiet">取消</a>
+    <a class="live-face ml-auto" href="/Home/Project" target="_blank" rel="noopener">/Home/Project ↗</a>
+  </div>
+</form>

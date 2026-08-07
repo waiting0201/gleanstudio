@@ -1,0 +1,114 @@
+---
+/**
+ * 管理者表單。不走共用實體層 —— 它有密碼雜湊與 AdminLims 權限矩陣。
+ *
+ * 權限的形狀跟舊系統一樣：每個 Lims 子節點一列，檢視 = 資料列存在，
+ * 新增/修改/刪除 = 對應旗標。**沒有勾檢視就等於整個區塊不給進**，
+ * 而導覽列是照著這個長出來的，所以這裡勾什麼，對方就看得到什麼。
+ */
+import Csrf from './Csrf.astro';
+
+interface LimNode { LimID: number; Key: string; Value: string; ParentValue: string }
+interface Props {
+  row?: { AdminID: number; Name: string; Username: string; Email: string | null; IsSuperAdmin: number; MustChangePassword: number };
+  lims: LimNode[];
+  granted: Record<number, { view: boolean; add: boolean; update: boolean; delete: boolean }>;
+  /** 正在編輯自己 —— 不給關掉自己的超級使用者旗標 */
+  isSelf: boolean;
+}
+const { row, lims, granted, isSelf } = Astro.props;
+const isNew = !row;
+
+const groups = [...new Map(lims.map((l) => [l.ParentValue, lims.filter((x) => x.ParentValue === l.ParentValue)])).entries()];
+const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['delete', '刪除']] as const;
+---
+<form method="post" action="/api/admin/Admins/save">
+  <Csrf />
+  {row && <input type="hidden" name="id" value={row.AdminID}>}
+
+  <div class="record p-6">
+    <div class="grid gap-5 md:grid-cols-2">
+      <div>
+        <label class="field-label" for="Name">姓名<span class="text-oxide"> ＊</span></label>
+        <input class="field-input" id="Name" name="Name" type="text" required value={row?.Name ?? ''} autocomplete="off">
+      </div>
+      <div>
+        <label class="field-label" for="Username">帳號<span class="text-oxide"> ＊</span></label>
+        <input class="field-input" id="Username" name="Username" type="text" required
+               value={row?.Username ?? ''} autocomplete="off">
+        <span class="field-hint">登入用，之後不建議更動。</span>
+      </div>
+    </div>
+
+    <div class="mt-5">
+      <label class="field-label" for="Email">Email</label>
+      <input class="field-input" id="Email" name="Email" type="email" value={row?.Email ?? ''} autocomplete="off">
+    </div>
+
+    <div class="mt-5">
+      <label class="field-label" for="password">{isNew ? '初始密碼' : '重設密碼'}{isNew && <span class="text-oxide"> ＊</span>}</label>
+      <input class="field-input" id="password" name="password" type="password"
+             required={isNew} autocomplete="new-password" minlength="12">
+      <span class="field-hint">
+        {isNew
+          ? '至少 12 個字元。對方第一次登入時會被要求換掉。'
+          : '留空就不動密碼。填了就會覆蓋，並要求對方下次登入時再換一次。'}
+      </span>
+    </div>
+  </div>
+
+  <div class="record mt-6 p-6">
+    <h2 class="record-title text-lg">權限</h2>
+    <p class="field-hint mt-1 mb-5">
+      沒有勾「檢視」的區塊，對方的左側導覽根本不會出現。改完立刻生效，不用重新登入。
+    </p>
+
+    <label class="mb-6 flex items-start gap-3">
+      <input type="checkbox" name="IsSuperAdmin" value="1" class="mt-1.5"
+             checked={row?.IsSuperAdmin === 1} disabled={isSelf}>
+      <span>
+        <span class="text-sm text-ink">超級使用者</span>
+        <span class="field-hint">
+          略過下面所有勾選，永遠有全部權限。
+          {isSelf && ' 這是你自己的帳號，不能在這裡關掉 —— 會把自己鎖在門外。'}
+        </span>
+      </span>
+    </label>
+    {isSelf && row?.IsSuperAdmin === 1 && <input type="hidden" name="IsSuperAdmin" value="1">}
+
+    {groups.map(([parent, nodes]) => (
+      <div class="mb-5">
+        <div class="eyebrow mb-2">{parent}</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-bench-deep text-left">
+                <th class="pb-1 pr-4 font-normal text-ink-faint">區塊</th>
+                {VERBS.map(([, label]) => <th class="w-16 pb-1 font-normal text-ink-faint">{label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {nodes.map((n) => (
+                <tr class="border-b border-bench">
+                  <td class="py-2 pr-4">{n.Value}</td>
+                  {VERBS.map(([verb]) => (
+                    <td class="py-2">
+                      <input type="checkbox" name={`lim_${n.LimID}_${verb}`} value="1"
+                             checked={granted[n.LimID]?.[verb] ?? false}
+                             aria-label={`${n.Value} ${VERBS.find(([v]) => v === verb)?.[1]}`}>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div class="mt-6 flex flex-wrap items-center gap-3">
+    <button type="submit" class="btn btn-primary">{isNew ? '新增管理者' : '儲存變更'}</button>
+    <a href="/backend/SettingMs/Admins" class="btn btn-quiet">取消</a>
+  </div>
+</form>

@@ -56,6 +56,8 @@ const rowsTitled = (html, needle) =>
 
 let createdId = null;
 let createdServiceIds = [];
+let createdProjectId = null;
+let createdAdminId = null;
 
 try {
   console.log('\n登入與 session');
@@ -198,6 +200,70 @@ try {
   const afterAbout = d1('SELECT Description d FROM Abouts WHERE AboutID = 1', true)[0].d;
   check('Abouts 存回原值不變形', r.status === 303 && afterAbout === beforeAbout);
 
+  // ── 案例（87 筆，自己的形狀）──────────────────────────
+  console.log('\n案例');
+  let h = await get('/backend/WebMs/Projects');
+  check('列表渲染', h.includes('案例') && /instrument">87</.test(h));
+  check('依分類篩選', (await get('/backend/WebMs/Projects?type=' + encodeURIComponent('文物修護'))).includes('文物修護'));
+  check('搜尋', (await get('/backend/WebMs/Projects?q=' + encodeURIComponent('歷史博物館'))).includes('歷史博物館'));
+
+  const pf = new FormData();
+  pf.set('__csrf', csrfOf(await get('/backend/WebMs/AddProjects')));
+  pf.set('Type', '文物修護'); pf.set('Place', TEST_TITLE); pf.set('Title', '測試案名'); pf.set('SubTitle', '測試項目');
+  r = await post('/api/admin/Projects/save', pf, true);
+  const proj = d1(`SELECT ProjectID, LegacyOrder o FROM Projects WHERE Place = '${TEST_TITLE}'`, true)[0];
+  createdProjectId = proj?.ProjectID ?? null;
+  check('新增案例排在最後', r.status === 303 && proj?.o === 88, `#${proj?.o}`);
+  check('公開頁看得到', (await (await fetch(BASE + '/Home/Project')).text()).includes('測試項目'));
+
+  r = await post('/api/admin/Projects/delete',
+    new URLSearchParams({ __csrf: csrfOf(await get('/backend/WebMs/Projects')), id: createdProjectId }));
+  check('刪除案例', r.status === 303 && d1('SELECT COUNT(*) n FROM Projects', true)[0].n === 87);
+  createdProjectId = null;
+
+  // ── 管理者（密碼 + 權限矩陣）──────────────────────────
+  console.log('\n管理者');
+  h = await get('/backend/SettingMs/Admins');
+  check('列表渲染', h.includes('管理者') && h.includes('（你自己）'));
+
+  const af2 = new FormData();
+  af2.set('__csrf', csrfOf(await get('/backend/SettingMs/AddAdmins')));
+  af2.set('Name', TEST_TITLE); af2.set('Username', 'smoketest'); af2.set('password', 'a-temporary-passphrase-2026');
+  af2.set('lim_4_view', '1'); af2.set('lim_4_add', '1');   // 只給文章的檢視與新增
+  r = await post('/api/admin/Admins/save', af2, true);
+  const created = d1(`SELECT AdminID, MustChangePassword m FROM Admins WHERE Username = 'smoketest'`, true)[0];
+  createdAdminId = created?.AdminID ?? null;
+  check('新增管理者', r.status === 303 && !!createdAdminId);
+  check('強制首次換密碼', created?.m === 1);
+
+  const grants = d1(`SELECT LimID, IsAdd, IsUpdate, IsDelete FROM AdminLims WHERE AdminID = ${createdAdminId}`, true);
+  check('權限只給了勾選的', grants.length === 1 && grants[0].LimID === 4
+    && grants[0].IsAdd === 1 && grants[0].IsUpdate === 0 && grants[0].IsDelete === 0);
+
+  const dup = new FormData();
+  dup.set('__csrf', csrfOf(await get('/backend/SettingMs/AddAdmins')));
+  dup.set('Name', 'x'); dup.set('Username', 'smoketest'); dup.set('password', 'a-temporary-passphrase-2026');
+  await post('/api/admin/Admins/save', dup, true);
+  check('重複帳號被擋', /已經有人用了/.test(await get('/backend/SettingMs/AddAdmins')));
+
+  const weak = new FormData();
+  weak.set('__csrf', csrfOf(await get('/backend/SettingMs/AddAdmins')));
+  weak.set('Name', 'x'); weak.set('Username', 'weakpw'); weak.set('password', 'short');
+  await post('/api/admin/Admins/save', weak, true);
+  check('太短的初始密碼被擋', /至少 12 個字元/.test(await get('/backend/SettingMs/AddAdmins')));
+
+  r = await post('/api/admin/Admins/delete',
+    new URLSearchParams({ __csrf: csrfOf(await get('/backend/SettingMs/Admins')), id: String(admin.AdminID) }));
+  check('不能刪除自己', /不能刪除自己/.test(await get('/backend/SettingMs/Admins')));
+
+  r = await post('/api/admin/Admins/delete',
+    new URLSearchParams({ __csrf: csrfOf(await get('/backend/SettingMs/Admins')), id: String(createdAdminId) }));
+  check('刪除管理者', r.status === 303
+    && d1(`SELECT COUNT(*) n FROM Admins WHERE Username='smoketest'`, true)[0].n === 0);
+  check('權限一併清掉（CASCADE）',
+    d1(`SELECT COUNT(*) n FROM AdminLims WHERE AdminID = ${createdAdminId}`, true)[0].n === 0);
+  createdAdminId = null;
+
 } finally {
   console.log('\n清理');
   if (createdId) {
@@ -209,6 +275,10 @@ try {
     d1(`DELETE FROM Services WHERE ServiceID IN (${createdServiceIds.map((i) => `'${i}'`).join(', ')})`);
     check('Services 已清空', d1('SELECT COUNT(*) n FROM Services', true)[0].n === 0);
   }
+  if (createdProjectId) d1(`DELETE FROM Projects WHERE ProjectID = '${createdProjectId}'`);
+  if (createdAdminId) d1(`DELETE FROM Admins WHERE AdminID = ${createdAdminId}`);
+  d1("DELETE FROM Admins WHERE Username IN ('smoketest','weakpw')");
+  check('測試帳號已清乾淨', d1("SELECT COUNT(*) n FROM Admins", true)[0].n === 1);
   d1('UPDATE Admins SET MustChangePassword = 1 WHERE AdminID = 1');
   check('MustChangePassword 已還原',
     d1('SELECT MustChangePassword m FROM Admins WHERE AdminID = 1', true)[0].m === 1);

@@ -1,0 +1,19 @@
+---
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import ProjectForm from '../../../components/admin/ProjectForm.astro';
+import { requirePermission } from '../../../lib/auth/session';
+import { existingValues } from '../../../lib/admin/projects';
+
+export const prerender = false;
+
+const guard = await requirePermission(Astro, 'WebMs/AddProjects');
+if ('response' in guard) return guard.response;
+const existing = await existingValues();
+---
+<Admin title="新增案例" session={guard.session}>
+<Flash />
+<h1 class="record-title text-2xl">新增案例</h1>
+<p class="eyebrow mt-1">會排在 /Home/Project 最後面。分類與地點請盡量從既有的值挑，不要重打。</p>
+<div class="mt-8"><ProjectForm existing={existing} /></div>
+</Admin>

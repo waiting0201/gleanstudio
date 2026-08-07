@@ -1,0 +1,70 @@
+---
+/** 管理者列表。 */
+import { env } from 'cloudflare:workers';
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import Csrf from '../../../components/admin/Csrf.astro';
+import { requirePermission, can } from '../../../lib/auth/session';
+
+export const prerender = false;
+
+const guard = await requirePermission(Astro, 'SettingMs/Admins');
+if ('response' in guard) return guard.response;
+const { session } = guard;
+
+const [mayAdd, mayEdit, mayDelete] = await Promise.all([
+  can(session, 'SettingMs/AddAdmins'),
+  can(session, 'SettingMs/EditAdmins'),
+  can(session, 'SettingMs/DeleteAdmins'),
+]);
+
+const { results: rows } = await env.DB.prepare(
+  `SELECT a.AdminID, a.Name, a.Username, a.Email, a.IsSuperAdmin, a.MustChangePassword,
+          (SELECT COUNT(*) FROM AdminLims l WHERE l.AdminID = a.AdminID) AS lims
+   FROM Admins a ORDER BY a.AdminID`,
+).all<{ AdminID: number; Name: string; Username: string; Email: string | null;
+        IsSuperAdmin: number; MustChangePassword: number; lims: number }>();
+---
+<Admin title="管理者" session={session}>
+<Flash />
+
+<div class="flex flex-wrap items-baseline justify-between gap-4">
+  <div>
+    <h1 class="record-title text-2xl">管理者</h1>
+    <p class="eyebrow mt-1"><span class="instrument">{rows.length}</span> 個帳號</p>
+  </div>
+  {mayAdd && <a href="/backend/SettingMs/AddAdmins" class="btn btn-primary">新增管理者</a>}
+</div>
+
+<ul class="mt-8 space-y-px">
+  {rows.map((a) => (
+    <li class="record flex flex-wrap items-start justify-between gap-x-6 gap-y-2 px-4 py-4">
+      <div class="min-w-0">
+        <div class="record-id">{a.Username}</div>
+        <div class="record-title mt-0.5 text-lg">
+          {mayEdit
+            ? <a href={`/backend/SettingMs/EditAdmins?id=${a.AdminID}`} class="text-ink no-underline hover:text-brass">{a.Name}</a>
+            : a.Name}
+          {a.AdminID === session.adminId && <span class="eyebrow ml-2">（你自己）</span>}
+        </div>
+        <div class="eyebrow mt-0.5">
+          {a.IsSuperAdmin === 1 ? '超級使用者' : `${a.lims} 個區塊`}
+          {a.MustChangePassword === 1 && ' · 下次登入要換密碼'}
+          {a.Email && ` · ${a.Email}`}
+        </div>
+      </div>
+      {mayDelete && a.AdminID !== session.adminId && (
+        <details class="text-right">
+          <summary class="cursor-pointer list-none text-sm text-ink-faint hover:text-oxide">刪除</summary>
+          <form method="post" action="/api/admin/Admins/delete" class="mt-2 flex items-center gap-2">
+            <Csrf />
+            <input type="hidden" name="id" value={a.AdminID}>
+            <span class="text-sm text-ink-soft">確定刪掉？這個帳號會立刻無法登入。</span>
+            <button type="submit" class="btn btn-danger">刪除</button>
+          </form>
+        </details>
+      )}
+    </li>
+  ))}
+</ul>
+</Admin>

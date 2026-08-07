@@ -15,6 +15,8 @@ import { can, getSession, type AdminSession } from '../lib/auth/session';
 import { verifyCsrf, CSRF_FIELD } from '../lib/auth/csrf';
 import type { RouteKey } from '../lib/auth/permissions';
 import { putEntityPhoto, deleteEntityPhoto, checkDescription, MediaError } from '../lib/media';
+import { hashPassword } from '../lib/auth/password';
+import { limTree } from '../lib/admin/admins';
 import { buildEntities, type EntityDef } from '../lib/admin/entities';
 import { getArticleTypes } from '../db/queries';
 
@@ -165,6 +167,174 @@ app.post('/articles/delete', requires('WebMs/DeleteArticles'), async (c) => {
   return back(ARTICLES);
 });
 
+// ── 案例 ──────────────────────────────────────────────
+// 不走共用實體層：分組完全由 LegacyOrder 的先後決定，而 Type / Place / Title
+// 是自由文字 —— 打錯一個字就在公開頁多出一個只有一筆的分類標題。
+// 見 docs/04-data-model.md §5
+const PROJECTS = '/backend/WebMs/Projects';
+
+app.post('/Projects/save', async (c) => {
+  const form = c.get('form');
+  const id = String(form.get('id') ?? '').trim().toLowerCase();
+  const isNew = id === '';
+
+  if (!(await can(c.get('admin'), isNew ? 'WebMs/AddProjects' : 'WebMs/EditProjects'))) {
+    return c.text('這個動作你沒有權限。', 403);
+  }
+
+  const type = String(form.get('Type') ?? '').trim();
+  const place = String(form.get('Place') ?? '').trim();
+  const title = String(form.get('Title') ?? '').trim();
+  const subTitle = String(form.get('SubTitle') ?? '').trim();
+
+  const problem = !type ? '請填分類。' : !place ? '請填地點。' : !title ? '請填案名。' : null;
+  if (problem) {
+    await setFlash(c, { tone: 'stop', text: problem });
+    return back(isNew ? '/backend/WebMs/AddProjects' : `/backend/WebMs/EditProjects?id=${id}`);
+  }
+
+  if (isNew) {
+    // 排在最後。LegacyOrder 就是公開頁的分組與 <li> 順序
+    const tail = await env.DB.prepare('SELECT COALESCE(MAX(LegacyOrder), 0) + 1 AS o FROM Projects')
+      .first<{ o: number }>();
+    await env.DB.prepare(
+      `INSERT INTO Projects (ProjectID, Type, Place, Title, SubTitle, Sort, LegacyOrder)
+       VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6)`,
+    ).bind(crypto.randomUUID(), type, place, title, subTitle, tail?.o ?? 1).run();
+    await setFlash(c, { tone: 'done', text: `已新增「${subTitle || title}」。` });
+  } else {
+    const exists = await env.DB.prepare('SELECT 1 AS x FROM Projects WHERE ProjectID = ?1').bind(id).first();
+    if (!exists) return c.text('找不到這筆案例。', 404);
+    await env.DB.prepare(
+      'UPDATE Projects SET Type = ?1, Place = ?2, Title = ?3, SubTitle = ?4 WHERE ProjectID = ?5',
+    ).bind(type, place, title, subTitle, id).run();
+    await setFlash(c, { tone: 'done', text: `已更新「${subTitle || title}」。` });
+  }
+
+  return back(PROJECTS);
+});
+
+app.post('/Projects/delete', requires('WebMs/DeleteProjects'), async (c) => {
+  const id = String(c.get('form').get('id') ?? '').toLowerCase();
+  const row = await env.DB.prepare('SELECT Title, SubTitle FROM Projects WHERE ProjectID = ?1')
+    .bind(id).first<{ Title: string; SubTitle: string | null }>();
+  if (!row) return c.text('找不到這筆案例。', 404);
+
+  // LegacyOrder 留缺口沒關係 —— 它只用來決定相對先後
+  await env.DB.prepare('DELETE FROM Projects WHERE ProjectID = ?1').bind(id).run();
+  await setFlash(c, { tone: 'done', text: `已刪除「${row.SubTitle || row.Title}」。` });
+  return back(PROJECTS);
+});
+
+// ── 管理者 ────────────────────────────────────────────
+// 不走共用實體層：密碼雜湊 + AdminLims 權限矩陣。
+const ADMINS = '/backend/SettingMs/Admins';
+const VERBS = ['view', 'add', 'update', 'delete'] as const;
+
+app.post('/Admins/save', async (c) => {
+  const form = c.get('form');
+  const raw = String(form.get('id') ?? '').trim();
+  const isNew = raw === '';
+  const id = isNew ? 0 : Number.parseInt(raw, 10);
+  const me = c.get('admin');
+
+  if (!(await can(me, isNew ? 'SettingMs/AddAdmins' : 'SettingMs/EditAdmins'))) {
+    return c.text('這個動作你沒有權限。', 403);
+  }
+
+  const name = String(form.get('Name') ?? '').trim();
+  const username = String(form.get('Username') ?? '').trim();
+  const email = String(form.get('Email') ?? '').trim() || null;
+  const password = String(form.get('password') ?? '');
+  const isSuper = form.get('IsSuperAdmin') === '1' ? 1 : 0;
+
+  const backTo = isNew ? '/backend/SettingMs/AddAdmins' : `/backend/SettingMs/EditAdmins?id=${id}`;
+  const stop = async (text: string) => { await setFlash(c, { tone: 'stop', text }); return back(backTo); };
+
+  if (!name) return stop('請填姓名。');
+  if (!username) return stop('請填帳號。');
+  if (isNew && password.length < 12) return stop('初始密碼至少 12 個字元。');
+  if (!isNew && password !== '' && password.length < 12) return stop('新密碼至少 12 個字元。');
+
+  const clash = await env.DB.prepare('SELECT AdminID FROM Admins WHERE Username = ?1 AND AdminID <> ?2')
+    .bind(username, id).first();
+  if (clash) return stop(`帳號「${username}」已經有人用了。`);
+
+  const now = new Date().toISOString();
+  let adminId = id;
+
+  if (isNew) {
+    const r = await env.DB.prepare(
+      `INSERT INTO Admins (Name, Username, PasswordHash, Email, IsSuperAdmin, MustChangePassword, CreatedAt)
+       VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6) RETURNING AdminID`,
+    ).bind(name, username, await hashPassword(password), email, isSuper, now).first<{ AdminID: number }>();
+    adminId = r!.AdminID;
+  } else {
+    // 不能把自己的超級使用者旗標關掉 —— 會把自己鎖在門外
+    const keepSuper = adminId === me.adminId && me.isSuper ? 1 : isSuper;
+    if (password === '') {
+      await env.DB.prepare(
+        'UPDATE Admins SET Name = ?1, Username = ?2, Email = ?3, IsSuperAdmin = ?4, UpdatedAt = ?5 WHERE AdminID = ?6',
+      ).bind(name, username, email, keepSuper, now, adminId).run();
+    } else {
+      // 改別人的密碼 → 要求對方下次登入再換一次，管理者不該知道對方的常用密碼
+      await env.DB.prepare(
+        `UPDATE Admins SET Name = ?1, Username = ?2, Email = ?3, IsSuperAdmin = ?4,
+                           PasswordHash = ?5, MustChangePassword = 1, UpdatedAt = ?6
+         WHERE AdminID = ?7`,
+      ).bind(name, username, email, keepSuper, await hashPassword(password), now, adminId).run();
+    }
+  }
+
+  // ── 權限矩陣 ──
+  // 整組重寫比 diff 簡單，而且不會漏掉「取消勾選」這個方向
+  const nodes = await limTree();
+  const stmts = [env.DB.prepare('DELETE FROM AdminLims WHERE AdminID = ?1').bind(adminId)];
+  for (const n of nodes) {
+    if (form.get(`lim_${n.LimID}_view`) !== '1') continue;   // 檢視 = 資料列存在
+    stmts.push(env.DB.prepare(
+      'INSERT INTO AdminLims (AdminLimID, AdminID, LimID, IsAdd, IsUpdate, IsDelete) VALUES (?1, ?2, ?3, ?4, ?5, ?6)',
+    ).bind(
+      crypto.randomUUID(), adminId, n.LimID,
+      form.get(`lim_${n.LimID}_add`) === '1' ? 1 : 0,
+      form.get(`lim_${n.LimID}_update`) === '1' ? 1 : 0,
+      form.get(`lim_${n.LimID}_delete`) === '1' ? 1 : 0,
+    ));
+  }
+  await env.DB.batch(stmts);
+
+  await setFlash(c, { tone: 'done', text: `已${isNew ? '新增' : '更新'}管理者「${name}」。` });
+  return back(ADMINS);
+});
+
+app.post('/Admins/delete', requires('SettingMs/DeleteAdmins'), async (c) => {
+  const id = Number.parseInt(String(c.get('form').get('id') ?? ''), 10);
+  const me = c.get('admin');
+
+  if (id === me.adminId) {
+    await setFlash(c, { tone: 'stop', text: '不能刪除自己的帳號。' });
+    return back(ADMINS);
+  }
+  const { count } = await env.DB.prepare('SELECT COUNT(*) AS count FROM Admins').first<{ count: number }>() ?? { count: 0 };
+  if (count <= 1) {
+    await setFlash(c, { tone: 'stop', text: '這是最後一個管理者帳號，刪掉就沒有人能進後台了。' });
+    return back(ADMINS);
+  }
+
+  const row = await env.DB.prepare('SELECT Name FROM Admins WHERE AdminID = ?1').bind(id).first<{ Name: string }>();
+  if (!row) return c.text('找不到這個管理者。', 404);
+
+  // AdminLims 有 ON DELETE CASCADE，權限會一起清掉
+  await env.DB.prepare('DELETE FROM Admins WHERE AdminID = ?1').bind(id).run();
+  await setFlash(c, { tone: 'done', text: `已刪除管理者「${row.Name}」。` });
+  return back(ADMINS);
+});
+
+/**
+ * ⚠️ **泛用路由一定要放在具名路由後面。** Hono 依註冊順序比對，
+ * `/:entity/save` 放在前面會把 `/Projects/save` 也吃掉，然後因為 Projects
+ * 不在共用實體層裡而回 404 —— 而且是安靜地 404，看起來像路由沒建。
+ */
 // ── 其餘實體：一份定義餵給同一組 handler ─────────────
 // 舊系統把這段 CRUD 寫了七遍，上傳那段也複製了七次。
 // 文章 / Projects / Admins 不走這裡 —— 它們各有各的形狀，見 src/lib/admin/entities.ts
@@ -342,5 +512,6 @@ app.post('/:entity/sort', async (c) => {
 
   return back(listUrl(def));
 });
+
 
 export default app;

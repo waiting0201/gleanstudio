@@ -146,11 +146,15 @@ node scripts/verify-media.mjs [--remote]
 - [x] 上下移動排序，`Sort*` 對應到 `update` 權限（舊系統的對應表根本沒涵蓋 `Sort*`）
 - [x] `npm run smoke:admin` 擴充到 31 項
 
-**待辦 —— 兩個形狀不一樣的實體**
+- [x] **Projects**（87 筆）—— 依分類篩選 + 搜尋，`Type`/`Place`/`Title` 掛 `datalist` 防打錯字，新增排在 `LegacyOrder` 最後
+- [x] **Admins** —— 密碼重設、權限矩陣勾選、以及兩道自我保護（不能刪自己、不能關掉自己的超級使用者）
+- [x] `npm run smoke:admin` —— **47 項**端到端
 
-- [ ] **Projects**（87 筆）—— 需要分頁與搜尋，而且它的 `LegacyOrder` 釘住了 `/Home/Project` 的四層分組順序，新增/刪除都要一併維護
-- [ ] **Admins** —— 密碼重設與權限勾選，牽涉 `AdminLims`
+**Phase 5 剩下的**
+
 - [ ] Abouts 的圖片欄位在公開站沒有被引用過（`/Home/About` 只用 Description）—— 要確認是不是該拿掉
+- [ ] **部署前要先建遠端 KV namespace**：`wrangler kv namespace create SESSION`，再把 id 填進 `wrangler.jsonc`
+- [ ] 遠端 D1 的順序補值（`db/seed/0002-order-backfill.sql`）
 - [ ] **部署前要先建遠端 KV namespace**：`wrangler kv namespace create SESSION`，再把 id 填進 `wrangler.jsonc`
 
 **過程中發現**

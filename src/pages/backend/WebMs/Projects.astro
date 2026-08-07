@@ -1,0 +1,139 @@
+---
+/**
+ * 案例列表。87 筆，不走共用實體層 —— 它的形狀跟其他實體不一樣。
+ *
+ * 公開頁 /Home/Project 是四層分組：Type →【標題】、Place → <h5>、
+ * Title → <p>、SubTitle → <li>。**分組完全由 LegacyOrder 的先後決定**，
+ * 而 Type / Place / Title 是自由文字 —— 打錯一個字就會在公開頁多出一個
+ * 全新的分類標題，而且只有一筆。
+ *
+ * 所以這一頁的重點不是「一列一列改」，是**讓分組結構看得見**：
+ * 依 Type 篩選（那正是公開頁最外層的分法），每一列都印出它完整的分組路徑。
+ */
+import { env } from 'cloudflare:workers';
+import Admin from '../../../layouts/Admin.astro';
+import Flash from '../../../components/admin/Flash.astro';
+import Csrf from '../../../components/admin/Csrf.astro';
+import { requirePermission, can } from '../../../lib/auth/session';
+
+export const prerender = false;
+
+const guard = await requirePermission(Astro, 'WebMs/Projects');
+if ('response' in guard) return guard.response;
+const { session } = guard;
+
+const [mayAdd, mayEdit, mayDelete] = await Promise.all([
+  can(session, 'WebMs/AddProjects'),
+  can(session, 'WebMs/EditProjects'),
+  can(session, 'WebMs/DeleteProjects'),
+]);
+
+const type = Astro.url.searchParams.get('type') ?? '';
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+
+// 分類清單依 LegacyOrder 的先後 —— 跟公開頁的分組順序一致，不是字典序
+const { results: types } = await env.DB.prepare(
+  `SELECT Type, COUNT(*) AS n, MIN(LegacyOrder) AS first
+   FROM Projects GROUP BY Type ORDER BY first`,
+).all<{ Type: string; n: number; first: number }>();
+
+const where: string[] = [];
+const binds: unknown[] = [];
+if (type) { where.push(`Type = ?${binds.length + 1}`); binds.push(type); }
+if (q) {
+  const like = `%${q}%`;
+  where.push(`(Place LIKE ?${binds.length + 1} OR Title LIKE ?${binds.length + 2} OR SubTitle LIKE ?${binds.length + 3})`);
+  binds.push(like, like, like);
+}
+const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+const stmt = env.DB.prepare(
+  `SELECT ProjectID, Type, Place, Title, SubTitle, Sort, LegacyOrder
+   FROM Projects ${clause} ORDER BY LegacyOrder`,
+);
+const { results: rows } = await (binds.length ? stmt.bind(...binds) : stmt).all<{
+  ProjectID: string; Type: string; Place: string; Title: string;
+  SubTitle: string | null; Sort: number; LegacyOrder: number;
+}>();
+
+const total = types.reduce((n, t) => n + t.n, 0);
+const tabs = [{ label: '全部', value: '', n: total }, ...types.map((t) => ({ label: t.Type, value: t.Type, n: t.n }))];
+const href = (t: string) => `?${new URLSearchParams({ ...(t ? { type: t } : {}), ...(q ? { q } : {}) })}`;
+---
+<Admin title="案例" session={session}>
+
+<Flash />
+
+<div class="flex flex-wrap items-baseline justify-between gap-4">
+  <div>
+    <h1 class="record-title text-2xl">案例</h1>
+    <p class="eyebrow mt-1">
+      <span class="instrument">{total}</span> 筆 · 顯示在 /Home/Project，依分類→地點→標題四層分組
+    </p>
+  </div>
+  {mayAdd && <a href="/backend/WebMs/AddProjects" class="btn btn-primary">新增案例</a>}
+</div>
+
+<nav aria-label="依分類篩選" class="mt-7 flex flex-wrap gap-x-4 gap-y-1 border-b border-bench-deep pb-2">
+  {tabs.map((t) => (
+    <a href={href(t.value)} aria-current={t.value === type ? 'page' : undefined}
+       class:list={[
+         'text-sm no-underline',
+         t.value === type ? 'text-brass' : 'text-ink-soft hover:text-ink',
+       ]}>{t.label} <span class="instrument">{t.n}</span></a>
+  ))}
+</nav>
+
+<form method="get" class="mt-4 flex flex-wrap items-center gap-2">
+  {type && <input type="hidden" name="type" value={type}>}
+  <input class="field-input max-w-xs" type="search" name="q" value={q}
+         placeholder="搜尋地點、標題或項目" aria-label="搜尋案例">
+  <button type="submit" class="btn btn-quiet">搜尋</button>
+  {(q || type) && <a href="?" class="text-sm text-ink-faint no-underline hover:text-ink">清除</a>}
+</form>
+
+{rows.length === 0 ? (
+  <div class="record mt-8 p-10 text-center">
+    <p class="text-sm text-ink-soft">{q ? `找不到符合「${q}」的案例。` : '這個分類還沒有案例。'}</p>
+  </div>
+) : (
+  <ul class="mt-6 space-y-px">
+    {rows.map((p) => (
+      <li class="record flex flex-wrap items-start justify-between gap-x-6 gap-y-2 px-4 py-3">
+        <div class="min-w-0 flex-1">
+          <div class="record-title text-base">
+            {mayEdit
+              ? <a href={`/backend/WebMs/EditProjects?id=${p.ProjectID}`}
+                   class="text-ink no-underline hover:text-brass">{p.SubTitle || '（沒有項目名稱）'}</a>
+              : (p.SubTitle || '（沒有項目名稱）')}
+          </div>
+          {/* 完整的分組路徑 —— 這就是它在公開頁上的位置 */}
+          <div class="eyebrow mt-0.5">{p.Type} › {p.Place} › {p.Title}</div>
+        </div>
+        <div class="flex shrink-0 items-center gap-4">
+          <span class="instrument text-ink-faint" title="公開頁上的排序">#{p.LegacyOrder}</span>
+          {mayDelete && (
+            <details class="text-right">
+              <summary class="cursor-pointer list-none text-sm text-ink-faint hover:text-oxide">刪除</summary>
+              <form method="post" action="/api/admin/Projects/delete" class="mt-2 flex items-center gap-2">
+                <Csrf />
+                <input type="hidden" name="id" value={p.ProjectID}>
+                <span class="text-sm text-ink-soft">確定刪掉？</span>
+                <button type="submit" class="btn btn-danger">刪除</button>
+              </form>
+            </details>
+          )}
+        </div>
+      </li>
+    ))}
+  </ul>
+)}
+
+<p class="field-hint mt-6">
+  公開頁的分組順序由 <span class="instrument">#</span> 這個號碼決定，不是由分類或地點的筆劃決定。
+  新增的案例會排在最後面。
+</p>
+
+<a class="live-face mt-3 inline-block" href="/Home/Project" target="_blank" rel="noopener">/Home/Project ↗</a>
+
+</Admin>
