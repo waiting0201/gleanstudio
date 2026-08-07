@@ -228,7 +228,18 @@ wrangler 沒有 `object list` 或 `head`，所以驗證只能整個抓下來比�
 5. 重跑 Step 3 ~ 6
 6. 重跑 parity 套件（[08-verification](08-verification.md)）
 
-Step 2 ~ 6 全部是冪等的，可以放心重跑。
+⚠️ **`db:seed` 不是冪等的** —— 它是純 `INSERT`，對已經有資料的庫會直接撞主鍵。
+重跑要先清空（本機是 `rm -rf .wrangler/state/v3/d1` 再 migrate + seed）。
+
+**資料已經灌好、後來才加順序欄位**的情況（Phase 3 的 `LegacyTypeOrder` 就是）
+用另一支：
+
+```bash
+npm run seed:order      # → db/seed/0002-order-backfill.sql，只有 UPDATE，冪等
+npx wrangler d1 execute gleanstudio --remote --file=db/seed/0002-order-backfill.sql
+```
+
+Step 2 ~ 4 是冪等的，可以放心重跑。
 
 ---
 

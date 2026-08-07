@@ -67,7 +67,8 @@ ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層。
 npm run export             # 本機 SQL Server → data/export/
 npm run hash               # 明碼密碼 → PBKDF2 雜湊
 npm run order:derive       # 從 tests/golden/ 重建顯示順序資料（不打正式站）
-npm run seed:build         # → db/seed/0001-data.sql
+npm run seed:build         # → db/seed/0001-data.sql（純 INSERT，只能灌空的庫）
+npm run seed:order         # → db/seed/0002-order-backfill.sql（只有 UPDATE，冪等）
 npm run db:migrate         # wrangler d1 migrations apply --local（加 :remote 走遠端）
 npm run db:seed            # 灌資料（加 :remote 走遠端）
 npm run media:upload       # 圖片 → R2（加 :remote）

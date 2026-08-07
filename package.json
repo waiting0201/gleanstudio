@@ -10,6 +10,7 @@
     "export": "node scripts/export-mssql.mjs",
     "hash": "node scripts/hash-passwords.mjs",
     "seed:build": "node scripts/build-seed-sql.mjs",
+    "seed:order": "node scripts/build-order-backfill.mjs",
     "golden": "node scripts/capture-golden.mjs",
     "order:derive": "node scripts/derive-order.mjs",
     "db:migrate": "wrangler d1 migrations apply gleanstudio --local",
