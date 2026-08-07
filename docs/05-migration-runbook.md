@@ -36,7 +36,7 @@
 在動任何資料之前，先處理 [09-known-issues](09-known-issues.md) §2 列出的 4 組外洩憑證：
 
 - **reCAPTCHA secret** 與 **SendGrid API key** —— **立刻輪替**。遷移完全不需要它們
-- **Azure SQL `wadmin` 密碼** —— 遷移完成後輪替（Phase 8 重新同步時還要用）
+- **Azure SQL 的管理帳號密碼** —— 遷移完成後輪替（Phase 8 重新同步時還要用）
 - **本機 `sa` 密碼**（`twvsjp0205`，寫在 `Web.config`）—— 隨舊系統下線一併作廢。注意這組**在本機 Docker 容器無效**，容器的密碼在 `docker inspect sqlserver` 的 `MSSQL_SA_PASSWORD`
 
 另外確認 `reference/old/` 過去有沒有被推上公開 remote。它在這個 repo 是 gitignored，但這份程式碼是從別的地方來的。
@@ -212,14 +212,14 @@ wrangler 沒有 `object list` 或 `head`，所以驗證只能整個抓下來比�
 
 **這是唯一需要 Azure 存取的步驟。**
 
-正式站的資料庫是 Azure SQL：`tcp:weypro.database.windows.net,1433` / `gleanstudio` / `wadmin`（連線字串在 [Web.Release.config:13](../reference/old/Gleanstudio/Web.Release.config#L13)，同時也是待輪替的憑證之一）。
+正式站的資料庫是 Azure SQL。**主機名稱、資料庫名稱與帳號都在 [Web.Release.config:13](../reference/old/Gleanstudio/Web.Release.config#L13) 的連線字串裡，這份文件不轉錄** —— 這個 repo 是公開的，而那台伺服器還活著。那組憑證也在待輪替清單上（[09-known-issues](09-known-issues.md) 2.1）。
 
 1. Azure Portal → SQL server `weypro` → Networking → Firewall rules → 加入這台機器的對外 IP（`curl -s https://ifconfig.me`）
 2. 對編輯者宣告內容凍結，並停用舊後台（Azure App Service 停機，或對 `/backend` 做 IP 限制）
 3. 用同一支 `scripts/export-mssql.mjs`，只換連線字串：
 
    ```bash
-   MSSQL_URL='mssql://wadmin:PASSWORD@weypro.database.windows.net:1433/gleanstudio?encrypt=true' \
+   MSSQL_URL='mssql://<帳號>:<密碼>@<主機>:1433/<資料庫>?encrypt=true' \
      node scripts/export-mssql.mjs --out data/export
    ```
 4. 媒體改從正式站抓（`scripts/fetch-media.mjs`）：檔案清單**由 DB 匯出結果產生**，不是掃目錄；對每一筆 `GET https://gleanstudio.com.tw/{path}`，併發 4，404 記進 `media/missing.json`

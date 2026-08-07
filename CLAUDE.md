@@ -18,6 +18,8 @@
 
 3. **密鑰只能透過 `wrangler secret`，不得進 git。**
    舊程式碼裡有 4 組外洩憑證待處理，見 [docs/09-known-issues.md](docs/09-known-issues.md) §2。
+   **這個 repo 是公開的** —— 文件描述舊系統的憑證時只指到 `reference/old/` 的檔案位置，
+   **不轉錄實際的值**（帳號、主機名稱、密碼都算）。`reference/` 本身 gitignored 且從未進過版控。
 
 ---
 

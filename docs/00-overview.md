@@ -14,7 +14,7 @@
 |---|---|
 | 網域 | `gleanstudio.com.tw`（實測 A 記錄 → Azure） |
 | 主機 | Azure App Service，IIS 10.0，`X-AspNetMvc-Version: 5.2` |
-| 資料庫 | Azure SQL：`weypro.database.windows.net` / `gleanstudio` |
+| 資料庫 | Azure SQL（主機與帳號見 `Web.Release.config`，公開文件不轉錄）|
 | Solution | 3 個專案：`Gleanstudio`（Web）、`Gleanstudio.Models`（EF6 + Repository）、`Gleanstudio.Service`（Service 層） |
 | 框架 | .NET Framework 4.8、MVC 5.2.7、Razor 3、EF 6.5.1 |
 | 前端 | Bootstrap 5.1.1（編進單一 `style.css`，268 KB）、jQuery 1.11.1 |

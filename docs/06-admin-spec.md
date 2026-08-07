@@ -90,7 +90,7 @@ salt：16 bytes 隨機（crypto.getRandomValues）
 
 ## 4. 移除後門帳號
 
-舊站的 `weypro` / `weypro12ab` → `AdminID = 888` 繞過所有權限檢查。
+舊站有一組寫死的後門帳號 `weypro` → `AdminID = 888`，繞過所有權限檢查。（密碼在舊原始碼裡，**文件不轉錄**。）
 
 **直接刪除，不留相容層。** 改用 `Admins.IsSuperAdmin` 欄位 —— 一樣可以繞過 `AdminLims` 檢查，但它是一筆真實、可稽核、可撤銷的資料列。
 

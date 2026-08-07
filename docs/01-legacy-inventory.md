@@ -265,7 +265,7 @@ Area `backend`，路由 `backend/{controller}/{action}/{id}`，佈景是 SmartAd
 **登入**（`MainController.ValidateUser`）：
 
 - 用 **Session**，不是 Forms Auth。`Web.config` 沒有 `<authentication>`、`<authorization>`、`<sessionState>`、`machineKey`
-- **寫死的後門超級使用者**：`weypro` / `weypro12ab` → `Session["AdminID"] = 888`，繞過所有權限檢查
+- **寫死的後門超級使用者**：帳號 `weypro`（密碼寫死在 [CheckSessionAttribute.cs](../reference/old/Gleanstudio/Filters/CheckSessionAttribute.cs)，**這裡不轉錄** —— 見本檔開頭的說明）→ `Session["AdminID"] = 888`，繞過所有權限檢查
 - 一般登入：查 `Username` 後 `admin.Password != password` **明碼字串比對**，沒有雜湊、沒有 salt、沒有鎖定、沒有 timing-safe 比較
 - 成功後設 `Session["IsLogin"]`、`["Username"]`、`["AdminID"]`、`["AdminLims"]`（把 EF 的延遲載入集合直接塞進 session）
 - `Logout` 只設 `IsLogin = false` 並移除 `Username`，**`AdminID` 與 `AdminLims` 留在 session 裡**

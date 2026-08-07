@@ -39,7 +39,7 @@
 
 | # | 憑證 | 位置 | 處置 |
 |---|---|---|---|
-| 2.1 | **Azure SQL `wadmin` 密碼**（正式站） | [Web.Release.config:13](../reference/old/Gleanstudio/Web.Release.config#L13) | 遷移完成**後**輪替 —— Phase 8 重新同步時還要用 |
+| 2.1 | **Azure SQL 管理帳號密碼**（正式站） | [Web.Release.config:13](../reference/old/Gleanstudio/Web.Release.config#L13) | 遷移完成**後**輪替 —— Phase 8 重新同步時還要用 |
 | 2.2 | 本機 `sa` 密碼 | `Web.config:12` + `Gleanstudio.Models/App.config` + `Gleanstudio.Service/App.config` | 隨舊系統下線一併作廢 |
 | 2.3 | **reCAPTCHA secret** | [HomeController.cs:237](../reference/old/Gleanstudio/Controllers/HomeController.cs#L237) | **立刻輪替** —— 遷移不需要它 |
 | 2.4 | **SendGrid API key** | `Commons/Librarys.cs` | **立刻輪替** —— 遷移不需要它 |
@@ -119,7 +119,7 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 | 4.2 | 後台權限不足 | 轉址到 `/Error/Validation`，而該路由不存在 → 404 | 原地渲染 **403** | 舊行為讓「沒權限」與「網址打錯」無法區分 |
 | 4.3 | 後台登出 | GET | **POST** | GET 登出可被 CSRF |
 | 4.4 | 後台刪除 | `[HttpGet]` | **POST + CSRF token** | 同上 |
-| 4.5 | 超級使用者 | 寫死 `weypro` / `weypro12ab` → `AdminID = 888` | `Admins.IsSuperAdmin` 欄位 | 可稽核、可撤銷 |
+| 4.5 | 超級使用者 | 寫死的 `weypro` 後門 → `AdminID = 888` | `Admins.IsSuperAdmin` 欄位 | 可稽核、可撤銷 |
 | 4.6 | 管理員密碼 | `nvarchar(20)` 明碼 | PBKDF2 雜湊 + `MustChangePassword` | |
 | 4.7 | 上傳驗證 | 無 | magic bytes + 10 MB 上限 | |
 | 4.8 | 權限比對 | `Key.Contains()` 子字串 | 精確比對 + CI 斷言 | 見 [06-admin-spec](06-admin-spec.md) §5 |
