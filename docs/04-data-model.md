@@ -261,6 +261,42 @@ ORDER BY t.Sort;
 
 seed 建構時把這個名次寫進 `Articles.LegacyOrder`，所有涉及 `Articles` 排序的查詢都加 `, LegacyOrder` 作為次要排序。
 
+### 一個欄位不夠 —— 還有 `LegacyTypeOrder`（Phase 3 才發現）
+
+`/Home/Articles` 與 `/Home/Articles?ArticleTypeID=…` 在舊站是同一句 `OrderByDescending(CreateDate)`，只差一個 `WHERE`。**但 SQL Server 對並列列的輸出順序在兩種計畫下不一樣**：
+
+| 清單 | 2026-01-01 那三篇的順序 |
+|---|---|
+| `/Home/Articles`（未篩選） | `4772b8a8` → `22acb62c` → `d6d01a97` |
+| `/Home/Articles?ArticleTypeID=ff829f70-…` | `22acb62c` → `4772b8a8` → … |
+
+同一組資料列，兩張清單的先後不同 —— **一個次要排序欄位表達不了兩種順序**。兩張清單都在 golden 裡，兩種順序都是凍結的契約。
+
+所以 `Articles` 有兩個相容性欄位（`db/migrations/0002_articles_legacy_type_order.sql`）：
+
+| 欄位 | 用在 | 編號方式 |
+|---|---|---|
+| `LegacyOrder` | `/Home/Articles`（未篩選） | 全域 1..N |
+| `LegacyTypeOrder` | `/Home/Articles?ArticleTypeID=…` | **每個分類各自** 1..N |
+
+`src/db/queries.ts` 的 `getArticlesPage()` 依有無 `articleTypeId` 換次要排序欄位。`scripts/verify-d1.mjs` 兩種順序都驗。
+
+**這是「照抄一個未定義行為」的代價的具體樣貌** —— 不是抄一次就好，是每一種查詢形狀都要抄一次。markup 解凍後兩個欄位一起移除，改用 `CreateDate DESC, ArticleID`。
+
+### 順序資料可以離線重建
+
+`data/export/legacy-order.json` 與 `projects-order.json` 兩個檔都由 oracle 推導而來，本機資料重跑產不出來，**因此都進版控**。
+
+要重建時不必再打正式站（那等於重新 baseline）—— `npm run order:derive` 只讀 `tests/golden/`：
+
+```bash
+npm run order:derive     # tests/golden/ → data/export/{legacy-order,projects-order}.json
+```
+
+解析邏輯放在 `scripts/lib/legacy-order.mjs`，`capture-golden.mjs`（打正式站）與 `derive-order.mjs`（讀 golden）共用同一份，不會漂移。
+
+⚠️ golden 只涵蓋每個分類的第 1 頁，所以 `typeOrder` 裡超出第 1 頁的文章是**推斷**的（依未篩選順序往後續編），列在 `typeOrderInferred` 讓人看得見。下一次 `npm run golden` 會逐頁爬，屆時全部是觀察值。
+
 **這也意味著 Phase 1（golden 擷取）是 Phase 2（資料遷移）的前置**，不只是時效性考量 —— 沒有 golden 就沒有 `LegacyOrder`。
 
 **但書**：

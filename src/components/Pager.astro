@@ -1,0 +1,58 @@
+---
+// ← Infrastructure/Paging/CustomPager.cs，選項來自 Views/Home/Articles.cshtml:5-15
+//
+// 這裡是「逐字重現」不是「重寫一個分頁器」。以正式站抓下來的輸出為準
+// （docs/03-url-contract.md §5.1），含三個既有的怪癖：
+//   1. <nav class="Page navigation example"> —— 有人把 aria-label 貼錯位置了
+//   2. 前後頁的 <li> 有 page-item，數字頁的沒有（NormalPageElementClass 從未賦值）
+//   3. 所有 href 都一樣，沒有 p 也沒有 ArticleTypeID（generatePageUrl 忽略頁碼）
+interface Props {
+  /** list.PageNumber —— 送進 ToPagedList 的原始 p */
+  pageNumber: number;
+  pageCount: number;
+  pageSize: number;
+  /** pager 自己從 query string 重新解析的頁碼，跟 pageNumber 是兩條路徑 */
+  currentPage: number;
+  /** generatePageUrl(page) 的結果 —— 舊站忽略 page 參數，所以是常數 */
+  href: string;
+}
+const { pageNumber, pageCount, pageSize, currentPage, href } = Astro.props;
+
+const BACK = '<img src="/Content/images/svg/arrow-page-back.svg">';
+const NEXT = '<img src="/Content/images/svg/arrow-page-next.svg">';
+
+// CustomPager.cs:43-59 —— `PageCount > PageSize` 是拿每頁筆數（6）當視窗大小的
+// 筆誤。目前只有 2 頁，2 > 6 為 false，永遠走「全部頁碼都顯示」那條路。
+// 文章超過 42 篇（7 頁 × 6）之後這個分支才會啟動，屆時 golden 要重抓。照抄。
+let first = 1;
+let last = pageCount;
+let count = last;
+if (pageCount > pageSize) {
+  const max = pageSize;
+  first = Math.max(1, pageNumber - Math.trunc(max / 2));
+  count = max;
+  last = first + count - 1;
+  if (last > pageCount) first = pageCount - max + 1;
+}
+
+// TagBuilder.AddCssClass 是前插，而 CustomPager 先加 LiElementClasses 再加
+// disabled —— 所以停用狀態的 class 順序是 `disabled page-item`，不是反過來。
+// 停用時 href 是 "javascript:;"，不是省略。
+const arrow = (enabled: boolean, glyph: string) =>
+  enabled
+    ? `<li class="page-item"><a class="page-link" href="${href}">${glyph}</a></li>`
+    : `<li class="disabled page-item"><a class="page-link" href="javascript:;">${glyph}</a></li>`;
+
+const numbers = Array.from({ length: Math.max(0, count) }, (_, i) => first + i)
+  .map((n) => `<li${n === currentPage ? ' class="active"' : ''}><a class="page-link" href="${href}">${n}</a></li>`)
+  .join('');
+
+// 首頁 / 末頁連結、頁碼統計、總筆數都關掉了（DisplayLinkToFirstPage 等 = false）
+const html =
+  '<nav class="Page navigation example"><ul class="pagination justify-content-center">' +
+  arrow(currentPage > 1, BACK) +
+  numbers +
+  arrow(currentPage < pageCount, NEXT) +
+  '</ul></nav>';
+---
+<Fragment set:html={html} />

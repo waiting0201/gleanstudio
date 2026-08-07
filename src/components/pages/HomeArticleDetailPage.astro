@@ -3,7 +3,7 @@
 import Site from '../../layouts/Site.astro';
 import { getArticleTypes, getArticle } from '../../db/queries';
 import { getGuid } from '../../lib/query';
-import { formatDate } from '../../lib/format';
+import { formatDate, htmlEncode } from '../../lib/format';
 
 const articleTypes = await getArticleTypes();
 const id = getGuid(Astro.url, 'ArticleID');
@@ -13,8 +13,7 @@ const article = id ? await getArticle(id) : null;
 // 刻意分歧：回 404。見 docs/09-known-issues.md 4.1
 if (!article) return new Response(null, { status: 404 });
 ---
-<Site title={`${article.title} - 禾勤藝術有限公司`} articleTypes={articleTypes}>
-<div class="container">
+<Site title={`${article.title} - 禾勤藝術有限公司`} articleTypes={articleTypes}><div class="container">
     <div class="row justify-content-center">
         <div class="col-12 text-center py-4">
             <img src="/Content/images/logo.png">
@@ -29,7 +28,7 @@ if (!article) return new Response(null, { status: 404 });
                     <div class="news-list">
                         <div class="news-text text-center">
                             <div class="news-text-label-g">{article.typeTitle}</div>
-                            <div class="font-34 text-black">{article.title}</div>
+                            <div class="font-34 text-black" set:html={htmlEncode(article.title)}></div>
                             <small><i>{formatDate(article.createDate)}</i></small>
                         </div>
                         <div class="news-content mx-auto">
@@ -40,7 +39,7 @@ if (!article) return new Response(null, { status: 404 });
                 <div class="col-12 my-5 cursor">
                     <a href="/Home/Articles">
                         <div class="bg-btn mx-auto">
-                            &lt; BACK
+                            <Fragment set:html={'< BACK'} />
                         </div>
                     </a>
                 </div>

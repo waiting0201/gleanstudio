@@ -1,7 +1,12 @@
 {
-  "capturedAt": "2026-08-07T06:29:37.708Z",
+  "capturedAt": "2026-08-07T06:29:37.711Z",
   "origin": "https://gleanstudio.com.tw",
+  "derivedFrom": "tests/golden (scripts/derive-order.mjs)",
   "note": "從正式站 /Home/Articles 的實際顯示順序取得。CreateDate 並列時的順序無法從資料庫推導，見 docs/04-data-model.md §5",
+  "typeOrderNote": "/Home/Articles?ArticleTypeID={guid} 的實際顯示順序（每個分類各自從 1 起算）。舊站對 CreateDate 並列列的排序在「有無分類篩選」兩種查詢下不一致 —— 同一組 2026-01-01 的資料列，未篩選是 4772b8a8→22acb62c，篩選後是 22acb62c→4772b8a8。一個欄位表達不了兩種順序，所以有 LegacyOrder 與 LegacyTypeOrder 兩欄。",
+  "typeOrderInferred": [
+    "d6d01a97-2da1-45da-b620-f859981e4826"
+  ],
   "order": {
     "96aaa3f5-b7db-4416-ab14-2877ed239219": 1,
     "2c22a9d8-61fa-457a-b354-aaae97281e90": 2,
@@ -12,5 +17,16 @@
     "4772b8a8-9912-4769-bacf-18d176e0061a": 7,
     "22acb62c-0b58-498b-8b7b-3e6f95b37653": 8,
     "d6d01a97-2da1-45da-b620-f859981e4826": 9
+  },
+  "typeOrder": {
+    "96aaa3f5-b7db-4416-ab14-2877ed239219": 1,
+    "2c22a9d8-61fa-457a-b354-aaae97281e90": 2,
+    "e016d09a-6f46-48fa-ae30-6ed329ad1a46": 3,
+    "51e3bd0a-ea80-4eb9-9cc8-3e4e00b01cff": 4,
+    "22acb62c-0b58-498b-8b7b-3e6f95b37653": 5,
+    "4772b8a8-9912-4769-bacf-18d176e0061a": 6,
+    "d6d01a97-2da1-45da-b620-f859981e4826": 7,
+    "18cacc7a-4bde-43f0-a490-c4e1897dc97a": 1,
+    "21b3941f-4095-4006-822c-45942c21338e": 1
   }
 }

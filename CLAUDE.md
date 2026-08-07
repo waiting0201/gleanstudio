@@ -23,8 +23,11 @@
 
 ## 現在做到哪
 
-**Phase 3 進行中**（前台移植）。Astro 專案骨架、版型、資料層、parity 工具都好了；
-**Level B parity 20/32**。Project 的分組順序尚未對齊；Contact 與 Articles（含 Pager）尚未移植。
+**Phase 3 完成**（前台移植，2026-08-07）。10 個前台 action 全部移植完畢，
+**Level B parity 31/31（gating 全綠）、Level A 29/31**。`/Upload/*` 的 R2 路由與大小寫 middleware 都好了。
+剩下的 2 頁 Level A 差異是 Astro 序列化器的正規化行為，已審閱並接受（[docs/08](docs/08-verification.md) §7a）。
+
+**下一步：Phase 4（聯絡表單 POST）與 Phase 5（後台）** —— 兩者可並行。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -56,6 +59,7 @@
 # 資料（已可用）
 npm run export             # 本機 SQL Server → data/export/
 npm run hash               # 明碼密碼 → PBKDF2 雜湊
+npm run order:derive       # 從 tests/golden/ 重建顯示順序資料（不打正式站）
 npm run seed:build         # → db/seed/0001-data.sql
 npm run db:migrate         # wrangler d1 migrations apply --local（加 :remote 走遠端）
 npm run db:seed            # 灌資料（加 :remote 走遠端）
@@ -113,8 +117,11 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 - 文件與 UI 文案寫繁體中文
 - `astro.config.mjs` 必須設 `compressHTML: false`
 - `Articles` 排序一律 `ORDER BY CreateDate DESC, LegacyOrder` —— 有兩組日期並列
+  （**依分類篩選時要換成 `LegacyTypeOrder`**，舊站兩種查詢的並列順序不同，見 [ADR-017](docs/10-decisions.md)）
 - **`wrangler dev` 不會可靠地重載新 build 的 chunk** —— 改完一定要重啟，用 `npm run preview`
 - **不要用 `LENGTH()` 比對內容完整性** —— 它數 code point，JS `.length` 數 UTF-16 單位，內文有 🔗 就會差 1。要比就比整串或雜湊
+- **版型與頁面的空白是契約的一部分** —— `<Site>` 開標籤後換不換行逐頁不同，改之前先跑 `npm run parity -- <path> --level a`
+- **Razor 的 `@x` 不等於 Astro 的 `{x}`** —— 前者把 160–255 的字元編成 `&#nnn;`。要 byte parity 就用 `set:html={htmlEncode(x)}`（`src/lib/format.ts`）
 
 ---
 

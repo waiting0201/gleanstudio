@@ -2,7 +2,7 @@
 // ← Views/Home/Index.cshtml
 import Site from '../../layouts/Site.astro';
 import { getArticleTypes, getAbout, getLatestArticlePerType } from '../../db/queries';
-import { formatDate } from '../../lib/format';
+import { formatDate, htmlEncode } from '../../lib/format';
 
 const [articleTypes, about, latest] = await Promise.all([
   getArticleTypes(),
@@ -30,7 +30,8 @@ const [articleTypes, about, latest] = await Promise.all([
                 </div>
                 <img src={`/Upload/ArticleTypes/${t.articleTypeId}/${t.photo}`} class="img-fluid">
             </div>
-</Fragment>))}        </div>
+</Fragment>))}            
+        </div>
     </div>
     <!--News-->
     <div class="row justify-content-center">
@@ -39,19 +40,19 @@ const [articleTypes, about, latest] = await Promise.all([
             <small class="text-uppercase">Get Latest Updates and News</small>
         </div>
         <div class="row">
-{latest.map((a) => (<Fragment>            <div class="col-md-4 news-list">
-                <div class="text-center cursor" onclick={`location.href='/Home/ArticleDetail?ArticleID=${a.articleId}';`}>
-                    <img src={`/Upload/Articles/${a.articleId}/${a.photo}`} class="img-fluid">
-                    <div class="news-text">
-                        <div class="news-text-label">{a.typeTitle}</div>
-                        <div class="font-20 text-black">{a.title}</div>
-                        <small><i>{formatDate(a.createDate)}</i></small>
-                        <div class="font-17 text-decoration-underline cursor mt-3 more-btn">
-                            <a href={`/Home/ArticleDetail?ArticleID=${a.articleId}`}>More</a>
+{latest.map((a) => (<Fragment>                    <div class="col-md-4 news-list">
+                        <div class="text-center cursor" onclick={`location.href='/Home/ArticleDetail?ArticleID=${a.articleId}';`}>
+                            <img src={`/Upload/Articles/${a.articleId}/${a.photo}`} class="img-fluid">
+                            <div class="news-text">
+                                <div class="news-text-label">{a.typeTitle}</div>
+                                <div class="font-20 text-black" set:html={htmlEncode(a.title)}></div>
+                                <small><i>{formatDate(a.createDate)}</i></small>
+                                <div class="font-17 text-decoration-underline cursor mt-3 more-btn">
+                                    <a href={`/Home/ArticleDetail?ArticleID=${a.articleId}`}>More</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
 </Fragment>))}        </div>
         <div class="col-12">
             <div class="bg-btn mx-auto more-btn"><a href="/Home/Articles">View all art news</a></div>

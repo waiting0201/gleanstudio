@@ -6,9 +6,10 @@ import Site from '../../layouts/Site.astro';
 import { getArticleTypes } from '../../db/queries';
 
 const articleTypes = await getArticleTypes();
+// ⚠️ <Site> 開標籤與 <div class="container"> 之間刻意不換行 —— 舊站這一頁的
+//    view 輸出前面沒有換行，多一個就掉 byte parity。見 src/layouts/Site.astro
 ---
-<Site title="文物修復放大鏡 - 禾勤藝術有限公司" articleTypes={articleTypes}>
-<div class="container">
+<Site title="文物修復放大鏡 - 禾勤藝術有限公司" articleTypes={articleTypes}><div class="container">
     <div class="row justify-content-center">
         <div class="col-12 text-center py-4">
             <img src="/Content/images/logo.png">

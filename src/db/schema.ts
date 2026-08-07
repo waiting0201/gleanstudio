@@ -59,8 +59,11 @@ export const articles = sqliteTable('Articles', {
   description: text('Description').notNull(),
   createDate: text('CreateDate').notNull(),
   // 相容性欄位：釘住 CreateDate 並列時的顯示順序，值來自正式站觀察。
+  // 兩欄是因為舊站「未篩選」與「依分類篩選」兩種查詢的並列順序不一致 ——
+  // 同一組資料列在兩張清單上的先後不同，一個欄位表達不了。
   // 見 docs/04-data-model.md §5、docs/10-decisions.md ADR-012
   legacyOrder: integer('LegacyOrder').notNull().default(0),
+  legacyTypeOrder: integer('LegacyTypeOrder').notNull().default(0),
 });
 
 export const services = sqliteTable('Services', {

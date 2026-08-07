@@ -16,7 +16,8 @@ Thumbs.db
 !.env.example
 .dev.vars
 
-# 資料庫匯出（含明碼管理員密碼）。manifest / anomalies / legacy-order 例外，見 docs/05
+# 資料庫匯出（含明碼管理員密碼）。manifest / anomalies / 兩個順序檔例外，見 docs/05
+# 順序檔是 oracle 推導出來的，本機資料重跑產不出來 —— 一定要進版控
 # 逐層 unignore —— gitignore 對被排除的目錄不會再看裡面的否定規則
 data/*
 !data/export/
@@ -24,6 +25,7 @@ data/export/*
 !data/export/manifest.json
 !data/export/anomalies.json
 !data/export/legacy-order.json
+!data/export/projects-order.json
 
 # Node
 node_modules/

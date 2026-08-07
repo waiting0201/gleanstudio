@@ -79,12 +79,23 @@ npm run golden
 
 - **`POST /Home/Contact`** —— 不能對正式站發 POST（會寄真信、燒 reCAPTCHA 配額）。期望輸出手工推導後放 `tests/derived/`，由人審閱
 - **錯誤頁** —— 舊站不存在的 `ArticleID` 回 500 黃頁，新站刻意回 404。這是[刻意分歧](../../../docs/09-known-issues.md) 4.1，不是失敗
-- **小寫資源路徑** —— Workers Assets 的大小寫行為未定，見 [docs/08-verification.md](../../../docs/08-verification.md) §5.4
+- **小寫資源路徑** —— Workers Assets 大小寫敏感（Phase 3 已實測），接受落差，見 [docs/08-verification.md](../../../docs/08-verification.md) §5.4
 
 ## 接受一個差異
 
-若決定接受某個無法達成的 Level A parity：
+`scripts/parity-diff.mjs` 有兩種機制，**不要混用**：
 
-1. 記進 [docs/08-verification.md](../../../docs/08-verification.md) §7 豁免清單，附原因與日期
-2. 在 parity runner 的豁免設定加上該路徑
-3. **不要**因此放寬 Level B 的 gating
+| | `EXEMPTIONS` | `DIVERGENCES` |
+|---|---|---|
+| 意思 | 輸出幾乎一樣，差在無渲染影響的細節 | 我們決定不做那件事，**永遠**不會相符 |
+| 做法 | 對 golden 套用轉換後再比 | 整頁略過，印出理由 |
+| 記在 | [docs/08](../../../docs/08-verification.md) §7 | [docs/08](../../../docs/08-verification.md) §7b + [docs/09](../../../docs/09-known-issues.md) §4 |
+
+流程：
+
+1. 先判斷是哪一種 —— 「能做但很醜」不是豁免，是還沒做
+2. 記進對應的文件小節，附原因與日期
+3. 在 parity runner 加上對應設定
+4. **不要**因此放寬 Level B 的 gating
+
+Level A（byte）差異若判定接受，記進 [docs/08](../../../docs/08-verification.md) §7a 表格即可 —— 它本來就不 gating，不需要動 runner。

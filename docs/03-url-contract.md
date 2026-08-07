@@ -194,6 +194,18 @@ export default defineConfig({
 - 富文本欄位全部走 `@Html.Raw` 未過濾
 - 卡片點擊用 inline `onclick="location.href='…'"`
 
+### 5.6 小寫路徑會改變**整頁**的站內連結 ⚠️
+
+`Url.Action("About")` 的 controller 片段來自 `RouteData.Values["controller"]`，也就是**使用者實際打進來的字串**。所以 `/home/about` 這一頁的每一條站內連結都變成 `/home/About` —— controller 跟著小寫，action 名稱維持原本的大小寫。
+
+`tests/golden/home-about~1a8370.html` 與 `Home-About.html` 的唯一差別就是這 12 條連結。
+
+**做法**：不讓每個元件都帶一個前綴參數。`src/middleware.ts` 在 rewrite 之後於出口把 `"/Home/` 換成使用者打的片段 —— 只有非正規大小寫的請求會走到這條路徑，正常請求零成本。
+
+### 5.7 `/Home/Articles` 有兩套排序
+
+未篩選與依分類篩選是同一句 `OrderByDescending(CreateDate)`，但 SQL Server 對並列列的輸出順序在兩種計畫下不同，而兩張清單都在 golden 裡。需要兩個相容性欄位，見 [04-data-model](04-data-model.md) §5 與 [ADR-017](10-decisions.md)。
+
 ---
 
 ## 6. `<title>` 逐頁對照
@@ -291,7 +303,7 @@ export default defineConfig({
 | `/Home/Articles?p=0` | **500** | 建議 200（視為 `p=1`） | `ToPagedList(0, 6)` 丟例外。**刻意分歧** |
 | `/Home/ArticleDetail?ArticleID=<不存在>` | **500** | 建議 404 | `article.Title` 對 null 取值。**刻意分歧** |
 | `/Home/Service?ArticleTypeID=<不存在>` | **500** | 建議 404 | 同上，`articletype.Title`。**刻意分歧** |
-| `/home/about`（小寫） | **200** | 200 | IIS 大小寫不敏感，需 middleware，見 §3.3 |
+| `/home/about`（小寫） | **200** | 200 | IIS 大小寫不敏感，需 middleware，見 §3.3 與 §5.6（連結大小寫也跟著變）|
 | `/Home/About/`（尾斜線） | **200** | 200 | 不轉址，`trailingSlash: 'ignore'` |
 | `/Error/Validation` | **404** | 403 | 舊站從未實作，見 [06-admin-spec](06-admin-spec.md) §7 |
 

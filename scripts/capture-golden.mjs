@@ -14,6 +14,7 @@
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import { parseArticleIds, hasNextPage, parseProjectOrder } from './lib/legacy-order.mjs';
 
 function arg(flag, fallback) {
   const i = process.argv.indexOf(flag);
@@ -83,16 +84,20 @@ async function capture(path, { note } = {}) {
 }
 
 // ── 探索：文章順序與分類 ──────────────────────────────────
-/** 逐頁抓 /Home/Articles，取得跨頁的實際顯示順序。這就是 legacy order。 */
-async function crawlArticleOrder() {
+/**
+ * 逐頁抓文章列表，取得跨頁的實際顯示順序。這就是 legacy order。
+ *
+ * 未篩選與依分類篩選要各爬一次 —— 舊站對 CreateDate 並列列的輸出順序在兩種
+ * 查詢下並不一致，兩種順序都是契約。見 docs/04-data-model.md §5
+ */
+async function crawlArticleList(pathFor, { noteFirst } = {}) {
   const order = [];
   for (let p = 1; p <= 50; p++) {
-    const html = await capture(`/Home/Articles?p=${p}`, { note: p === 1 ? 'articles-page-1' : undefined });
-    const ids = [...html.matchAll(/ArticleDetail\?ArticleID=([0-9a-f-]{36})/gi)].map((m) => m[1].toLowerCase());
+    const html = await capture(pathFor(p), { note: p === 1 ? noteFirst : undefined });
+    const ids = parseArticleIds(html);
     if (ids.length === 0) break;
     order.push(...ids);
-    // 沒有「下一頁」的可用連結就停
-    if (!/arrow-page-next\.svg/.test(html) || /disabled page-item"><a class="page-link" href="javascript:;"><img src="\/Content\/images\/svg\/arrow-page-next\.svg"/.test(html)) break;
+    if (!hasNextPage(html)) break;
   }
   return order;
 }
@@ -111,7 +116,7 @@ for (const p of FIXED) await capture(p);
 
 // 2. 文章列表逐頁 → 取得 legacy order
 console.log('\n── 文章列表（同時取得顯示順序）──');
-const articleOrder = await crawlArticleOrder();
+const articleOrder = await crawlArticleList((p) => `/Home/Articles?p=${p}`, { noteFirst: 'articles-page-1' });
 console.log(`  → 共 ${articleOrder.length} 篇，順序已記錄`);
 
 // 3. Project 的分組順序 —— 同樣只能從 oracle 取
@@ -120,24 +125,8 @@ console.log(`  → 共 ${articleOrder.length} 篇，順序已記錄`);
 // 見 docs/04-data-model.md §5
 console.log('\n── Project 分組順序 ──');
 const projectHtml = (await readFile(`${OUT}/${slugFor('/Home/Project')}`)).toString('utf8');
-const projectOrder = {};
-{
-  // 粒度必須到 SubTitle（<li>）。Title 之內的 <li> 順序在舊站是
-  // OrderBy(Sort)，但 Sort 並列時又落回實體順序 —— 一樣只能從 oracle 取。
-  let rank = 0;
-  let type = null, place = null, title = null;
-  const re = /<h2 class="text-center mb-4">【([^<]*)】<\/h2>|<h5 class="mb-1">([^<]*)<\/h5>|<p class="mb-1 fw-bold">([^<]*)<\/p>|<li>([^<]*)<\/li>/g;
-  let m;
-  while ((m = re.exec(projectHtml))) {
-    if (m[1] !== undefined) { type = m[1]; place = null; title = null; }
-    else if (m[2] !== undefined) { place = m[2]; title = null; }
-    else if (m[3] !== undefined) { title = m[3]; }
-    else if (m[4] !== undefined && type && place && title) {
-      projectOrder[`${type}|${place}|${title}|${m[4]}`] = ++rank;
-    }
-  }
-  console.log(`  → ${rank} 筆 (Type|Place|Title|SubTitle)`);
-}
+const projectOrder = parseProjectOrder(projectHtml);
+console.log(`  → ${Object.keys(projectOrder).length} 筆 (Type|Place|Title|SubTitle)`);
 
 // 4. 分類：從首頁的 Service 連結取得
 console.log('\n── 分類頁 ──');
@@ -145,9 +134,16 @@ const homeHtml = (await readFile(`${OUT}/root.html`)).toString('utf8');
 const typeIds = [...new Set(
   [...homeHtml.matchAll(/Service\?ArticleTypeID=([0-9a-f-]{36})/gi)].map((m) => m[1].toLowerCase())
 )];
+// 分類篩選後的文章順序也要逐頁爬 —— 它跟未篩選的順序不一樣。
+// 第 1 頁刻意不帶 p，維持既有的 fixture 檔名。
+const articleTypeOrder = {};
 for (const id of typeIds) {
   await capture(`/Home/Service?ArticleTypeID=${id}`);
-  await capture(`/Home/Articles?ArticleTypeID=${id}`);
+  const ids = await crawlArticleList(
+    (p) => (p === 1 ? `/Home/Articles?ArticleTypeID=${id}` : `/Home/Articles?p=${p}&ArticleTypeID=${id}`),
+  );
+  ids.forEach((articleId, i) => { articleTypeOrder[articleId] = i + 1; });
+  console.log(`  → ${id.slice(0, 8)} 共 ${ids.length} 篇`);
 }
 
 // 5. 每篇文章的詳細頁
@@ -176,7 +172,12 @@ await writeFile(`${EXPORT_DIR}/legacy-order.json`,
     origin: ORIGIN,
     note: '從正式站 /Home/Articles 的實際顯示順序取得。CreateDate 並列時的順序' +
           '無法從資料庫推導，見 docs/04-data-model.md §5',
+    typeOrderNote:
+      '/Home/Articles?ArticleTypeID={guid} 的實際顯示順序（每個分類各自從 1 起算）。' +
+      '舊站對 CreateDate 並列列的排序在「有無分類篩選」兩種查詢下不一致，' +
+      '一個欄位表達不了兩種順序，所以有 LegacyOrder 與 LegacyTypeOrder 兩欄。',
     order: legacyOrder,
+    typeOrder: articleTypeOrder,
   }, null, 2) + '\n', 'utf8');
 
 await writeFile(`${EXPORT_DIR}/projects-order.json`,

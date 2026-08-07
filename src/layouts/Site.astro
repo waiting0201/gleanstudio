@@ -9,6 +9,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Scripts from '../components/Scripts.astro';
 import type { ArticleType } from '../db/queries';
+import { htmlEncode } from '../lib/format';
 
 interface Props {
   title: string;
@@ -30,7 +31,7 @@ const { title, articleTypes } = Astro.props;
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="robots" content="all,follow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title}</title>
+    <title set:html={htmlEncode(title)}></title>
     <meta name="keywords" content="禾勤藝術有限公司,文物修復,物件研究詮釋,展覽策劃,展場設計">
     <meta name="description" content="禾勤藝術藉著持續的創新與改善，培養負責、主動積極且有效率的工作團隊，提昇公司競爭力。">
 <Styles />
@@ -41,12 +42,9 @@ const { title, articleTypes } = Astro.props;
 
 <Header articleTypes={articleTypes} />
 
-    
-<slot />
-<Footer />
+    <slot /><Footer />
 <Scripts />
 
-    
-<slot name="scripts" />
+    <slot name="scripts" />
 </body>
 </html>

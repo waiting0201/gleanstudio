@@ -110,11 +110,19 @@ Playwright 在 375 / 768 / 1440 三個寬度，同時對正式站與本機截圖
 
 **Phase 1 已把邊界情境全部探測並收進 golden**，結果見 [03-url-contract](03-url-contract.md) §9。額外發現兩個舊站也會 500 的情境：`?p=0` 與 `/Home/Service?ArticleTypeID=<不存在>`。三個 500 都是同一個模式 —— 舊站對找不到的資料一律當機。
 
-### 5.4 Workers Assets 的大小寫敏感度
+### 5.4 Workers Assets 的大小寫敏感度 —— 已實測（2026-08-07）
 
-沒有任何文件說明 Workers Assets 對路徑大小寫是否敏感。**Phase 3 用 `wrangler dev` 實測**，不要假設。
+**結論：大小寫敏感。** `wrangler dev` 實測：
 
-若確實敏感，`/content/css/style.css`（小寫）會 404 而舊站是 200。選項是 `run_worker_first: ["/content/*", "/scripts/*"]`（很醜，而且無法乾淨地只表達「小寫變體」）或接受落差。**建議接受**並記在 [09-known-issues](09-known-issues.md) —— 站內只會產生大小寫正確的資源網址。
+| 路徑 | 結果 |
+|---|---|
+| `/Content/css/style.css` | 200，`text/css`，268 KB |
+| `/content/css/style.css` | **404** |
+| `/Scripts/nav.js` | 200 |
+
+附帶觀察：資產沒命中時請求**會落到 Worker**（回的是 Astro 的 404 頁，不是 Workers Assets 的）。所以理論上 middleware 補得起來，但這需要把資產路徑也納入正規化表並改走 `ASSETS` binding。
+
+**判定：接受落差**，記在 [09-known-issues](09-known-issues.md) 4.10。站內不會產生小寫資源網址，影響範圍只有手打網址。`run_worker_first` 沒有乾淨的方式只表達「小寫變體」，不值得。
 
 ### 5.5 排序並列
 
@@ -150,6 +158,43 @@ Playwright 在 375 / 768 / 1440 三個寬度，同時對正式站與本機截圖
 **判定：接受。** 零渲染、零 SEO、零行為影響，且是全站唯一一處、內容固定。繼續跟編譯器纏鬥的報酬率太低。
 
 Level B 比對時只從 **golden** 移除這個註解，本機不動 —— 這樣「本機多了什麼」仍然會被抓到。
+
+⚠️ 豁免要連同註解後面的**換行**一起移除（`'<!--main-->\n'`）。只刪註解會留下一個本機不可能產生的空行，讓 Level A 的 byte 比對每一頁都失敗 —— 也就是讓 Level A 這個訊號整個失效。
+
+---
+
+## 7a. 已審閱並接受的 Level A 差異（2026-08-07）
+
+Phase 3 結束時 **Level A 29/31、Level B 31/31**。剩下兩頁的差異都是 Astro 序列化器的正規化行為，不改模板就無法重現：
+
+| 頁面 | 差異 | 判定 |
+|---|---|---|
+| `/Home/Gallery` | golden `<span class='zoom cursor' id='ex1'>`（單引號），本機輸出雙引號 | 接受。Astro 一律把屬性值序列化成雙引號，來源寫單引號也一樣。要重現只能把整段改成 `set:html` 字串，等於放棄模板 |
+| `/Home/Contact` | golden `<input … value="" />`（.NET TagBuilder 的自閉合），本機 `<input … value="">` | 接受。Astro 對 void 元素一律不輸出 ` /`。同上，重現的代價是把整個表單變成字串 |
+
+兩者在 DOM 層完全相同（Level B 通過），瀏覽器行為零差異。
+
+**為了拿到這 29 頁，做過的事**（都是「照抄 Razor 的空白語意」，不是美化）：
+
+- 版型的 `<slot />` 前後空白要精準 —— `_Layout.cshtml` 的 `@{ Html.RenderPartial(…) }` 與 `@RenderBody()` 對周圍空白的處理不同
+- 每一頁 view 的**開頭換行數不同**（`@{ }` 區塊、`@model` 指示詞留下的殘餘不同）。`ArticleDetail` / `Contact` / `Gallery` 的 `<Site>` 開標籤後**刻意不換行**
+- 迴圈的收尾空白屬於**迴圈之後**而不是每一圈 —— `Index` 的卡片群、`Project` 的分組都踩過
+- `htmlEncode()`（`src/lib/format.ts`）重現 `HttpUtility.HtmlEncode` 把 160–255 字元編成數值參考的行為（`·` → `&#183;`）。Astro 的 `{x}` 不會這樣做
+- `ArticleDetail` 的 `< BACK` 在舊 view 裡是裸的 `<`，Razor 原樣輸出，Astro 會跳脫 —— 用 `set:html` 還原
+
+---
+
+## 7b. 刻意分歧（parity 工具會略過）
+
+`scripts/parity-diff.mjs` 的 `DIVERGENCES` 列出「我們決定不做那件事」的頁面。與豁免不同 —— 豁免是「輸出幾乎一樣」，這裡是**永遠不會相符**。
+
+| 路徑 | 說明 |
+|---|---|
+| `/Error/Validation` | 舊站從未實作（404 黃頁），新站回 403 原地渲染。見 [06-admin-spec](06-admin-spec.md) §7、[09-known-issues](09-known-issues.md) 4.2 |
+
+另有 3 頁因為舊站回 5xx 而略過（`p.status >= 500`），見 [09-known-issues](09-known-issues.md) §4。
+
+**把它們留在紅燈裡不是誠實，是讓 gate 失去意義** —— 一個永遠紅的 gate 沒有人會看。
 
 ---
 

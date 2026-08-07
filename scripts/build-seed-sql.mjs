@@ -52,16 +52,17 @@ function insertRows(table, cols, rows) {
  * 跳脫整串再依長度切，跳脫後的 '' 是兩個字元，切點若落在中間會壞掉 ——
  * 所以額外檢查切點，遇到落在 '' 中間就往前退一格。
  */
-function insertArticles(rows, legacyOrder) {
-  const cols = ['ArticleID', 'ArticleTypeID', 'Title', 'Photo', 'CreateDate', 'LegacyOrder'];
+function insertArticles(rows, legacyOrder, legacyTypeOrder) {
+  const cols = ['ArticleID', 'ArticleTypeID', 'Title', 'Photo', 'CreateDate', 'LegacyOrder', 'LegacyTypeOrder'];
   const out = [];
   const warnings = [];
 
   for (const r of rows) {
     const order = legacyOrder[r.ArticleID];
-    if (order === undefined) {
+    const typeOrder = legacyTypeOrder[r.ArticleID];
+    if (order === undefined || typeOrder === undefined) {
       throw new Error(
-        `Articles ${r.ArticleID} 不在 legacy-order.json 裡。\n` +
+        `Articles ${r.ArticleID} 不在 legacy-order.json 的 ${order === undefined ? 'order' : 'typeOrder'} 裡。\n` +
         '排序資料來自 Phase 1 的 capture-golden.mjs —— 請先跑 npm run golden。\n' +
         '見 docs/04-data-model.md §5'
       );
@@ -70,7 +71,8 @@ function insertArticles(rows, legacyOrder) {
       warnings.push(`${r.ArticleID} 的 Description ${(r.Description.length / 1024 / 1024).toFixed(2)} MB，逼近 D1 的 2 MB 單列上限`);
     }
 
-    const vals = cols.map((c) => (c === 'LegacyOrder' ? order : q(r[c])));
+    const vals = cols.map((c) =>
+      c === 'LegacyOrder' ? order : c === 'LegacyTypeOrder' ? typeOrder : q(r[c]));
     out.push(`INSERT INTO Articles (${cols.join(', ')}, Description) VALUES\n  (${vals.join(', ')}, '');`);
 
     const escaped = String(r.Description).replace(/'/g, "''");
@@ -98,7 +100,9 @@ const [lims, admins, adminLims, articleTypes, articles, services, teams, project
   await Promise.all(['Lims', 'Admins', 'AdminLims', 'ArticleTypes', 'Articles', 'Services', 'Teams', 'Projects', 'Abouts'].map(read));
 
 const hashes = JSON.parse(await readFile(`${IN}/admin-hashes.json`, 'utf8'));
-const legacyOrder = JSON.parse(await readFile(`${IN}/legacy-order.json`, 'utf8')).order;
+const legacy = JSON.parse(await readFile(`${IN}/legacy-order.json`, 'utf8'));
+const legacyOrder = legacy.order;           // 未篩選清單的順序
+const legacyTypeOrder = legacy.typeOrder;   // 依分類篩選後的順序，見 docs/04-data-model.md §5
 const projectOrder = JSON.parse(await readFile(`${IN}/projects-order.json`, 'utf8')).order;
 
 const adminRows = admins.map((a) => {
@@ -124,7 +128,7 @@ add('Admins', insertRows('Admins', ['AdminID', 'Name', 'Username', 'PasswordHash
 add('AdminLims', insertRows('AdminLims', ['AdminLimID', 'AdminID', 'LimID', 'IsAdd', 'IsUpdate', 'IsDelete'], adminLims));
 add('ArticleTypes', insertRows('ArticleTypes', ['ArticleTypeID', 'Title', 'SubTitle', 'Summary', 'Description', 'BgClass', 'Photo', 'Sort'], articleTypes));
 
-const art = insertArticles(articles, legacyOrder);
+const art = insertArticles(articles, legacyOrder, legacyTypeOrder);
 add(`Articles（${articles.length} 列，Description 分段 append）`, art.statements);
 
 add('Services', insertRows('Services', ['ServiceID', 'ArticleTypeID', 'Title', 'Photo', 'Sort'], services));

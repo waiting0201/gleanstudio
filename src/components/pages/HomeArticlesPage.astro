@@ -1,0 +1,93 @@
+---
+// ← Views/Home/Articles.cshtml + HomeController.Articles
+//
+// 分頁器逐字重現在 src/components/Pager.astro（含既有 bug），見 docs/03-url-contract.md §5.1
+// 分類導覽列的 href 用 ViewBag.pageNumber，也就是「使用者送進來的 p」——
+// 所以 ?p=999 的分類連結也會帶 p=999。照抄。
+import Site from '../../layouts/Site.astro';
+import Pager from '../../components/Pager.astro';
+import { getArticleTypes, getArticlesPage, PAGE_SIZE } from '../../db/queries';
+import { getGuid, getPage } from '../../lib/query';
+import { formatDate, htmlEncode } from '../../lib/format';
+
+const page = getPage(Astro.url);
+const articleTypeId = getGuid(Astro.url, 'ArticleTypeID');
+
+const [articleTypes, paged] = await Promise.all([
+  getArticleTypes(),
+  getArticlesPage(page, articleTypeId),
+]);
+
+// 找不到的分類**不是** 404 —— 舊站實測回 200 空列表（docs/03-url-contract.md §9）。
+// 這跟 /Home/Service 不一樣，那邊舊站會 NRE 當機。
+---
+<Site title="Art News - 禾勤藝術有限公司" articleTypes={articleTypes}>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center py-4">
+            <img src="/Content/images/logo.png">
+        </div>
+    </div>
+
+    <!--News-->
+    <div class="row justify-content-center">
+        <div class="col-11">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center">
+                    <div class="news-sublist my-4">
+                        <ul class="nav justify-content-center">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Home/Project">服務實績</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled active" aria-current="page" href="/Home/Articles">近期專案</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-12 text-center mb-4">
+                    <div class="text-title mt-4">Art News</div>
+                    <div class="news-sublist my-4">
+                        <ul class="nav justify-content-center">
+                            <li class="nav-item">
+                                <a class={`nav-link ${articleTypeId === null ? 'disabled active' : ''}`} aria-current="page" href="/Home/Articles?p=1">全部</a>
+                            </li>
+{articleTypes.map((t) => (<Fragment>                                <li class="nav-item">
+                                    <a class={`nav-link ${articleTypeId === t.articleTypeId ? 'disabled active' : ''}`} href={`/Home/Articles?p=${page}&ArticleTypeID=${t.articleTypeId}`}>{t.title}</a>
+                                </li>
+</Fragment>))}                        </ul>
+                    </div>
+                </div>
+                <div class="row">
+{paged.items.map((a) => (<Fragment>                            <div class="col-md-4 news-list">
+
+                                <div class="text-center cursor">
+                                    <img src={`/Upload/Articles/${a.articleId}/${a.photo}`} class="img-fluid" alt="...">
+                                    <div class="news-text">
+                                        <div class="news-text-label">{a.typeTitle}</div>
+                                        <div class="font-20 text-black" set:html={htmlEncode(a.title)}></div>
+                                        <small><i>{formatDate(a.createDate)}</i></small>
+                                        <div class="font-17 text-decoration-underline cursor mt-3 more-btn">
+                                            <a href={`/Home/ArticleDetail?ArticleID=${a.articleId}`}>More</a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+</Fragment>))}                </div>
+                <div class="col-12 my-5">
+                    <Pager
+                      pageNumber={page}
+                      pageCount={paged.pageCount}
+                      pageSize={PAGE_SIZE}
+                      currentPage={page}
+                      href="/Home/Articles"
+                    />
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</Site>

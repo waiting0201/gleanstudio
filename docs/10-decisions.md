@@ -178,6 +178,23 @@ KV 的最終一致性在這裡無關緊要：session 登入時寫一次，由同
 
 ---
 
+## ADR-017 再加一個 `Articles.LegacyTypeOrder`，而不是想辦法用一個欄位
+
+**決定**：`Articles` 同時有 `LegacyOrder`（未篩選清單）與 `LegacyTypeOrder`（依分類篩選後的清單，每類各自從 1 起算）。查詢依有無分類篩選換次要排序欄位。
+
+**背景**：Phase 3 移植 `/Home/Articles` 時，分類篩選頁的 Level B 對不上。原因不是移植錯誤 —— 舊站對 `CreateDate` 並列列的輸出順序在「有無 `WHERE ArticleTypeID`」兩種計畫下就是不同的（`4772b8a8` → `22acb62c` 對上 `22acb62c` → `4772b8a8`）。
+
+**曾經考慮並否決的做法**：
+
+- **只用 `LegacyOrder`，接受分類頁順序不同** —— 那是兩張卡片對調，屬於 markup 凍結範圍內的可見差異，而且 golden 明確記錄了正確答案。沒有理由放掉一個已知可達成的 parity
+- **從欄位推導** —— ADR-012 已經證明過這條路是死的
+
+**理由**：兩種順序都是 oracle 觀察值，都是契約。與其在一個欄位上疊規則，不如老實承認有兩張清單就記兩份順序。
+
+**代價**：第二個純相容性欄位，`npm run golden` 要多爬每個分類的分頁（已改）。也讓「照抄未定義行為」的真實成本浮上檯面：不是抄一次，是每一種查詢形狀抄一次。兩個欄位在 markup 解凍後一起移除。
+
+---
+
 ## ADR-016 大型 `Description` 用分段 append 寫入 D1
 
 **決定**：seed 時先 `INSERT` 一個 `Description = ''` 的列，再用一連串 `UPDATE … SET Description = Description || '<段>'` 補完，每段跳脫後 ≤ 80 KB。

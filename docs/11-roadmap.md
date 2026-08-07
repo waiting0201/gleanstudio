@@ -2,7 +2,7 @@
 
 10 個階段。每一階段有明確的完成條件 —— 「做完了沒」應該是機械可答的問題，不是判斷題。
 
-**現況：Phase 2 完成，Phase 3（前台移植）可以開始。**
+**現況：Phase 3 完成，Phase 4（聯絡表單）與 Phase 5（後台）可以開始。**
 
 ---
 
@@ -62,34 +62,40 @@ node scripts/verify-media.mjs [--remote]
 
 ---
 
-## Phase 3 — 前台移植（最大的一階段）🚧 進行中
+## Phase 3 — 前台移植（最大的一階段）✅ 完成（2026-08-07）
 
-**第一個看得見的里程碑** —— 做完就能在 `wrangler dev` 跑出完整前台。
+**第一個看得見的里程碑** —— `wrangler dev` 已能跑出完整前台。
 
-**目前 parity：Level B 20/32**。跑 `npm run preview` 會 build → 重啟 wrangler → 跑 parity。
+**parity：Level B 31/31（gating 全綠）、Level A 29/31**。
+跑 `npm run preview` 會 build → 重啟 wrangler → 跑 parity。
 
 - [x] `src/layouts/Site.astro` + 4 個 partial 元件（Styles / Header / Footer / Scripts）
 - [x] Astro 專案骨架、Drizzle schema、D1 查詢層
-- [x] `scripts/parity-diff.mjs`（Level A/B + 資料快照綁定 + 明列豁免）
-- [x] 已移植且全綠：`/`、`/Home/Index`、`About`、`Team`、`Gallery`、`Services`、`Service`（×3 分類）、`ArticleDetail`（×9 篇）
-- [ ] `/Home/Project` —— 已移植，但**分組順序尚未對齊**。Type/Place/Title 層已從正式站取得順序，`<li>`（SubTitle）層仍有差異
-- [ ] 待移植：`/Home/Contact`、`/Home/Articles`（含 Pager）
-- [ ] `src/components/Pager.astro` 逐字重現（含 bug，[03-url-contract](03-url-contract.md) §5.1）
-- [ ] `/` 與 `/Home/Index` 輸出 byte-identical
-- [ ] `src/middleware.ts` 大小寫 rewrite
-- [ ] `src/pages/Upload/[entity]/[id]/[photo].ts` R2 服務
-- [ ] `public/Content` + `public/Scripts` 已複製（只搬有引用的圖）
-- [ ] **`compressHTML: false` 已設定**
-- [ ] **日期用 en-US 格式化，輸出如 `20 July 2026`**
-- [ ] 每個 golden fixture 的 Level B 通過
-- [ ] Level A 差異已審閱：不是零就是列在 [08-verification](08-verification.md) §7
-- [ ] **Workers Assets 大小寫敏感度已實測**並記錄結果
+- [x] `scripts/parity-diff.mjs`（Level A/B + 資料快照綁定 + 明列豁免 + 刻意分歧）
+- [x] 10 個前台 action 全部移植：`/`、`/Home/Index`、`About`、`Team`、`Gallery`、`Project`、`Services`、`Service`（×3 分類）、`Articles`（含分頁與分類）、`ArticleDetail`（×9 篇）、`Contact`（GET）
+- [x] `/Home/Project` 分組順序已對齊 —— 起因是 `projects-order.json` 的 key 沒有解 HTML entity（`&#39;`），一筆對不上就讓整個分組順序偏掉
+- [x] `src/components/Pager.astro` 逐字重現（含 bug，[03-url-contract](03-url-contract.md) §5.1）
+- [x] `/` 與 `/Home/Index` 輸出 byte-identical
+- [x] `src/middleware.ts` 大小寫 rewrite（含 §5.6 的連結大小寫還原）
+- [x] `src/pages/Upload/[entity]/[id]/[photo].ts` R2 服務（200 / 206 / 304 都實測過）
+- [x] `public/Content` + `public/Scripts` 已複製；28 個被引用的資源全部 200
+- [x] **`compressHTML: false` 已設定**
+- [x] **日期用 en-US 格式化，輸出如 `20 July 2026`**
+- [x] 每個 golden fixture 的 Level B 通過
+- [x] Level A 差異已審閱：剩 2 頁，列在 [08-verification](08-verification.md) §7a
+- [x] **Workers Assets 大小寫敏感度已實測** —— 敏感，接受落差（[08](08-verification.md) §5.4、[09](09-known-issues.md) 4.10）
+
+**過程中發現、原本不在計畫裡的事**：
+
+- `Articles` 需要**兩個**排序相容性欄位，不是一個（[ADR-017](10-decisions.md)、`db/migrations/0002`）
+- 小寫路徑會改變整頁的站內連結（[03-url-contract](03-url-contract.md) §5.6）
+- 順序資料現在可以離線從 golden 重建：`npm run order:derive`
 
 ---
 
 ## Phase 4 — 聯絡表單
 
-- [ ] GET `/Home/Contact` 的 Level B 通過
+- [x] GET `/Home/Contact` 的 Level B 通過（Phase 3 一併完成，`src/components/pages/HomeContactPage.astro`）
 - [ ] POST 驗證邏輯與 5 個欄位的繁中錯誤訊息一致
 - [ ] 驗證失敗回 **200** 並重新渲染表單（不是 4xx）
 - [ ] 成功回 **302** 到 `/`

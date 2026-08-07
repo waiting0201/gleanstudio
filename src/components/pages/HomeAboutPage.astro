@@ -23,7 +23,9 @@ const [articleTypes, about] = await Promise.all([getArticleTypes(), getAbout()])
                 <div class="col-12 text-center">
                     <div class="about">
                         
-                        <span><Fragment set:html={about!.description} /></span>
+                        <span>
+                            <Fragment set:html={about!.description} />
+                        </span>
                     </div>
                 </div>
             </div>

@@ -63,7 +63,8 @@ for (const [table, meta] of Object.entries(manifest.files)) {
 
 // ── 2. LegacyOrder 與正式站觀察到的顯示順序一致 ────────
 console.log('\n文章排序（LegacyOrder）');
-const legacy = JSON.parse(await readFile(`${IN}/legacy-order.json`, 'utf8')).order;
+const legacyFile = JSON.parse(await readFile(`${IN}/legacy-order.json`, 'utf8'));
+const legacy = legacyFile.order;
 const ordered = query('SELECT ArticleID FROM Articles ORDER BY CreateDate DESC, LegacyOrder').map((r) => r.ArticleID);
 const expected = Object.keys(legacy);
 check('順序與正式站相同', JSON.stringify(ordered) === JSON.stringify(expected));
@@ -71,6 +72,21 @@ if (JSON.stringify(ordered) !== JSON.stringify(expected)) {
   expected.forEach((id, i) => {
     if (ordered[i] !== id) console.log(`      #${i + 1} 期望 ${id.slice(0, 8)} 實得 ${(ordered[i] ?? '—').slice(0, 8)}`);
   });
+}
+
+// 分類篩選後是另一套順序 —— 舊站兩種查詢對並列列的輸出不一致，
+// 兩種順序都是凍結的契約。見 docs/04-data-model.md §5
+console.log('\n文章排序（LegacyTypeOrder，依分類篩選）');
+const typeOrder = legacyFile.typeOrder;
+for (const typeId of [...new Set(query('SELECT DISTINCT ArticleTypeID t FROM Articles').map((r) => r.t))]) {
+  const got = query(
+    `SELECT ArticleID FROM Articles WHERE ArticleTypeID = '${typeId}' ORDER BY CreateDate DESC, LegacyTypeOrder`,
+  ).map((r) => r.ArticleID);
+  const want = Object.entries(typeOrder)
+    .filter(([id]) => got.includes(id))
+    .sort((a, b) => a[1] - b[1])
+    .map(([id]) => id);
+  check(typeId.slice(0, 8), JSON.stringify(got) === JSON.stringify(want), `${got.length} 篇`);
 }
 
 // ── 3. 富文本完整性（UTF-8 中文 + HTML 經 JSON 再經 SQL 字面值）──

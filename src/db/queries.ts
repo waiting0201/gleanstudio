@@ -79,17 +79,24 @@ export interface PagedArticles {
   totalItemCount: number;
 }
 
-/** /Home/Articles —— 依 CreateDate DESC 排序，可選分類篩選，每頁 6 筆。 */
+/**
+ * /Home/Articles —— 依 CreateDate DESC 排序，可選分類篩選，每頁 6 筆。
+ *
+ * ⚠️ 次要排序欄位隨有無篩選而換：舊站兩種查詢對 CreateDate 並列列的輸出順序
+ * 本來就不一致（SQL Server 的計畫差異），而兩種順序都是凍結的契約。
+ * 見 docs/04-data-model.md §5
+ */
 export async function getArticlesPage(page: number, articleTypeId?: string | null): Promise<PagedArticles> {
   const filter = articleTypeId ? 'WHERE a.ArticleTypeID = ?' : '';
   const binds = articleTypeId ? [articleTypeId] : [];
+  const tieBreaker = articleTypeId ? 'a.LegacyTypeOrder' : 'a.LegacyOrder';
 
   const countStmt = env.DB.prepare(`SELECT COUNT(*) AS n FROM Articles a ${filter}`);
   const row = await (binds.length ? countStmt.bind(...binds) : countStmt).first<{ n: number }>();
   const total = row?.n ?? 0;
 
   const items = await queryArticles(
-    `${filter} ORDER BY a.CreateDate DESC, a.LegacyOrder LIMIT ? OFFSET ?`,
+    `${filter} ORDER BY a.CreateDate DESC, ${tieBreaker} LIMIT ? OFFSET ?`,
     [...binds, PAGE_SIZE, (page - 1) * PAGE_SIZE],
   );
 

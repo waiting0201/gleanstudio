@@ -9,6 +9,7 @@ import { getArticleTypes, getProjectGroups } from '../../db/queries';
 const [articleTypes, groups] = await Promise.all([getArticleTypes(), getProjectGroups()]);
 ---
 <Site title="案例展示 - 禾勤藝術有限公司" articleTypes={articleTypes}>
+
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-12 text-center py-4">
@@ -53,9 +54,9 @@ const [articleTypes, groups] = await Promise.all([getArticleTypes(), getProjectG
                                     </div>
 </Fragment>))}                            </div>
                         </div>
-
+</Fragment>))}
                     
-</Fragment>))}                </div>
+                </div>
             </div>
         </div>
     </div>

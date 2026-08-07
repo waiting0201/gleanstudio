@@ -122,7 +122,8 @@ PBKDF2-SHA256 @ 100,000 次迭代，低於 OWASP 建議的 600,000。這是 Work
 | 4.7 | 上傳驗證 | 無 | magic bytes + 10 MB 上限 | |
 | 4.8 | 權限比對 | `Key.Contains()` 子字串 | 精確比對 + CI 斷言 | 見 [06-admin-spec](06-admin-spec.md) §5 |
 | 4.9 | `Sort*` 操作的權限 | 完全沒被涵蓋 | 對應到 `update` | |
-| 4.10 | 資源路徑小寫（如 `/content/css/style.css`） | IIS 服務（200） | **可能 404**，待 Phase 3 實測 | Workers Assets 的大小寫行為無文件記載，見 [08-verification](08-verification.md) §5.4 |
+| 4.10 | 資源路徑小寫（如 `/content/css/style.css`） | IIS 服務（200） | **404**（Phase 3 已實測） | Workers Assets 大小寫敏感。站內不會產生小寫資源網址，影響僅限手打網址。見 [08-verification](08-verification.md) §5.4 |
+| 4.11 | `/upload/...`（小寫路徑） | IIS 服務（200） | **404** | middleware 的正規化表只涵蓋 10 條 `/Home/*`（[03-url-contract](03-url-contract.md) §3.3）。同 4.10，站內只產生 `/Upload/` |
 
 ---
 

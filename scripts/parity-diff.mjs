@@ -81,16 +81,24 @@ const EXEMPTIONS = [
   {
     // Astro 的編譯器會丟掉版型層的 HTML 註解（四種寫法都試過）。
     // 零渲染影響，見 src/layouts/Site.astro 的說明。
+    // 連同它後面那個換行一起拿掉 —— 註解在 Razor 裡自成一行，只刪註解會留下
+    // 一個本機不可能產生的空行，讓 Level A 的 byte 比對每一頁都失敗。
     id: 'astro-strips-main-comment',
-    apply: (html) => html.replace('<!--main-->', ''),
+    apply: (html) => html.replace('<!--main-->\n', ''),
   },
 ];
 
-const domSig = (html, { exempt = false } = {}) => {
-  let h = html;
-  if (exempt) for (const e of EXEMPTIONS) h = e.apply(h);
-  return serialize(parse(h));
-};
+const applyExemptions = (html) => EXEMPTIONS.reduce((h, e) => e.apply(h), html);
+const domSig = (html) => serialize(parse(html));
+
+/**
+ * 刻意分歧：舊站的行為不值得重現，而且**永遠**不會與 golden 相符。
+ * 跟 EXEMPTIONS 不同 —— 那是「輸出幾乎一樣、差在無渲染影響的細節」，
+ * 這裡是「我們決定不做那件事」。每一條都要在 docs/09-known-issues.md §4 有紀錄。
+ */
+const DIVERGENCES = new Map([
+  ['/Error/Validation', '舊站從未實作（404 黃頁）。新站回 403 原地渲染，見 docs/06-admin-spec.md §7'],
+]);
 
 /** 找出兩個字串第一個不同的位置，並附上上下文。 */
 function firstDiff(a, b) {
@@ -117,10 +125,16 @@ if (!pages.length) {
 
 let passA = 0, passB = 0, failB = 0, skipped = 0;
 const failures = [];
+const diverged = [];
 
 for (const p of pages) {
   // 舊站當機的頁面刻意不重現，見 docs/09-known-issues.md §4
   if (p.status >= 500) { skipped++; continue; }
+  if (DIVERGENCES.has(p.path)) {
+    diverged.push(p.path);
+    console.log(`≠  ${p.path}\n   刻意分歧：${DIVERGENCES.get(p.path)}`);
+    continue;
+  }
 
   let res, body;
   try {
@@ -132,13 +146,13 @@ for (const p of pages) {
     continue;
   }
 
-  const golden = norm(await readFile(`${GOLDEN}/${p.slug}`, 'utf8'));
+  // golden 套用豁免後再比 —— 本機不套，這樣「本機多了什麼」仍然會被抓到
+  const golden = applyExemptions(norm(await readFile(`${GOLDEN}/${p.slug}`, 'utf8')));
   const local = norm(body);
 
   const statusOk = res.status === p.status;
   const a = golden === local;
-  // golden 套用豁免後再比 —— 本機不套，這樣「本機多了什麼」仍然會被抓到
-  const gSig = domSig(golden, { exempt: true }), lSig = domSig(local);
+  const gSig = domSig(golden), lSig = domSig(local);
   const b = gSig === lSig;
 
   if (a) passA++;
@@ -165,10 +179,11 @@ for (const p of pages) {
   }
 }
 
-const total = pages.length - skipped;
+const total = pages.length - skipped - diverged.length;
 console.log(`\nLevel A（byte）  ${passA}/${total}`);
 console.log(`Level B（DOM）   ${passB}/${total}   ← gating`);
 if (skipped) console.log(`略過 ${skipped} 頁（舊站 5xx，刻意不重現）`);
+if (diverged.length) console.log(`刻意分歧 ${diverged.length} 頁：${diverged.join(', ')}`);
 if (failures.length) {
   console.log(`\n❌ Level B 未通過：\n${failures.map((f) => '   ' + f).join('\n')}`);
   process.exit(1);

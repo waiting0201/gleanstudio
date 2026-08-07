@@ -7,6 +7,7 @@ import { getArticleTypes, getTeams } from '../../db/queries';
 const [articleTypes, teams] = await Promise.all([getArticleTypes(), getTeams()]);
 ---
 <Site title="禾勤團隊 - 禾勤藝術有限公司" articleTypes={articleTypes}>
+
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-12 text-center py-4">

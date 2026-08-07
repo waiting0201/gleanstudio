@@ -1,0 +1,133 @@
+---
+// ← Views/Home/Contact.cshtml（GET）
+//
+// 聯絡資訊全部寫死在 view，沒有任何資料查詢。
+// 表單欄位在舊站是 @Html.TextBoxFor / @Html.ValidationMessageFor 產生的，
+// 這裡把它們展開成正式站實際輸出的 markup（含 unobtrusive validation 的
+// data-val-* 屬性與空的 field-validation-valid <span>）—— 屬性順序是
+// TagBuilder 的 SortedDictionary 造成的字母序，照抄。
+//
+// ⚠️ POST 與驗證失敗重新渲染是 Phase 4 的事（docs/11-roadmap.md）。
+//    屆時 <span> 要換成 field-validation-error 並填入訊息，
+//    <input> 要加 input-validation-error 並回填 value。
+//    期望 markup 只能從原始碼推導，見 docs/03-url-contract.md §7.1
+import Site from '../../layouts/Site.astro';
+import { getArticleTypes } from '../../db/queries';
+
+const articleTypes = await getArticleTypes();
+// ⚠️ <Site> 開標籤與 <div class="container"> 之間刻意不換行 —— 舊站這一頁的
+//    view 輸出前面沒有換行，多一個就掉 byte parity。見 src/layouts/Site.astro
+---
+<Site title="聯絡方式 - 禾勤藝術有限公司" articleTypes={articleTypes}><div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 text-center py-4">
+            <img src="/Content/images/logo.png">
+        </div>
+    </div>
+
+    <!--contact-->
+    <div class="row justify-content-center">
+        <div class="col-10">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center mb-4">
+                    <div class="text-title mt-5">Contact Us</div>
+                </div>
+                <div class="col-lg-5 col-md-12 mb-5">
+                    <div class="contact">
+                        <div class="mb-5 font-28">禾勤藝術有限公司</div>
+                        <div class="font-18 my-5">
+                            <p>
+                                請將您的需求填寫於表單並送出<br>
+                                我們會盡快由專人以郵件回覆您
+                            </p>
+                        </div>
+                        <div class="contact-tt">
+                            <div class="contact-title">服務據點：</div>
+                            <p>公司地址：臺中市大雅區龍善三街148號</p>
+                            <p>臺南辦事處：臺南市北區公園路427巷29號</p>
+                            <div class="contact-title mt-3">聯絡資訊：</div>
+                            <p>聯繫電話：0987119558</p>
+                            <p>電子郵件：glean1218@gmail.com</p>
+                            <p>也歡迎於Facebook和Instagram粉絲專頁與我們聯繫和交流</p>
+                            <div class="contact-title mt-3">營業時間：</div>
+                            <p>週一~五 09：30 ~ 17：30</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7 col-md-12">
+                    <div class="contact">
+                        <form id="form" method="post" action="/Home/Contact">
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" data-val="true" data-val-required="請輸入姓名" id="Name" name="Name" placeholder="姓名" type="text" value="" />
+                                        <label for="Name">姓名<span>＊</span></label>
+                                    </div>
+                                    <span class="field-validation-valid" data-valmsg-for="Name" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="col">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" data-val="true" data-val-email="Email格式錯誤" data-val-required="請輸入Email" id="Email" name="Email" placeholder="E-Mail" type="text" value="" />
+                                        <label for="Email">E-Mail<span>＊</span></label>
+                                    </div>
+                                    <span class="field-validation-valid" data-valmsg-for="Email" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" data-val="true" data-val-required="請輸入主旨" id="Title" name="Title" placeholder="主旨" type="text" value="" />
+                                        <label for="Title">主旨<span>＊</span></label>
+                                    </div>
+                                    <span class="field-validation-valid" data-valmsg-for="Title" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="col">
+                                    <div class="form-floating mb-3">
+                                        <input class="form-control" data-val="true" data-val-required="請輸入電話" id="Phone" name="Phone" placeholder="聯絡電話" type="text" value="" />
+                                        <label for="Phone">聯絡電話</label>
+                                    </div>
+                                    <span class="field-validation-valid" data-valmsg-for="Phone" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-floating">
+                                        <textarea class="form-control" cols="20" data-val="true" data-val-required="請輸入訊息" id="Message" name="Message" placeholder="訊息" rows="2" style="height:25vh">
+</textarea>
+                                        <label for="Message">訊息<span>＊</span></label>
+                                    </div>
+                                    <span class="field-validation-valid" data-valmsg-for="Message" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <input type="hidden" id="GoogleCaptchaToken" name="GoogleCaptchaToken" />
+                                    <div id="btnSubmit" class="bg-btn mt-4 font-type-body cursor">確 定 送 出</div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<Fragment slot="scripts">
+    <script is:inline src="https://www.google.com/recaptcha/api.js?render=6LdbNcwcAAAAAND-6LKK67EUEnk6I-9rFboJkV5M"></script>
+    <script is:inline>
+        grecaptcha.ready(function () {
+            /**/
+            grecaptcha.execute('6LdbNcwcAAAAAND-6LKK67EUEnk6I-9rFboJkV5M', { action: 'login' }).then(function (token) {
+            /**/
+            $("#GoogleCaptchaToken").val(token);
+        });
+    });
+
+    $(function () {
+        $("#btnSubmit").click(function () {
+            $("#form").submit();
+        });
+    });
+    </script>
+</Fragment>
+</Site>
