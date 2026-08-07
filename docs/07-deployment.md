@@ -150,6 +150,24 @@ adapter 連 worker 名稱都會換掉（`gleanstudio` → `gleanstudio-preview`�
 
 **例外**：`d1 migrations apply` 讀的是根 `wrangler.jsonc`（那裡有 `env` 區塊），所以那一行**要**加 `--env preview`。為了不受 `.wrangler/deploy/config.json` 重導影響，明確加上 `--config wrangler.jsonc`，而且**排在 build 之前**。
 
+### ⚠️ 部署那一步不用 `wrangler-action`
+
+smoke 要打「這一次部署出來的網址」，所以得拿到它。實測 `cloudflare/wrangler-action@v4`：
+
+- `deployment-url` output → **空的**
+- `command-output` output → 也拿不到
+
+兩次部署都卡在解析。而 wrangler 自己明明就把網址印在 stdout：
+
+```
+Deployed gleanstudio triggers (0.66 sec)
+  https://gleanstudio.waiting0201.workers.dev
+```
+
+所以部署那一步改成直接 `npx wrangler deploy 2>&1 | tee`，自己接輸出。認證方式一樣（wrangler 本來就讀 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`），只是少一層轉手、也少一個會沉默失敗的地方。
+
+migration 那一步仍然用 action —— 它不需要回傳值。
+
 ### `deploy-production.yml` — 目前只有 `workflow_dispatch`
 
 ```

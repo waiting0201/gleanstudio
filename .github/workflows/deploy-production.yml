@@ -19,9 +19,9 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production           # ← 已設 required reviewer，且限定 master 分支
-      url: ${{ steps.url.outputs.url }}
+      url: ${{ steps.deploy.outputs.url }}
     outputs:
-      url: ${{ steps.url.outputs.url }}
+      url: ${{ steps.deploy.outputs.url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -95,28 +95,27 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 migrations apply gleanstudio --remote
 
+      # ⚠️ 這裡刻意**不用** cloudflare/wrangler-action。
+      #
+      # 我們需要部署出來的網址（smoke 要打它）。實測 wrangler-action v4 的
+      # `deployment-url` output 是空的，`command-output` 也拿不到 —— 試過兩次都
+      # 卡在解析。wrangler 自己明明就把網址印在 stdout 上，直接跑它、自己接輸出，
+      # 少一層轉手也少一個會沉默失敗的地方。
+      #
+      # 認證：wrangler 本來就讀 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID，
+      # action 做的也是同一件事。
       - name: 部署
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
-
-      # ⚠️ wrangler-action 的 deployment-url output 實測是空的（v4，2026-08-07）。
-      #    從 wrangler 自己印出來的網址解析，解析不到就失敗 ——
-      #    **絕對不要退回預設值**，那會讓最後那道 parity 去比對舊站然後全綠。
-      - name: 取得部署網址
-        id: url
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          set -uo pipefail
-          out=$(cat <<'WRANGLER_OUT'
-          ${{ steps.deploy.outputs.command-output }}
-          WRANGLER_OUT
-          )
-          url=$(printf '%s' "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
+          set -o pipefail
+          npx wrangler deploy 2>&1 | tee /tmp/deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' /tmp/deploy.log | head -1)
           if [ -z "$url" ]; then
-            echo "::error::從 wrangler 的輸出解析不到部署網址"
-            printf '%s\n' "$out" | tail -20
+            echo "::error::wrangler 的輸出裡找不到部署網址 —— 不要用預設值頂替，那會讓 smoke 去比對舊站"
+            tail -30 /tmp/deploy.log
             exit 1
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
