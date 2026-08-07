@@ -1,13 +1,11 @@
 # 正式部署。`environment: production` 讓 GitHub 擋在人工核准前面。
 name: Deploy production
 
-# ⚠️ 目前**只有手動觸發**。
-#
-# Cloudflare 那邊的資源還沒建齊（KV 的 SESSION 不存在，wrangler.jsonc 還有
-# placeholder），現在讓每次 push 都排一個待核准的部署只會累積雜訊。
-# Phase 7 soak 開始時改成：
+# ⚠️ 目前**只有手動觸發**。Phase 7 soak 開始時改成：
 #   push:
 #     branches: [master]
+#
+# 第一次部署：2026-08-07 → https://gleanstudio.waiting0201.workers.dev
 on:
   workflow_dispatch:
 
@@ -21,9 +19,9 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production           # ← 已設 required reviewer，且限定 master 分支
-      url: ${{ steps.deploy.outputs.deployment-url }}
+      url: ${{ steps.url.outputs.url }}
     outputs:
-      url: ${{ steps.deploy.outputs.deployment-url }}
+      url: ${{ steps.url.outputs.url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -103,6 +101,26 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+
+      # ⚠️ wrangler-action 的 deployment-url output 實測是空的（v4，2026-08-07）。
+      #    從 wrangler 自己印出來的網址解析，解析不到就失敗 ——
+      #    **絕對不要退回預設值**，那會讓最後那道 parity 去比對舊站然後全綠。
+      - name: 取得部署網址
+        id: url
+        run: |
+          set -uo pipefail
+          out=$(cat <<'WRANGLER_OUT'
+          ${{ steps.deploy.outputs.command-output }}
+          WRANGLER_OUT
+          )
+          url=$(printf '%s' "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
+          if [ -z "$url" ]; then
+            echo "::error::從 wrangler 的輸出解析不到部署網址"
+            printf '%s\n' "$out" | tail -20
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "部署網址：$url"
 
   smoke:
     needs: deploy

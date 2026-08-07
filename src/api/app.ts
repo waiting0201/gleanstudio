@@ -37,7 +37,32 @@ async function setFlash(c: { env: { astro: APIContext } }, flash: Flash) {
 /** 303 —— POST/Redirect/GET，重新整理不會重送表單。 */
 const back = (to: string) => new Response(null, { status: 303, headers: { location: to } });
 
-// ── 鏈的第一節：一定要登入 ────────────────────────────
+/**
+ * ── 第一節：把 request body 讀掉 ──────────────────────
+ *
+ * ⚠️ **一定要排在任何提早回應之前。**
+ *
+ * 原本的順序是「先查 session，沒登入就直接回 401」——那條路徑從來沒有讀取
+ * request body。在 workerd 上這會留下一條沒收乾淨的連線，而 HTTP keep-alive
+ * 會重用它：**下一個請求收到 500「Network connection lost」**。
+ *
+ * CI 上重現過三次，症狀是「沒有 CSRF token 被擋」這一項失敗 —— 看起來像
+ * CSRF 壞了，其實是前一個 401 留下的連線。macOS 本機重現不出來（試過 8 回合
+ * 都正常），所以這是只有在 Linux 上跑才會現形的一類。見 docs/08-verification.md §9
+ *
+ * 代價：未登入的請求也會先被解析 body。表單很小，而且平台本來就有請求大小
+ * 上限，換掉一整類連線層的怪病是划算的。
+ */
+app.use('*', async (c, next) => {
+  if (c.req.method !== 'POST') {
+    await c.req.raw.body?.cancel().catch(() => {});
+    return c.text('只收 POST', 405);
+  }
+  c.set('form', await c.req.raw.formData());
+  await next();
+});
+
+// ── 第二節：一定要登入 ────────────────────────────────
 app.use('*', async (c, next) => {
   const session = await getSession(astro(c) as never);
   if (!session) return new Response('請先登入', { status: 401 });
@@ -45,19 +70,16 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-// ── 第二節：讀表單並驗 CSRF ───────────────────────────
+// ── 第三節：CSRF ──────────────────────────────────────
 // 舊系統任何地方都沒有 anti-forgery token，而且刪除是 GET（docs/06 §9）
 app.use('*', async (c, next) => {
-  if (c.req.method !== 'POST') return c.text('只收 POST', 405);
-  const form = await c.req.raw.formData();
-  if (!(await verifyCsrf(astro(c).session as never, form.get(CSRF_FIELD)))) {
+  if (!(await verifyCsrf(astro(c).session as never, c.get('form').get(CSRF_FIELD)))) {
     return c.text('表單驗證碼不對。請重新整理頁面再試一次。', 403);
   }
-  c.set('form', form);
   await next();
 });
 
-/** 第三節：逐路由的權限。403 不轉址 —— 見 docs/06 §7 */
+/** 第四節：逐路由的權限。403 不轉址 —— 見 docs/06 §7 */
 const requires = (route: RouteKey) => async (c: any, next: any) => {
   if (!(await can(c.get('admin'), route))) {
     return c.text('這個動作你沒有權限。', 403);

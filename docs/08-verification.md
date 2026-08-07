@@ -239,7 +239,38 @@ miniflare 的檔名是內部雜湊，不是 database id 或名稱的 sha256（�
 
 ---
 
-## 9. 已知的不穩定：CI 上的 `wrangler dev` 崩潰過一次
+## 9. CI 上那個「CSRF 壞掉」的假象 —— 其實是沒讀 request body
+
+**結論（2026-08-07）：找到了，是應用層的真 bug，不是測試環境問題。**
+
+症狀：`smoke:admin` 的「沒有 CSRF token 被擋」在 CI 上失敗，`wrangler dev` 隨後崩潰。看起來像 CSRF 中介層壞了。
+
+診斷過程值得記，因為前兩個假設都是錯的：
+
+| 假設 | 為什麼被推翻 |
+|---|---|
+| 伺服器掛了 | 加了 `assertAlive`，那個時點**通過** —— 伺服器還活著 |
+| 兩個行程搶 miniflare 的 SQLite | 看起來很像（崩潰緊跟在外部 `d1 execute` 之後），但只是相鄰，不是因果 |
+
+**真正的答案要等到把實得的狀態碼印出來才出現**：
+
+```
+實得 500：Error: Network connection lost.
+```
+
+原本 Hono 的第一節 middleware 是「查 session，沒登入就直接回 401」——**那條路徑從來沒有讀取 request body**。在 workerd 上這會留下一條沒收乾淨的連線，而 HTTP keep-alive 會重用它，**下一個請求就收到 500**。
+
+`smoke:admin` 剛好連續發兩個：先無 cookie（→401，body 未讀），再帶 cookie。所以每次都踩。
+
+**修法**：把「讀 body」移到整條鏈的最前面，排在任何提早回應之前。
+
+**macOS 上重現不出來**（同樣的序列跑 8 回合都正常），所以這是只有在 Linux 上跑才會現形的一類 —— 跟 §8 的檔名大小寫同一個家族。
+
+**教訓：比較狀態碼的斷言，失敗時一定要印出實得值。** 只印一個 ✗ 讓這個 bug 多活了三輪 CI，而且把調查帶往兩個錯誤的方向。
+
+---
+
+## 9a. 原始紀錄：當時只知道「`wrangler dev` 崩潰過一次」
 
 **2026-08-07，第二次 CI。** `wrangler dev` 在服務完一個請求之後就死了，stdout 只留一個空的 `[ERROR]` 與 wrangler 的通用崩潰提示。表現出來是 `smoke:admin` 的「沒有 CSRF token 被擋」失敗 —— **看起來像 CSRF 壞了，其實是伺服器已經不在了**。
 
