@@ -171,7 +171,22 @@ node scripts/verify-media.mjs [--remote]
 - [x] `scripts/bootstrap-admin.mjs` —— 取代舊系統寫死的 `weypro` 後門（[06-admin-spec](06-admin-spec.md) §4）
 - [x] `deploy-preview.yml` / `deploy-production.yml`，migration 排在 build 之前
 - [x] `scripts/check-deploy-config.mjs` —— 部署前守門，見下方
-- [x] **在 GitHub 上真的跑一次** —— 第三次全綠（前兩次各抓到一個本機測不出來的問題）
+- [x] **在 GitHub 上真的跑一次** —— 五次之後穩定全綠
+- [x] `guard` job —— 機密防護（repo 是 public）
+- [x] deploy workflow 的 API token 預檢
+- [x] `main` / `assets` 明確宣告，`assets.directory` 指 `dist/client`
+
+**CI 在 GitHub 上跑的前五次抓到的**（本機一個都測不出來）：
+
+| 次 | 抓到 |
+|---|---|
+| 1 | **33/35 個 golden fixture 檔名大小寫錯** —— macOS 不分大小寫，parity 從沒在 Linux 上跑過 |
+| 2 | `wrangler dev` 崩潰 —— flaky，**未解**，見 [08-verification](08-verification.md) §9 |
+| 3 | 全綠 |
+| 4 | `guard` 的註解命中自己 |
+| 5 | 全綠：parity 31/31、聯絡表單 4/4、後台 47/47、權限 30/30 |
+
+加上本機正向測 guard 時發現的 `-i` 漏洞（三條規則只有一條會命中），這幾輪的產出是五個本來會潛伏的問題。
 - [ ] **`smoke:admin` 在 CI 上不穩定** —— `wrangler dev` 崩潰過一次，無法重現，見 [08-verification](08-verification.md) §9
 - [ ] Cloudflare API token（**含 D1 與 R2** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
 - [ ] 建 preview 的 D1 / R2 / KV，把 `wrangler.jsonc` 裡的 placeholder 換掉

@@ -32,6 +32,10 @@
 **Phase 4 程式完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠。
 **卡在 key 輪替** —— `RECAPTCHA_SECRET` 沒設就是每一筆送出都被判定驗證碼錯誤。
 
+**Phase 6 CI 完成**（2026-08-07）。GitHub Actions 上 `guard` + `verify` 兩個 job 全綠 ——
+parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30，**都是在 Linux 上驗的**。
+部署 workflow 寫好了但**還沒跑過**：preview 的 D1/R2/KV 還沒建，`production` environment 也還沒開人工核准。
+
 **Phase 5 程式完成**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
 富文本（擋 base64），以及 **7 個實體的完整 CRUD** —— `npm run smoke:admin` 47 項全綠。
 ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層；
