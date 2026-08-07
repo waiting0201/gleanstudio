@@ -155,12 +155,13 @@ environment: production（需要人工核准）
 
 ## 4. 切換（Phase 8）
 
-1. 對編輯者宣告內容凍結，停用舊後台（Azure App Service 停機或 IP 限制 `/backend`）
-2. 重跑 [05-migration-runbook](05-migration-runbook.md) §7 的正式站重新同步（D1 + R2），約 15 分鐘
-3. 用新資料重跑 parity 套件
-4. `gleanstudio.com.tw` 目前 A 記錄指向 Azure。若 zone 還不在 Cloudflare 就先搬過來；**至少提前 24 小時把 TTL 降到 60 秒**
-   - ⚠️ 這一步決定了回退能有多快，**而且無法事後補做**
-5. 加上 Worker route `gleanstudio.com.tw/*`，DNS 記錄切成 proxied 指向 Worker
+**前置條件：DNS 已經在 Cloudflare 手上。** 這是獨立的一件事，走 [12-dns-cutover](12-dns-cutover.md)，而且應該**提早很久**完成 —— 它有 24 小時的 TTL 前置期，也可能卡在 HiNet 的介面。DNS 換手做完時網站還在 Azure，訪客無感。
+
+1. 確認 [12-dns-cutover](12-dns-cutover.md) 的檢查清單全綠，且 TTL 已降到 60 秒
+2. 對編輯者宣告內容凍結，停用舊後台（Azure App Service 停機或 IP 限制 `/backend`）
+3. 重跑 [05-migration-runbook](05-migration-runbook.md) §7 的正式站重新同步（D1 + R2），約 15 分鐘
+4. 用新資料重跑 parity 套件
+5. 加上 Worker route `gleanstudio.com.tw/*`，A 記錄從 DNS only（灰雲）切成 proxied 指向 Worker
 6. Smoke test：13 條 URL 全跑一遍，加上抽驗幾個 `/Upload/*`，確認 gtag 仍然觸發
 7. **Azure App Service 保持運行並付費 30 天。不要刪。**
 
@@ -170,7 +171,7 @@ environment: production（需要人工核准）
 
 | 情境 | 做法 | 資料損失 |
 |---|---|---|
-| **切換後、還沒有人用新後台** | 刪掉 Worker route 或把 DNS 改回 Azure 的 IP。舊系統原封不動，仍然連著 Azure SQL | 無。**60 秒內完成**（前提是步驟 4 的 TTL 有先降） |
+| **切換後、還沒有人用新後台** | 刪掉 Worker route，或把 A 記錄改回 DNS only 指向 `23.97.79.119`。舊系統原封不動，仍然連著 Azure SQL | 無。**60 秒內完成**（前提是 [12-dns-cutover](12-dns-cutover.md) Step 2 的 TTL 有先降） |
 | **編輯者已經用過新後台** | 寫進 D1 的內容不在 Azure SQL 裡 | 有 |
 | **問題出在我們的程式碼而非資料** | `wrangler rollback` / `wrangler versions deploy` 回到前一版 | 無。比改 DNS 快 |
 
@@ -178,4 +179,4 @@ environment: production（需要人工核准）
 
 48 小時之後若還需要回退，就需要一支 D1 → Azure SQL 的反向腳本。**那支腳本必須在 Phase 7 就寫好並測過**，不能等到事故當下才動手。
 
-`gleanstudio.com.tw` 目前的 A 記錄值請在切換前記錄下來並寫進這一節，回退時要用。
+回退用的 A 記錄值：**`23.97.79.119`**（2026-08-07 盤點，Azure App Service `gleanstudio.azurewebsites.net`）。切換前再確認一次。

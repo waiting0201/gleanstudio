@@ -44,6 +44,7 @@
 | 看已知 bug 與待辦 | [docs/09-known-issues.md](docs/09-known-issues.md) |
 | 查某個技術決策為什麼這樣定 | [docs/10-decisions.md](docs/10-decisions.md) |
 | 看階段規劃與完成條件 | [docs/11-roadmap.md](docs/11-roadmap.md) |
+| 把 DNS 從 HiNet 換到 Cloudflare | [docs/12-dns-cutover.md](docs/12-dns-cutover.md) |
 
 ---
 
@@ -74,7 +75,7 @@ sa 密碼在 `docker inspect sqlserver` 的環境變數，**不是** `Web.config
 
 ```
 CLAUDE.md          這個檔
-docs/              12 篇架構文件（繁體中文）
+docs/              13 篇架構文件（繁體中文）
 reference/old/     舊 ASP.NET 系統 —— 唯讀，gitignored
 .claude/           settings.json + 2 個 skill
 

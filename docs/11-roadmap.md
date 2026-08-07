@@ -124,8 +124,16 @@
 
 步驟見 [07-deployment](07-deployment.md) §4。
 
+**前置：DNS 換手**（[12-dns-cutover](12-dns-cutover.md)）—— 獨立於開發，**可以現在就做**，不必等前面階段完成。做完時網站還在 Azure，訪客無感。
+
+- [ ] Cloudflare zone 已建立（**Add a site**，不是 Transfer domain —— [Cloudflare Registrar 不支援 .tw](https://developers.cloudflare.com/registrar/top-level-domains/)）
+- [ ] HiNet 完整 DNS 記錄已匯出並與盤點結果對照
 - [ ] **DNS TTL 提前 ≥24 小時降到 60 秒**（無法事後補做）
-- [ ] 記錄目前的 A 記錄值以備回退
+- [ ] NS 已改指 Cloudflare，解析結果與切換前一致
+- [ ] 回退用的 A 記錄值已記錄（`23.97.79.119`）
+
+**切換本身**
+
 - [ ] 內容凍結，舊後台停用
 - [ ] 用正式站資料重跑 Phase 2（需要 Azure 存取）
 - [ ] 用新資料重跑 parity
