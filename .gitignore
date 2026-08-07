@@ -54,6 +54,9 @@ obj/
 *.suo
 
 # 產生物
+# binding 型別由 wrangler.jsonc 產生 —— 進版控只會製造「忘了重新產生」的 diff。
+# npm run build 的 prebuild 會重跑，CI 也是。
+worker-configuration.d.ts
 db/seed/
 .wrangler/
 dist/

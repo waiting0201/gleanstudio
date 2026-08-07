@@ -23,18 +23,23 @@
     "verify:media": "node scripts/verify-media.mjs",
     "verify:permissions": "node --experimental-strip-types scripts/verify-permissions.mjs",
     "dev": "astro dev",
-    "build": "astro build",
+    "//prebuild": "binding 型別由 wrangler.jsonc 產生且不進版控，建置前重新產生以確保與設定同步",
+    "prebuild": "wrangler types",
+    "build": "astro check && astro build",
+    "cf-typegen": "wrangler types",
     "preview": "./scripts/dev-cycle.sh",
     "parity": "node scripts/parity-diff.mjs",
     "parity:contact": "node scripts/parity-contact.mjs",
     "smoke:admin": "node scripts/smoke-admin.mjs"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@tailwindcss/vite": "^4.3.3",
     "drizzle-kit": "^0.31.10",
     "mssql": "^11.0.1",
     "parse5": "^8.0.1",
     "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
     "wrangler": "^4.119.0"
   },
   "dependencies": {

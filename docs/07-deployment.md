@@ -67,11 +67,21 @@ npm ci
 → 順序資料可從 golden 重建（git diff --exit-code）
 → verify-d1（--no-accounts）
 → 權限註冊表斷言（06-admin-spec §5）
-→ astro build → wrangler dev
+→ npm run build（= wrangler types → astro check → astro build）→ wrangler dev
 → parity（Level B 為 gating）
 → parity:contact
 → bootstrap 一個 CI 帳號 → smoke:admin
 ```
+
+#### 型別檢查
+
+`npm run build` 是 `wrangler types && astro check && astro build`。
+
+- **`wrangler types`** 由 `prebuild` 觸發，從 `wrangler.jsonc` 產生 `worker-configuration.d.ts`。**那個檔不進版控** —— 進版控只會製造「忘了重新產生」的 diff
+- **secret 不在 `wrangler.jsonc` 裡**（也不該在），所以 `wrangler types` 產不出它們的型別。在 `src/env.d.ts` 的 `declare global` 裡補宣告，順便讓「這個專案需要哪些 secret」有一個看得到的地方
+  ⚠️ 一定要在 `declare global` 內 —— 那個檔有 `export {}`，是 module，module 裡的 `declare namespace` 不會併進全域
+
+**2026-08-07 第一次跑 `astro check` 時有 27 個錯誤** —— 這個專案在那之前從來沒做過型別檢查。修完是 0 error / 0 warning。其中一個發現值得記：`session.cookie` 的型別把 `httpOnly` **排除**在可設欄位之外（Astro 自己強制），所以設定檔裡那一行一直是無效的。線上實測回的是 `HttpOnly; Secure; SameSite=Lax`，屬性本身成立，但**是靠 Astro 的預設，不是靠我們的設定**。
 
 #### CI 要跑 parity，就得有資料
 

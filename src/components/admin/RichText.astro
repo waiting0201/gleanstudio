@@ -134,7 +134,7 @@ const { name, value, entity, recordId = '' } = Astro.props;
       if (csrf) fd.set('__csrf', csrf.value);
 
       const res = await fetch(`/api/admin/${entity}/photo`, { method: 'POST', body: fd });
-      const data = await res.json().catch(() => ({ error: '上傳失敗。' }));
+      const data = (await res.json().catch(() => ({ error: '上傳失敗。' }))) as { url?: string; error?: string };
       if (!res.ok) { status.textContent = data.error ?? '上傳失敗。'; return; }
 
       body.focus();

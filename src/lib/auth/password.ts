@@ -19,7 +19,10 @@ const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 async function derive(password: string, salt: Uint8Array, iterations: number): Promise<ArrayBuffer> {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  return crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, key, KEY_BITS);
+  // TS 5.7 起 Uint8Array 帶了 ArrayBufferLike 泛型，不再直接是 BufferSource。
+  // 執行期完全相同，只是型別上要說清楚。
+  return crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt as BufferSource, iterations, hash: 'SHA-256' }, key, KEY_BITS);
 }
 
 export async function hashPassword(password: string): Promise<string> {

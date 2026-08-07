@@ -29,7 +29,9 @@ export default defineConfig({
   //    driver 收到的 opts 是 undefined，登入當下就 500（讀 opts.base 炸掉）。
   session: {
     ttl: 8 * 60 * 60,
-    cookie: { name: 'gleanstudio_session', sameSite: 'lax', httpOnly: true, secure: true },
+    // httpOnly 不在可設的欄位裡 —— Astro 自己強制加上。
+    // 線上實測回的是 `HttpOnly; Secure; SameSite=Lax`，與 docs/06 §2 相符。
+    cookie: { name: 'gleanstudio_session', sameSite: 'lax', secure: true },
   },
 
   // ⚠️ Tailwind 只透過 Vite plugin 掛上，**不加 Astro 的 tailwind integration** ——
