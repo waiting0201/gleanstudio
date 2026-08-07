@@ -44,6 +44,31 @@ try {
   console.warn('⚠️  找不到 data/export/manifest.json，跳過資料快照綁定檢查\n');
 }
 
+/**
+ * ⚠️ **fixture 檔名要逐字相符，不能只靠「開得起來」。**
+ *
+ * macOS 的 APFS 預設不分大小寫，Linux 的 ext4 分。CI 第一次跑就炸在這裡 ——
+ * git 裡存的是 `home-articles__p-1.html`，manifest 裡寫的是
+ * `Home-Articles__p-1.html`，**35 個 fixture 有 33 個對不上**。
+ * 本機 readFile 照樣開得起來，所以整套 parity 從來沒有在區分大小寫的檔案系統上
+ * 真的跑過。
+ *
+ * 這裡直接比對目錄列表，讓這個問題在 macOS 上也會失敗。
+ * 見 docs/08-verification.md §8
+ */
+const onDisk = new Set(await readdir(GOLDEN));
+const missing = manifest.pages.map((p) => p.slug).filter((slug) => !onDisk.has(slug));
+if (missing.length) {
+  console.error(`❌ ${missing.length} 個 fixture 的檔名與 manifest 對不上（大小寫也算）：`);
+  for (const slug of missing) {
+    const near = [...onDisk].find((f) => f.toLowerCase() === slug.toLowerCase());
+    console.error(`   manifest ${slug}`);
+    console.error(`   磁碟上   ${near ?? '（找不到）'}`);
+  }
+  console.error('\n   macOS 不分大小寫會讓這個問題隱形，Linux 的 CI 會直接炸。');
+  process.exit(2);
+}
+
 const norm = (s) => s.replace(/\r\n/g, '\n');
 
 /**

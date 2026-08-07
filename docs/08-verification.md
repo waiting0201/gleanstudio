@@ -246,3 +246,17 @@ miniflare 的檔名是內部雜湊，不是 database id 或名稱的 sha256（�
 現在的做法：忽略大小寫後撞名時，補上路徑雜湊後綴（`home-about~1a8370.html`）。
 
 **教訓**：驗證工具的 bug 會偽裝成被驗證對象的 bug。對不上時，先確認 oracle 本身是不是被自己的工具汙染了 —— 直接 `curl` 正式站比對最快。
+
+### 第二次踩到同一件事：git 裡的檔名與 manifest 對不上
+
+**CI 第一次跑就炸在這裡。**
+
+`git ls-files` 顯示 `home-articles__p-1.html`（全小寫），而 `manifest.json` 寫的是 `Home-Articles__p-1.html`。**35 個 fixture 有 33 個對不上。**
+
+macOS 的 APFS 不分大小寫，`readFile` 照樣開得起來 —— 所以整套 parity **從來沒有在區分大小寫的檔案系統上真的跑過**。這個問題在本機是隱形的，直到有一台 Linux 讀它。
+
+修法：把 git 裡的檔名改回與 manifest 一致（macOS 上要繞暫存名，`git mv a tmp && git mv tmp A`，否則 git 看不到改名）。
+
+**防止再犯**：`parity-diff.mjs` 開頭直接比對 `readdir()` 的結果與 manifest 的 slug，**逐字**，對不上就 exit 2。這樣它在 macOS 上也會失敗。
+
+這跟上面那則是同一條教訓的第二次出現 —— 而且這次是「本機環境的寬容遮住了問題」，比工具本身的 bug 更難察覺。
