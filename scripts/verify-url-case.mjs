@@ -77,6 +77,12 @@ if (!upload) {
     const s = await status(p);
     check(p, s === 200, s === 200 ? '' : `期望 200，實得 ${s}`);
   }
+  // 三項一起紅（含正規大小寫）＝ R2 裡根本沒有這個物件，與大小寫無關。
+  // CI 上會這樣是因為真圖在 reference/（gitignored）—— 見 seed-media-placeholder.mjs。
+  if (await status(upload) !== 200) {
+    console.log('  ↳ 正規大小寫也拿不到 —— R2 沒有這個物件，不是大小寫處理壞了。');
+    console.log('    本機跑 `npm run media:upload`；CI 跑 `node scripts/seed-media-placeholder.mjs`。');
+  }
 }
 
 /**

@@ -160,6 +160,20 @@ npm run verify:url-case          # 加 --base <url> 打已部署的站
 跟 CI 第一次跑抓到「33/35 個 golden fixture 檔名大小寫錯」是同一個坑（§9）。
 已接進 `ci.yml`，排在 parity 之後。
 
+#### ⚠️ `/Upload/*` 那三項在 CI 需要先有物件
+
+真正的圖片在 `reference/old/Gleanstudio/Upload`（gitignored），CI 上沒有，
+所以 `npm run media:upload` 在 CI 跑不了、R2 是空的 —— 那三項會**連正規大小寫都 404**。
+第一次上 CI 就是這樣紅的，但紅的原因與大小寫毫無關係。
+
+修法是讓 CI 真的有物件可以打，不是讓檢查跳過（大小寫只有在 Linux 上驗才算數）：
+`node scripts/seed-media-placeholder.mjs` 依版控裡的 `data/export/*.json` 推導 key，
+在**本機** R2 放 1×1 佔位圖（14 個 key，與 `upload-r2.mjs` 同一套 key 規則）。
+因為位元組數是假的，**CI 不跑 `verify:media`**；那支要比對來源檔，只能在本機跑。
+帶 `--remote` 會直接被拒絕 —— 佔位圖絕不能蓋掉正式站的圖。
+
+`verify-url-case.mjs` 現在也會在三項一起紅時多印一行，指出「是 R2 沒有物件」。
+
 ### 5.5 排序並列
 
 見 [04-data-model](04-data-model.md) §5。`LegacyOrder` 釘住了目前這份資料的順序，但那是把 oracle 觀察到的結果固定下來，不是從規則推導出來的。**資料一改就要重新擷取 golden 並重算**。

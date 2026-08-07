@@ -95,6 +95,13 @@ jobs:
           npm run seed:order
           npx wrangler d1 execute gleanstudio --local --file=db/seed/0002-order-backfill.sql
 
+      # 真正的圖片在 reference/（gitignored），CI 上沒有 —— 但 R2 全空的話
+      # /Upload/* 連正規大小寫都 404，「網址大小寫」那一步就變成三項全紅，
+      # 而且紅的原因與大小寫無關。放 1×1 佔位圖，讓那組檢查真的有東西可以打。
+      # ⚠️ 因此 CI 不跑 verify:media（它比位元組數，需要來源檔）。
+      - name: 本機 R2 放佔位圖
+        run: node scripts/seed-media-placeholder.mjs
+
       # 順序資料能不能從 golden 重建 —— 重建結果要與版控裡的一致
       - name: 順序資料可重建
         run: |
