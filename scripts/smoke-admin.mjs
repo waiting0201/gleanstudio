@@ -20,7 +20,14 @@ const BASE = process.argv.includes('--base')
 const TEST_TITLE = '【煙霧測試】跑完會自動刪除';
 const TYPE_ID = 'ff829f70-4d55-4f55-aa1f-750c050d2be0';
 
+/**
+ * ⚠️ 這會在 `wrangler dev` 執行中另外開一個行程碰同一個 miniflare SQLite。
+ * CI 上的崩潰高度懷疑跟這個有關（docs/08-verification.md §9），所以把每次
+ * 呼叫標出來，才能跟 wrangler 的請求 log 對時間。
+ */
+let d1Calls = 0;
 const d1 = (sql, json = false) => {
+  if (process.env.SMOKE_TRACE) console.log(`      [d1 #${++d1Calls}] ${sql.slice(0, 70)}`);
   const out = execFileSync('npx', [
     'wrangler', 'd1', 'execute', 'gleanstudio', '--local', ...(json ? ['--json'] : []), '--command', sql,
   ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
@@ -113,12 +120,16 @@ try {
   console.log('\n權限與 CSRF');
   const noCookie = cookie; cookie = '';
   r = await post('/api/admin/articles/delete', new URLSearchParams({ ArticleID: 'x' }));
-  check('未登入的變更被擋', r.status === 401);
+  check('未登入的變更被擋', r.status === 401, `實得 ${r.status}`);
   cookie = noCookie;
 
   r = await post('/api/admin/articles/delete', new URLSearchParams({ ArticleID: 'x' }));
-  if (r.status !== 403) await assertAlive('未帶 CSRF 的刪除');
-  check('沒有 CSRF token 被擋', r.status === 403);
+  if (r.status !== 403) {
+    // 401 代表 session 不見了（不是 CSRF 的問題），其他狀態碼則是別的東西壞了
+    console.log(`      實得 ${r.status}：${(await r.text()).slice(0, 80)}`);
+    await assertAlive('未帶 CSRF 的刪除');
+  }
+  check('沒有 CSRF token 被擋', r.status === 403, `實得 ${r.status}`);
 
   // 真的撤掉一個權限來測那條鏈，測完還原。
   // （唯一天生沒權限的 Teams 頁面還沒建，拿它測會變成在測 404）

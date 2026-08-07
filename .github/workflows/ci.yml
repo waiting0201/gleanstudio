@@ -131,6 +131,8 @@ jobs:
           SMOKE_USERNAME: ci
           # 只在這一個 job 裡存在，跑完就沒了
           SMOKE_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}-ci-smoke-pass
+          # 標出每次外部 d1 寫入，才能跟 wrangler 的請求 log 對時間（§9 的不穩定）
+          SMOKE_TRACE: '1'
         run: |
           ADMIN_PASSWORD="$SMOKE_PASSWORD" node scripts/bootstrap-admin.mjs \
             --username ci --name "CI 測試帳號" --no-force-change \
