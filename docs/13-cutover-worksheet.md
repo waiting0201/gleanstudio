@@ -85,8 +85,9 @@ route 變更在 Cloudflare 邊緣是秒級生效的，完全不經過遞迴 DNS 
 
 ## 2. 切換前必須清償
 
-- [ ] **輪替 reCAPTCHA secret**（[09-known-issues](09-known-issues.md) §2.3）—— 目前 Worker 上設的是舊程式碼裡的外洩原值
-- [ ] **輪替 SendGrid API key**（同上 §2.4）—— 同樣是外洩原值
+- [~] ~~輪替 reCAPTCHA secret / SendGrid API key~~ —— **決定不輪替**（2026-08-08 業主決定）。
+      兩把 key 沿用舊值，是明示接受的風險而非待辦，理由與曝險範圍見
+      [09-known-issues](09-known-issues.md) §2 開頭。**不要再把它列回清單。**
 - [x] **`CONTACT_TO` 已改成 `glean1218@gmail.com`**（2026-08-08）—— 這是禾勤自己印在
       Contact 頁上的信箱，也是整套 golden 裡唯一出現過的一個
 - [~] ~~D1 → Azure SQL 反向回退腳本~~ —— **決定不做**（2026-08-08）。Azure SQL 會刪掉，

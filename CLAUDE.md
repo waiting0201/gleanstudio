@@ -33,8 +33,8 @@
 收件人已改由 `CONTACT_TO` 決定，訪客的信箱放 `reply_to` —— 舊站那個把信寄給訪客本人的行為
 **刻意不重現**（[docs/09](docs/09-known-issues.md) §3.1）。
 `CONTACT_TO` 已於 2026-08-08 設成正式信箱 `glean1218@gmail.com`。
-⚠️ **但 `RECAPTCHA_SECRET` 與 `SENDGRID_API_KEY` 用的仍是舊程式碼裡的外洩原值，不是輪替後的新值** ——
-切換上線前必須輪替（[docs/09](docs/09-known-issues.md) §2.3 / §2.4）。
+`RECAPTCHA_SECRET` 與 `SENDGRID_API_KEY` 沿用舊程式碼裡的原值 —— **決定不輪替**
+（2026-08-08 業主決定），是明示接受的風險，不是待辦（[docs/09](docs/09-known-issues.md) §2）。
 
 **Phase 6 完成**（CI/CD，2026-08-07）。GitHub Actions 上 `guard` + `verify` 兩個 job 全綠 ——
 parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30，**都是在 Linux 上驗的**。
@@ -182,6 +182,7 @@ public/Content/    從 reference/ 逐字複製的 CSS 與圖
 
 ## 已知問題
 
-舊程式碼有 4 組外洩憑證（其中 reCAPTCHA 與 SendGrid 應立刻輪替）；聯絡表單很可能從未成功送達過禾勤；前台有多個因 markup 凍結而刻意保留的 bug。
+舊程式碼有 4 組外洩憑證 —— reCAPTCHA 與 SendGrid 這兩把**決定不輪替**，是明示接受的風險；
+聯絡表單很可能從未成功送達過禾勤；前台有多個因 markup 凍結而刻意保留的 bug。
 
 → [docs/09-known-issues.md](docs/09-known-issues.md)

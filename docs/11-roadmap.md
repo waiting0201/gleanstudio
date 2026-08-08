@@ -3,21 +3,21 @@
 10 個階段。每一階段有明確的完成條件 —— 「做完了沒」應該是機械可答的問題，不是判斷題。
 
 **現況：Phase 1–6 完成（2026-08-07），新站已部署在 <https://gleanstudio.waiting0201.workers.dev>。
-下一步是 Phase 7 soak，前置是輪替 reCAPTCHA 與 SendGrid key。**
+下一步是 Phase 7 soak。**
 
 ---
 
 ## Phase 0 — harness 與密鑰盤點
 
-只有文件，沒有應用程式碼。**兩項密鑰輪替至今未做**，是 Phase 7 的前置。
+只有文件，沒有應用程式碼。兩項密鑰**決定不輪替**（2026-08-08 業主決定），不再是任何階段的前置。
 
 - [x] `CLAUDE.md` 索引
 - [x] `docs/00` ~ `docs/11` 共 12 篇
 - [x] `.claude/settings.json`
 - [x] `.claude/skills/port-a-page/SKILL.md`
 - [x] `.claude/skills/parity-check/SKILL.md`
-- [ ] **reCAPTCHA secret 已輪替**（[09-known-issues](09-known-issues.md) 2.3）
-- [ ] **SendGrid API key 已輪替**（同上 2.4）
+- [~] ~~reCAPTCHA secret 已輪替~~ —— **決定不輪替**（[09-known-issues](09-known-issues.md) §2.3）
+- [~] ~~SendGrid API key 已輪替~~ —— **決定不輪替**（同上 §2.4）
 - [ ] 確認 `reference/old/` 過去沒有被推上公開 remote
 - [x] `master` 第一個 commit（`339f9fb`）
 
@@ -94,7 +94,7 @@ node scripts/verify-media.mjs [--remote]
 
 ---
 
-## Phase 4 — 聯絡表單 🚧 程式完成，等 key 輪替
+## Phase 4 — 聯絡表單 ✅ 完成
 
 `npm run parity:contact` 4 個情境全綠。
 
@@ -106,9 +106,9 @@ node scripts/verify-media.mjs [--remote]
 - [x] 寄信行為原樣保留（收件人是訪客自己的信箱，[09-known-issues](09-known-issues.md) §3.1）
 - [x] `tests/derived/` 的期望 markup 已產生並進版控
 - [ ] **`tests/derived/` 由人審閱** ← 這一項只有人能勾
-- [ ] **reCAPTCHA secret 已輪替並 `wrangler secret put RECAPTCHA_SECRET`**
+- [x] `RECAPTCHA_SECRET` 已設定（沿用舊值，**決定不輪替**）
       —— 沒設就是每一筆送出都被判定驗證碼錯誤（而且畫面上不會有任何提示，見 1.15）
-- [ ] SendGrid key 已輪替並設定（**先與業主確認 §3.1 的收件人要不要一起修**）
+- [x] `SENDGRID_API_KEY` 已設定（沿用舊值，**決定不輪替**）；§3.1 的收件人已改由 `CONTACT_TO` 決定
 - [ ] 302 那條分支用真的 token 走一次（排在 Phase 7 soak）
 
 **照抄舊站時發現的兩件事**（都寫進 [09-known-issues](09-known-issues.md) §1）：
@@ -196,7 +196,7 @@ node scripts/verify-media.mjs [--remote]
 - [x] Cloudflare API token（**要含 D1** —— 內建範本不含，[07-deployment](07-deployment.md) §3）
 - [x] `wrangler kv namespace create SESSION` —— 已建（`5d3e4b47…`），`check-deploy-config` 全綠
 - [x] 遠端 D1 的順序補值（`db/seed/0002-order-backfill.sql`）已灌
-- [x] Worker secrets 已設定 —— ⚠️ **用的是舊值，不是輪替後的**，見 Phase 7 的前置條件
+- [x] Worker secrets 已設定 —— 沿用舊值，**決定不輪替**（[09-known-issues](09-known-issues.md) §2）
 - [x] **真的部署上去了**：<https://gleanstudio.waiting0201.workers.dev>，
       版本 `afae605c`（來自 `1420cef`）。打這個網址跑 `parity-diff.mjs --base <url>`
       是 Level B 31/31、Level A 29/31 —— 跟本機一模一樣
@@ -218,7 +218,7 @@ node scripts/verify-media.mjs [--remote]
 
 **開始之前必須先處理**（[09-known-issues](09-known-issues.md) §2 狀態更新）：
 
-- [ ] **輪替 reCAPTCHA 與 SendGrid key** —— 目前設的是舊程式碼裡的原值，等於沒清償
+- [~] ~~輪替 reCAPTCHA 與 SendGrid key~~ —— **決定不輪替**（2026-08-08），明示接受的風險
 - [x] **§3.1 的收件人已經決定** —— 收件人改由 `CONTACT_TO` 決定，訪客的信箱放 `reply_to`
       （`1420cef`，[09-known-issues](09-known-issues.md) §3.1）。兩個 secret 任一個沒設就不寄，
       是 fail-safe 而不是預設寄給誰。**`CONTACT_TO` 已於 2026-08-08 改成 `glean1218@gmail.com`**

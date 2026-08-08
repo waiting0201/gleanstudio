@@ -33,22 +33,28 @@
 
 ## 2. 安全債 —— 4 組外洩憑證 🔴
 
-> **2026-08-07 狀態更新。** reCAPTCHA 與 SendGrid 的 Worker secret 已設定，
-> **但用的是舊程式碼裡那兩把原值（使用者決定），不是輪替後的新值。**
+> **2026-08-08 定案：2.3 與 2.4 決定不輪替（業主決定）。**
 >
-> 所以這兩條**沒有清償，只是被接上了**：
+> 這兩把 key 繼續沿用舊程式碼裡的原值。**這是明示接受的風險，不是待辦。**
+> 之後不要再把它們列進任何檢查清單，也不要「順手」去輪替。
 >
-> - **SendGrid**：那把 key 有完整寄件權限。任何拿到舊原始碼的人都能以該帳號寄信，
->   寄件網域是代理商的 `notification@weypro.com`。這個風險與新站無關，**現在就存在**
-> - **reCAPTCHA**：外洩的 secret 可以被拿去驗證別人網站的 token，消耗配額
+> **決定的依據**：這些值**從來沒有進過版控** —— `reference/` 是 gitignored 且從未提交。
+> 所以外洩範圍是**拿過舊原始碼的人**（前一手開發商），不是公開網際網路。
+> 這與「key 被推上公開 GitHub」是不同等級的風險。
 >
-> ⚠️ **Phase 7 soak 之前必須處理兩件事**（見 [11-roadmap](11-roadmap.md) Phase 7）：
-> 1. 輪替這兩把 key
-> 2. **§3.1 的收件人缺陷** —— 現在 key 設好了，一旦部署，聯絡表單會真的開始寄信，
->    而收件人是**訪客自己填的信箱**，不是禾勤。舊站因為沒有 await 很可能從未真的寄出，
->    新站會。也就是說：訪客會開始收到一封他們從來沒收過、寄件人是陌生網域的信
+> **被接受的實際曝險**：
 >
-> 在那之前新站沒有部署，所以目前沒有實際影響。
+> - **SendGrid**：那把 key 有完整寄件權限，寄件網域是代理商的 `notification@weypro.com`。
+>   持有舊原始碼的人可以冒用該帳號寄信。**這個風險在舊站時代就存在**，
+>   切換不會放大它，但也不會消除它
+> - **reCAPTCHA**：外洩的 secret 可被拿去驗證別人網站的 token，消耗配額
+>
+> **前提**：[11-roadmap](11-roadmap.md) Phase 0 那條「確認 `reference/old/` 過去沒有被推上
+> 公開 remote」**仍未勾選**。上面的依據建立在這個前提上 —— 若查出它曾經公開過，
+> 這個決定必須重新評估。
+>
+> §3.1 的收件人缺陷已處理：收件人改由 `CONTACT_TO` 決定（2026-08-08 已設成
+> `glean1218@gmail.com`），訪客的信箱放 `reply_to`。
 
 **這一節的優先度高於任何開發工作。**
 
@@ -58,8 +64,8 @@
 |---|---|---|---|
 | 2.1 | **Azure SQL 管理帳號密碼**（正式站） | [Web.Release.config:13](../reference/old/Gleanstudio/Web.Release.config#L13) | 遷移完成**後**輪替 —— Phase 8 重新同步時還要用 |
 | 2.2 | 本機 `sa` 密碼 | `Web.config:12` + `Gleanstudio.Models/App.config` + `Gleanstudio.Service/App.config` | 隨舊系統下線一併作廢 |
-| 2.3 | **reCAPTCHA secret** | [HomeController.cs:237](../reference/old/Gleanstudio/Controllers/HomeController.cs#L237) | **立刻輪替** —— 遷移不需要它 |
-| 2.4 | **SendGrid API key** | `Commons/Librarys.cs` | **立刻輪替** —— 遷移不需要它 |
+| 2.3 | **reCAPTCHA secret** | [HomeController.cs:237](../reference/old/Gleanstudio/Controllers/HomeController.cs#L237) | ⚪ **決定不輪替**（2026-08-08，業主決定）—— 見本節開頭 |
+| 2.4 | **SendGrid API key** | `Commons/Librarys.cs` | ⚪ **決定不輪替**（2026-08-08，業主決定）—— 見本節開頭 |
 
 另外，正式站的設定本身也有問題：
 
