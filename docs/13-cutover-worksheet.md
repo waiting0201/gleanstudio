@@ -107,17 +107,19 @@ wrangler secret list          # 確認四個都在，值不會印出來
 - [x] `parity:contact` 打已部署的 URL：**4/4**（2026-08-08）
       —— 4 個情境都停在驗證失敗或 captcha 失敗，**不會寄出任何信**，可以安全地重跑
 
-### 待重驗
-
-- [ ] `smoke:admin` 打已部署的 URL —— 2026-08-08 跑出 **45/48**，3 項失敗**全是部署落後**
-      （線上是 08-07 13:12 那一版，斷言來自之後的 `28f6515` 與 `0d08fc1`；同一份程式碼在 CI 是 48/48）。
-      **重新部署後要再跑一次**：
+- [x] `smoke:admin` 打已部署的 URL：**48/48**（2026-08-08，重新部署 `28f6515` 之後）
 
       ```bash
       node scripts/smoke-admin.mjs --remote --base https://gleanstudio.waiting0201.workers.dev
       ```
 
       ⚠️ 它會在**正式** D1 建資料再刪掉。`finally` 保證清理，但中途 Ctrl-C 會留渣。
+      跑完務必確認列數回到 Articles 9 / Projects 87 / Services 0 / Admins 1。
+
+- [x] **deploy workflow 第一次全綠**（run `31231827474`，2026-08-08）——
+      `deploy` + `smoke` 兩個 job 都成功，部署網址正確解析成
+      `https://gleanstudio.waiting0201.workers.dev`，parity 打的是**這一次剛部署出來的**
+      網址而非舊站，Level B 31/31。`8bb641c` 修掉的那步至此才真的驗證過。
 
 ---
 

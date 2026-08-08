@@ -41,9 +41,10 @@ parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30�
 **已經部署上線**：<https://gleanstudio.waiting0201.workers.dev>，遠端 D1 / R2 / KV 都建好也灌好了，
 打這個網址跑 parity 一樣是 Level B 31/31。刻意不做 preview 環境（[docs/07](docs/07-deployment.md) §2）。
 
-⚠️ **那一次 deploy workflow 的執行結果是紅的，但部署本身是成功的** —— 紅在後面「取得部署網址」
-那一步（`wrangler-action` 不吐 stdout 給它解析），已由 `8bb641c` 改成直接跑 wrangler 修掉，
-但**修完之後沒有再跑過 workflow**，所以部署後的 smoke 從來沒真的打過線上站。
+**deploy workflow 已第一次全綠**（run `31231827474`，2026-08-08）。在此之前那一次是紅的
+（`wrangler-action` 不吐 stdout，解析不到部署網址），由 `8bb641c` 改成直接跑 wrangler 修掉，
+但一直沒再跑過。這次 `deploy` + `smoke` 兩個 job 都成功，parity 打的是**這一次剛部署出來的**
+網址，Level B 31/31。線上跑的版本現在是 `28f6515`。
 
 **Phase 5 程式完成**（後台）。設計系統、登入、KV session、權限、CSRF、上傳、
 富文本（擋 base64），以及 **7 個實體的完整 CRUD** —— `npm run smoke:admin` 48 項全綠。
