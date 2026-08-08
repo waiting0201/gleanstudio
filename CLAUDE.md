@@ -53,10 +53,14 @@ Articles / Projects / Admins 各有自己的形狀（[docs/06](docs/06-admin-spe
 [docs/06](docs/06-admin-spec.md) §12 的 8 條完成條件全部達成；視覺語彙見同文件 §10，
 **選單名稱／清單欄位／表單欄位一律逐字照舊後台，見 §10b**。
 
-**Phase 8 準備中**（2026-08-08）。**DNS 換手其實早就做完了** —— zone 已在 Cloudflare，
-apex 與 `www` 都已 proxied，origin 仍指 Azure。所以切換 = **加一條 Worker route**，
-回退 = 刪掉它，秒級生效、不必動 DNS。原本文件寫的「≥24 小時降 TTL、留 3 個工作天」不再適用。
-→ 操作單 [docs/13-cutover-worksheet.md](docs/13-cutover-worksheet.md)
+**Phase 8 切換完成**（2026-08-08）。`gleanstudio.com.tw` 與 `www` **都已由 Worker 提供服務**，
+`x-aspnetmvc-version` 已從回應中消失。切換後在正式網域上驗過：
+apex 與 www 各 parity Level B 31/31、`parity:contact` 4/4、`verify:url-case` 42/42、
+`/Upload/*` 抽驗全 200、gtag 仍觸發。
+→ 操作單與驗證結果 [docs/13-cutover-worksheet.md](docs/13-cutover-worksheet.md)
+
+🔴 **route 是在 Cloudflare Dashboard 上加的，不在 `wrangler.jsonc` 裡** ——
+從程式碼看不出這個站已經上線。**回退要去 Dashboard 刪 route**，不是改設定檔。
 
 ⚠️ **D1 → Azure SQL 的反向腳本決定不寫**（Azure SQL 會刪）。代價：編輯者一在新後台寫入
 就沒有回頭路，而且 **Azure SQL 一刪、連「回舊站」都不可能**（舊站靠它跑）。

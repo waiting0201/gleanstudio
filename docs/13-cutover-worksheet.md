@@ -1,5 +1,42 @@
 # 13 — 切換操作單（Phase 8）
 
+> ## ✅ 切換已完成 —— 2026-08-08
+>
+> `gleanstudio.com.tw` 與 `www.gleanstudio.com.tw` **都已經由 Worker 提供服務**。
+> `x-aspnetmvc-version` / `x-powered-by: ASP.NET` 已從回應中消失。
+>
+> **切換後驗證（全部打正式網域）**
+>
+> | 項目 | apex | www |
+> |---|---|---|
+> | parity Level B（gating） | **31/31** | **31/31** |
+> | parity Level A（byte） | 29/31 | 29/31 |
+> | `parity:contact` | **4/4** | — |
+> | `verify:url-case` | **42/42** | — |
+> | `/Upload/*` 抽驗 | 4 個全 200（含一個 6.2 MB） | 200 |
+> | gtag `G-G2CBNFFB3Q` | 在 | — |
+> | 後台 | 登入頁 200、未登入 302 導回 | — |
+>
+> ### 🔴 route 是在 Cloudflare Dashboard 上加的，**不在 `wrangler.jsonc` 裡**
+>
+> 這是實際發生的事與本文件 §3 Step 4 的寫法之間的落差，**回退那天會咬人**：
+>
+> - `wrangler.jsonc` **沒有** `routes` 欄位 —— 從程式碼看不出這個站已經上線了
+> - 所以**回退不是「從 `wrangler.jsonc` 拿掉 routes 重新部署」**，
+>   而是**到 Dashboard → Workers Routes 把那兩條 route 刪掉**
+> - `wrangler deploy` 不會動到 Dashboard 上的 route，所以重新部署**不會**意外回退，
+>   但也**不會**幫你把 route 補回來
+>
+> 建議日後補進 `wrangler.jsonc` 讓設定即程式碼，**但那要另外排一次變更**：
+> 一旦 `routes` 進了設定檔，往後每次 `wrangler deploy` 都會以檔案內容為準覆寫，
+> 在正式流量上做這件事要挑時間，不要順手做。
+>
+> ### 尚未執行的收尾（見 §3 Step 6）
+>
+> - [ ] 舊後台停用 / 內容凍結 —— **切換當下並未執行**
+> - [ ] 新後台前 48 小時維持唯讀
+> - [ ] Azure App Service **與 Azure SQL** 一起保持運行 30 天
+
 把 `gleanstudio.com.tw` 的流量從 Azure 的舊站導到 Cloudflare Worker 的新站。
 
 這份是**操作當下照著打的清單**，不是設計文件。背景與決策見 [07-deployment](07-deployment.md) §4、[12-dns-cutover](12-dns-cutover.md)、[11-roadmap](11-roadmap.md) Phase 8。
@@ -232,7 +269,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://gleanstudio.com.tw/Upload/Artic
 | 情境 | 做法 | 時間 | 資料損失 |
 |---|---|---|---|
 | 問題出在程式碼而非資料 | `wrangler rollback` 回上一版 | 最快 | 無 |
-| 切換後、還沒有人用新後台 | 從 `wrangler.jsonc` 拿掉 `routes` 重新部署，或在 Dashboard 直接刪 route | **秒級**（不經過 DNS 快取） | 無 |
+| 切換後、還沒有人用新後台 | **Dashboard → Workers Routes 刪掉那兩條 route**（route 不在 `wrangler.jsonc` 裡，見文件開頭） | **秒級**（不經過 DNS 快取） | 無 |
 | 編輯者已經用過新後台 | **沒有回退路徑** —— 見下方 | — | 有 |
 
 回退目標值（切換前再確認一次，見 §1 的空格）：apex origin `23.97.79.119`，`www` → `gleanstudio.azurewebsites.net`。
