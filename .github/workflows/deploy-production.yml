@@ -15,6 +15,15 @@ name: Deploy production
 on:
   push:
     branches: [master]
+    # 只動文件不部署。paths-ignore 的語意是「**全部**改動檔案都符合才略過」——
+    # 同一個 push 裡只要夾帶一個 .md 以外的檔案，照樣會部署，所以
+    # 「改程式順手改 README」不會被意外跳過。
+    #
+    # 真的要為文件重新部署一次時，workflow_dispatch 還在。
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.claude/**'
   workflow_dispatch:
 
 concurrency:

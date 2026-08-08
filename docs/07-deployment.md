@@ -180,7 +180,7 @@ environment: production（required reviewer，且限定 master 分支）
 → smoke job：parity 套件打線上 URL
 ```
 
-**2026-08-08 起 `push: branches: [master]` 也會觸發**（`workflow_dispatch` 保留）。在那之前刻意只有手動：Cloudflare 的資源還沒建齊，讓每次 push 都排一個待核准的部署只會累積雜訊。現在資源齊了，smoke 也會拿**這一次剛部署出來的**網址跑 parity。
+**2026-08-08 起 `push: branches: [master]` 也會觸發**（`workflow_dispatch` 保留）。**只動文件不部署** —— `paths-ignore` 排除 `docs/**`、`**.md`、`.claude/**`。注意它的語意是「**全部**改動檔案都符合才略過」，所以「改程式順手改 README」照樣會部署，不會被意外跳過；真的要為文件重跑一次部署就用 `workflow_dispatch`。在那之前刻意只有手動：Cloudflare 的資源還沒建齊，讓每次 push 都排一個待核准的部署只會累積雜訊。現在資源齊了，smoke 也會拿**這一次剛部署出來的**網址跑 parity。
 
 🔴 **但 `production` 環境仍設著 required reviewer。** 所以現在每次 push 只是把部署排成 `waiting` 等人按 —— 上面那句「累積雜訊」原封不動地成立，只是換了個時間點出現。要真的全自動，得到 **Settings → Environments → production 取消 Required reviewers**（保留 Deployment branch policy: master）。這一步只能在 GitHub 設定裡改，改不了程式碼。
 
