@@ -361,6 +361,36 @@ try {
     `→ ${MUST_CHANGE_BEFORE}`);
 }
 
+/**
+ * 登出 —— **一定放在最後**，它會摧毀 session，放中間後面全部會 401。
+ *
+ * 這一段是補的（2026-08-08）。原本 48 項完全沒碰登出，結果
+ * `src/layouts/Admin.astro` 的登出表單漏了 `<Csrf />` 一路上到正式站才被使用者
+ * 發現 —— 按登出只會看到「表單驗證碼不對」，回不了登入頁。
+ *
+ * 所以這裡驗的不只是「登出會不會動」，還包括**那個 hidden input 在不在 markup 裡**。
+ * 只驗行為的話，用腳本自己組的 token 一樣會過，漏掉的欄位照樣抓不到。
+ */
+if (cookie) {
+  console.log('\n登出');
+  const shell = await get('/backend/Main/Index');
+  const logoutForm = shell.match(/<form[^>]*action="\/api\/admin\/logout"[^>]*>[\s\S]*?<\/form>/)?.[0] ?? '';
+  check('登出表單存在', logoutForm !== '');
+  check('登出表單帶著 CSRF token', /name="__csrf" value="[^"]{20,}"/.test(logoutForm),
+    logoutForm && !/__csrf/.test(logoutForm) ? '← 漏了 <Csrf />，按下去只會 403' : '');
+
+  let r = await post('/api/admin/logout', new URLSearchParams({}));
+  check('沒帶 CSRF 的登出被擋', r.status === 403, `實得 ${r.status}`);
+
+  r = await post('/api/admin/logout', new URLSearchParams({ __csrf: csrfOf(shell) }));
+  check('登出回到登入頁', r.status === 303, `→ ${r.headers.get('location')}`);
+  check('轉址目標是登入頁', r.headers.get('location') === '/backend/Main/Login');
+
+  check('session 真的沒了',
+    (await fetch(BASE + '/backend/Main/Index', { headers: { cookie }, redirect: 'manual' })).status === 302,
+    '（同一枚 cookie 進不去）');
+}
+
 console.log(fail ? `\n❌ ${fail} 項未通過（${pass} 項通過）` : `\n✅ ${pass} 項全部通過`);
 console.log('   資料已回到原狀 —— 接著跑 npm run parity 應該仍然全綠。');
 process.exit(fail ? 1 : 0);

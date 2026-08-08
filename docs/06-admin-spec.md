@@ -238,6 +238,29 @@ putEntityPhoto(
 
 新系統：所有變更操作加 double-submit token 並綁定 session。刪除一律 POST。
 
+### ⚠️ 「所有變更操作」包含登出 —— 這條在正式站上栽過一次
+
+`/api/admin/logout` 走的是 `src/api/app.ts` 同一條 middleware 鏈，所以它**也**需要
+`<Csrf />`。而 `src/layouts/Admin.astro` 的登出表單原本沒有 —— 按下登出只會拿到
+「表單驗證碼不對。請重新整理頁面再試一次。」，永遠回不了登入頁。
+**2026-08-08 由使用者在切換後的正式站上回報**，同日修掉。
+
+為什麼一路沒被抓到：
+
+- 其他 10 個表單都用共用元件（`EntityForm` / `ArticleForm` / …），登出表單是**直接寫在版型裡**的，
+  沒有走那些元件，也就沒有繼承到 `<Csrf />`
+- **`smoke:admin` 當時 48 項完全沒有碰登出** —— 它測了登入、CSRF 被擋、七個實體的 CRUD，
+  唯獨沒測「登出」這個每個使用者每天都會按的按鈕
+
+補的測試（`scripts/smoke-admin.mjs` 最後一段，登出會摧毀 session 所以必須放最後）
+刻意驗**兩件不同的事**：
+
+1. 行為 —— 沒帶 token 回 403、帶了回 303 到 `/backend/Main/Login`、同一枚 cookie 之後進不去
+2. **markup —— 那個 hidden input 到底在不在渲染出來的 `<form>` 裡**
+
+第 2 點才是真正的防線。只驗行為的話，測試腳本自己用 `csrfOf()` 組出來的 token 一樣會通過，
+表單裡漏掉的欄位照樣抓不到 —— 那正是這次發生的事。
+
 ---
 
 ## 10. 介面設計

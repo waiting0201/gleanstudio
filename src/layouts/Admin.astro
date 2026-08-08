@@ -10,6 +10,7 @@
 import '../styles/admin.css';
 import type { AdminSession } from '../lib/auth/session';
 import { visibleNav } from '../lib/auth/session';
+import Csrf from '../components/admin/Csrf.astro';
 
 interface Props {
   title: string;
@@ -45,7 +46,9 @@ const here = Astro.url.pathname;
         </a>
         <div class="flex items-center gap-4">
           <span class="eyebrow text-white/55">{session?.name ?? ''}</span>
+          {/* 登出也是變更操作，同樣走 Hono 那條 CSRF 鏈 —— 少這一行就必然 403 */}
           <form method="post" action="/api/admin/logout">
+            <Csrf />
             <button type="submit" class="eyebrow bg-transparent text-white/70 hover:text-white cursor-pointer border-0 p-0">登出</button>
           </form>
         </div>
