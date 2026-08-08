@@ -173,16 +173,40 @@ node scripts/check-deploy-config.mjs --expect production
 npx wrangler deploy
 ```
 
-⚠️ **`www` 要不要一起導，先決定。** 舊站的 `www` 是 CNAME 指向 Azure，新站沒有處理 `www` → apex 的正規化。兩個選項：
-- **一起導**（上面的寫法）—— `www` 也吃 Worker，但要確認新站在 `www` 主機名下渲染正常
-- **只導 apex**，`www` 維持指向 Azure —— 兩套系統並存，**不建議**，會出現同內容兩個來源
-
 apex 與 `www` 都已經 proxied，所以**這一步不需要動任何 DNS 記錄**。
+
+#### `www` 一起導 —— 已決定（2026-08-08），且不需要任何轉址邏輯
+
+舊站的 `www` 不是轉址，是**直接服務**，而且內容與 apex 逐字相同：
+
+```bash
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://gleanstudio.com.tw/       # 200（無轉址）
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://www.gleanstudio.com.tw/   # 200（無轉址）
+# 兩邊 body 的 sha256 相同，且等於 tests/golden/root.html 的
+# 78981cd038db8f208965e2262d56be52189f592ffbe9564076c324ee1857cf7b
+```
+
+所以**兩條 route 都指到 Worker 就逐字重現舊行為**，不必寫 `www` → apex 的正規化
+（寫了反而會發出舊站從來不發的 301，違反 [03-url-contract](03-url-contract.md)）。
+
+新站對主機名是中立的，2026-08-08 逐項確認過：
+
+| 檢查 | 結果 |
+|---|---|
+| `Astro.site`（設為 `https://gleanstudio.com.tw`） | **沒有任何頁面用到**，不影響輸出 |
+| `src/middleware.ts` | 無 host / hostname / origin 邏輯 |
+| 所有轉址 | 全是相對路徑，自動沿用當下主機名 |
+| 站內連結 | 全相對；絕對網址只有 FB / IG / jsdelivr 三個外部來源 |
+| session cookie | 未設 `domain` → host-only |
+
+⚠️ cookie 是 host-only 的副作用：**在 apex 登入的後台 session 不會帶到 `www`**，反之亦然。
+舊站 ASP.NET 的預設行為相同，所以這不是回歸。告訴編輯者固定用一個網址進後台即可。
 
 ### Step 5 — Smoke
 
 ```bash
 npm run parity         -- --base https://gleanstudio.com.tw     # 31 頁，比「13 條 URL」徹底
+npm run parity         -- --base https://www.gleanstudio.com.tw # www 也要驗，它也吃 Worker
 npm run parity:contact -- --base https://gleanstudio.com.tw
 npm run verify:url-case -- --base https://gleanstudio.com.tw
 
