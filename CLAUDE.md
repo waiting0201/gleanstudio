@@ -23,6 +23,25 @@
 
 ---
 
+## 後台 UI／設計任務：先做這兩件事
+
+**只要任務會動到 `src/styles/admin.css`、`src/layouts/Admin.astro` 或 `src/components/admin/**`：**
+
+1. **一定要啟動 `frontend-design` skill**，並先讀 [docs/06-admin-spec.md](docs/06-admin-spec.md)
+   §10（視覺語彙）與 §10b（資訊架構照舊後台）。兩者衝突時以 §10b 為準 ——
+   那是 2026-08-08 業主看過第一版說「對不上」之後定的。
+
+2. **一定要截圖看。** 改完跑 `npm run shot:admin`，**用 Read 打開 PNG 實際看過**再說做完了。
+   至少兩輪：改 → 截 → 看 → 再改。
+
+   **沒有截圖就等於閉著眼睛寫 CSS。** 前台有 parity 擋著，後台什麼都沒有 ——
+   「公開網址」那一欄印成「開啟 ↗」而不是網址本身（直接違反 §10 的簽名元素定義），
+   就是這樣活了八個月沒被發現的。
+
+前台**不適用**這一節 —— 前台 markup 凍結，見上面規則 2。
+
+---
+
 ## 現在做到哪
 
 **Phase 3 完成**（前台移植，2026-08-07）。10 個前台 action 全部移植完畢，
@@ -112,6 +131,11 @@ npm run verify:media
 npm run verify:permissions # 權限註冊表 ↔ Lims 資料一致（30 個路由）
 npm run verify:url-case    # 網址大小寫不敏感（42 項，要有跑著的伺服器）
 npm run smoke:admin        # 後台端到端（會真的建一筆文章再刪掉，跑完資料回原狀）
+
+# 後台設計（唯讀，不碰資料庫）—— 動 admin.css / Admin.astro / components/admin 之前後都要跑
+npm run shot:admin                          # 13 個畫面 → tmp/shots/1440/（先 npm run preview）
+npm run shot:admin -- --width 375,768,1440  # 三個寬度
+npm run shot:admin -- /backend/WebMs/Articles   # 只截一頁
 
 # 部署（Phase 6）
 CLOUDFLARE_ENV=preview npm run build          # ⚠️ 環境在 build 時決定，不是部署時

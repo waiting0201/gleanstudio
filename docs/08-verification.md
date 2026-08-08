@@ -68,11 +68,36 @@ npx wrangler r2 object put gleanstudio-media/Upload/Abouts/1/20250502083239.jpg 
 
 ### Level C — 視覺
 
-Playwright 在 375 / 768 / 1440 三個寬度，同時對正式站與本機截圖，用 `pixelmatch` 比對，閾值 ≤ 0.1%。
+⚠️ **前台這一層從未實作。** 原本規劃 Playwright 在 375 / 768 / 1440 三個寬度同時對正式站與
+本機截圖、用 `pixelmatch` 比對（閾值 ≤ 0.1%），抓 markup 比對抓不到的東西：CSS 載入失敗、
+字型 fallback 差異。到 Phase 8 切換完成為止都沒有接起來，Level A/B 全綠已足以擋住實際發生過的
+回歸，所以**不補了** —— 這裡留著是說明「為什麼前台沒有視覺驗證」，不是待辦。
 
-抓得到 markup 比對抓不到的東西：CSS 載入失敗、字型 fallback 差異。
+### Level C′ — 後台截圖（`npm run shot:admin`）
 
-**每階段手動跑，不進 CI** —— 慢，而且需要連外網打正式站。
+後台**沒有** Level A/B —— 它不在凍結範圍內，沒有 golden 可比。所以它有一個相反性質的工具：
+不做比對，只把畫面拍下來給人（或給模型）看。
+
+```bash
+npm run preview      # 先讓 wrangler dev 起來
+npm run shot:admin   # 13 個畫面 → tmp/shots/1440/
+```
+
+`scripts/shot-admin.mjs`，puppeteer-core 驅動本機 Chrome。**完全唯讀** —— 除了登入之外
+不送任何表單、不碰 D1（要驗行為請跑 `smoke:admin`）。帳密讀 gitignored 的
+`data/export/Admins.json`，或 `SHOT_USERNAME` / `SHOT_PASSWORD` 覆蓋。
+
+兩個會擋下來的前置狀況，都會把修法一起印出來：
+
+| 狀況 | 為什麼要擋 |
+|---|---|
+| 連不上 `localhost:8787` | 忘了跑 `npm run preview` |
+| 帳號 `MustChangePassword = 1` | 每一頁都會彈到強制改密碼，於是 13 張截到同一張圖 |
+
+`tmp/` 已 gitignored —— 截圖是設計時的中間產物，不進版控。
+
+**這支是後台唯一的視覺回饋迴路**，見 [CLAUDE.md](../CLAUDE.md)「後台 UI／設計任務」。
+它不是測試，不進 CI，不會失敗 —— 它的價值在於**逼人真的看一眼**。
 
 ---
 

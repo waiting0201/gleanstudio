@@ -31,7 +31,8 @@
     "preview": "./scripts/dev-cycle.sh",
     "parity": "node scripts/parity-diff.mjs",
     "parity:contact": "node scripts/parity-contact.mjs",
-    "smoke:admin": "node scripts/smoke-admin.mjs"
+    "smoke:admin": "node scripts/smoke-admin.mjs",
+    "shot:admin": "node scripts/shot-admin.mjs"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
@@ -39,6 +40,7 @@
     "drizzle-kit": "^0.31.10",
     "mssql": "^11.0.1",
     "parse5": "^8.0.1",
+    "puppeteer-core": "^25.5.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "wrangler": "^4.119.0"
