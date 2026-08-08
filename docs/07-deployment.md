@@ -168,7 +168,7 @@ Deployed gleanstudio triggers (0.66 sec)
 
 migration 那一步仍然用 action —— 它不需要回傳值。
 
-### `deploy-production.yml` — 目前只有 `workflow_dispatch`
+### `deploy-production.yml` — push 到 master 就部署
 
 ```
 environment: production（required reviewer，且限定 master 分支）
@@ -180,7 +180,9 @@ environment: production（required reviewer，且限定 master 分支）
 → smoke job：parity 套件打線上 URL
 ```
 
-**目前刻意只有 `workflow_dispatch`。** Cloudflare 的資源還沒建齊，讓每次 push 都排一個待核准的部署只會累積雜訊。Phase 7 soak 開始時改成 `push: branches: [master]`。
+**2026-08-08 起 `push: branches: [master]` 也會觸發**（`workflow_dispatch` 保留）。在那之前刻意只有手動：Cloudflare 的資源還沒建齊，讓每次 push 都排一個待核准的部署只會累積雜訊。現在資源齊了，smoke 也會拿**這一次剛部署出來的**網址跑 parity。
+
+🔴 **但 `production` 環境仍設著 required reviewer。** 所以現在每次 push 只是把部署排成 `waiting` 等人按 —— 上面那句「累積雜訊」原封不動地成立，只是換了個時間點出現。要真的全自動，得到 **Settings → Environments → production 取消 Required reviewers**（保留 Deployment branch policy: master）。這一步只能在 GitHub 設定裡改，改不了程式碼。
 
 **順序：build → migration → deploy。** 先建置再動資料庫 —— build 失敗的話資料庫完全沒被碰過。
 

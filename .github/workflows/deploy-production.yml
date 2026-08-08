@@ -1,12 +1,20 @@
 # 正式部署。`environment: production` 讓 GitHub 擋在人工核准前面。
 name: Deploy production
 
-# ⚠️ 目前**只有手動觸發**。Phase 7 soak 開始時改成：
-#   push:
-#     branches: [master]
+# push 到 master 就部署（2026-08-08 改）。原本只有 workflow_dispatch ——
+# 當時 Cloudflare 的資源還沒建齊，讓每次 push 都排一個待核准的部署只會累積雜訊。
+# 現在資源齊了，smoke 也會拿**這一次剛部署出來的**網址跑 parity，所以改成自動。
+#
+# ⚠️ **`production` 環境目前仍設著 required reviewer。**
+#    在那條規則拿掉之前，每一次 push 只會排一個 waiting 的部署等人按 ——
+#    那正是上面說的雜訊，只是換了個時間點出現。要真的全自動，得到
+#    Settings → Environments → production 取消 Required reviewers
+#    （保留 Deployment branch policy: master）。
 #
 # 第一次部署：2026-08-07 → https://gleanstudio.waiting0201.workers.dev
 on:
+  push:
+    branches: [master]
   workflow_dispatch:
 
 concurrency:
