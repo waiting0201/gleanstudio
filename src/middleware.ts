@@ -79,8 +79,21 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   }
 
   // ── 後台 / Error：rewrite，不動連結 ────────────────────
+  //
+  // ⚠️ **這裡一定要用 `next(url)`，不能用 `ctx.rewrite(url)`。**
+  //
+  // `ctx.rewrite()` 會把回應的 **Set-Cookie 丟掉**。登入時 `session.regenerate()`
+  // 換一組新的 session id（防 session fixation），那個 id 只能靠 Set-Cookie 傳給
+  // 瀏覽器 —— header 沒發出去，瀏覽器還拿著舊 id，而舊 id 已經沒有登入資料了。
+  // 於是下一頁判定「沒登入」又導回登入頁：**登入其實成功了，看起來卻像密碼錯了。**
+  // 2026-08-08 由使用者在正式站上用 /backend/main/login 回報。
+  //
+  // `next(url)` 是沿著同一條鏈往下走，Astro 的 session 後處理仍在外層，cookie 發得出來。
+  //
+  // 底下 /Upload 與前台那兩處仍然是 `ctx.rewrite()`，因為它們不碰 session ——
+  // 前台那一處還需要拿到 Response 才能改寫站內連結，換不得。
   const other = OTHER_PAGES.get(lower);
-  if (other && other !== path) return ctx.rewrite(other + ctx.url.search);
+  if (other && other !== path) return next(other + ctx.url.search);
 
   // ── /Upload/*：只有最前面那段要正規化 ──────────────────
   // entity / id / photo 的大小寫由路由自己處理（src/pages/Upload/…），

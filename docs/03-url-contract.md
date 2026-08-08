@@ -111,9 +111,37 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 | 路徑 | 為什麼會壞 | 怎麼修 |
 |---|---|---|
 | `/Home/*` | Astro 路由敏感 | rewrite，**而且要還原整頁的站內連結**（§5.6） |
-| `/backend/*` | 同上 | rewrite，不動連結（後台沒有 markup 契約）。⚠️ CSRF token 的判斷式也要跟著不分大小寫 |
+| `/backend/*` | 同上 | **`next(url)`，不是 `ctx.rewrite()`**（見下方）。不動連結（後台沒有 markup 契約）。⚠️ CSRF token 的判斷式也要跟著不分大小寫 |
 | `/Upload/*` | 只有最前面那段 | rewrite 前綴；entity / id / photo 由 route 自己正規化 |
 | `/Content/*`、`/Scripts/*` | Workers Assets 敏感，且在 Worker 之前 | 沒命中時用 `env.ASSETS` 重取 |
+
+#### ⚠️ `ctx.rewrite()` 會把 `Set-Cookie` 丟掉 —— 這在正式站上炸過一次
+
+**症狀**：從 `/backend/main/login`（小寫）登入，輸入正確帳密之後被彈回
+`/backend/Main/Login`，看起來像密碼錯了，但**登入其實是成功的**。
+
+**機制**：登入成功時 `session.regenerate()` 會換一組新的 session id（防 session
+fixation）。那個新 id 只能靠回應的 `Set-Cookie` 傳給瀏覽器。而 `ctx.rewrite()`
+產生的回應**沒有帶上這個 header** —— 瀏覽器還拿著舊 id，舊 id 已經不含登入資料，
+所以下一頁判定「沒登入」又導回登入頁。
+
+實測到的差異（正式站，2026-08-08）：
+
+```
+/backend/Main/Login   POST 302 → /backend/Main/Index   set-cookie=gleanstudio_session=97a9fb2b…  → 200
+/backend/main/login   POST 302 → /backend/Main/Index   set-cookie=（沒有）                        → 302 退回登入頁
+```
+
+**修法**：後台這一支改用 `next(other + ctx.url.search)`。它是沿著同一條中介鏈
+往下走，Astro 的 session 後處理仍在外層，cookie 發得出來。
+
+`/Upload/*` 與前台那兩處**維持 `ctx.rewrite()`**：它們不碰 session，而且前台那一處
+還需要拿到 `Response` 才能改寫站內連結（§5.6），換不得。
+
+**為什麼 `verify:url-case` 42 項全綠卻沒抓到**：它全部是 GET。它驗了「非正規大小寫
+的網址也發得出 CSRF token」，但從來沒有真的從那種網址 POST 一次。回歸測試因此補在
+`smoke:admin`（那裡才有帳密），驗的是「登入回應有沒有換發 cookie」與「登入後真的
+進得去」—— 退回舊寫法會紅 4 項，確認過。
 
 後台的正規大小寫用 `import.meta.glob` 在 build 時從實際檔案列舉，不手工維護清單。前台那 10 條刻意留成明列的常數 —— 它們多一道站內連結還原，而且是凍結契約的一部分。
 

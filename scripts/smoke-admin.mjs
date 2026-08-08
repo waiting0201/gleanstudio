@@ -145,6 +145,49 @@ try {
   cookie = (r.headers.get('set-cookie') ?? '').split(';')[0] || cookie;
   check('登入', r.status === 302, `→ ${r.headers.get('location')}`);
 
+  /**
+   * 從**非正規大小寫**的網址登入 —— 這是 2026-08-08 在正式站上炸掉的那條路。
+   *
+   * `src/middleware.ts` 把 /backend/main/login 正規化成 /backend/Main/Login。
+   * 原本用的是 `ctx.rewrite()`，而它會把回應的 **Set-Cookie 丟掉**。登入時
+   * `session.regenerate()` 會換一個新的 session id，那個 id 只能靠 Set-Cookie
+   * 傳給瀏覽器 —— header 沒發出去，瀏覽器還拿著舊 id，於是下一頁判定「沒登入」
+   * 又導回登入頁。**登入其實成功了，看起來卻像密碼錯了。**
+   *
+   * `verify:url-case` 抓不到，因為它 42 項全是 GET：它驗了「token 有渲染出來」，
+   * 從來沒有真的從小寫網址 POST 一次。所以這一項要放在有帳密的 smoke 裡。
+   *
+   * 用獨立的 cookie 罐，不要碰上面那個已登入的 session。
+   */
+  console.log('\n大小寫與 session');
+  for (const loginPath of ['/backend/main/login', '/BACKEND/MAIN/LOGIN']) {
+    const lp = await fetch(BASE + loginPath);
+    let jar = (lp.headers.get('set-cookie') ?? '').split(';')[0];
+    const token = csrfOf(await lp.text());
+    check(`${loginPath} 發得出 token`, token.length === 43);
+
+    const lr = await fetch(BASE + loginPath, {
+      method: 'POST', redirect: 'manual',
+      headers: { origin: BASE, cookie: jar, 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ __csrf: token, username: admin.Username, password: admin.Password }),
+    });
+    // 這一項才是關鍵：rewrite 掉了 Set-Cookie 的話，這裡會是空的
+    check('  登入回應有換發 cookie', !!lr.headers.get('set-cookie'),
+      lr.headers.get('set-cookie') ? '' : '← Set-Cookie 被 rewrite 丟掉了');
+    jar = (lr.headers.get('set-cookie') ?? '').split(';')[0] || jar;
+
+    const after = await fetch(BASE + '/backend/Main/Index', { headers: { cookie: jar }, redirect: 'manual' });
+    check('  登入後真的進得去', after.status === 200,
+      after.status === 302 ? '← 又被導回登入頁，session 沒帶過去' : `實得 ${after.status}`);
+
+    // 收掉這個 session，不要留著
+    await fetch(BASE + '/api/admin/logout', {
+      method: 'POST', redirect: 'manual',
+      headers: { origin: BASE, cookie: jar, 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ __csrf: csrfOf(await (await fetch(BASE + '/backend/Main/Index', { headers: { cookie: jar } })).text()) }),
+    });
+  }
+
   console.log('\n權限與 CSRF');
   const noCookie = cookie; cookie = '';
   r = await post('/api/admin/articles/delete', new URLSearchParams({ ArticleID: 'x' }));
