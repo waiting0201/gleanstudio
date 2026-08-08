@@ -1,5 +1,12 @@
 ---
-/** 新增與修改共用。差別只有標題、送出鈕文案，以及有沒有既有的圖與 ID。 */
+/**
+ * 新增與修改共用。差別只有標題、送出鈕文案，以及有沒有既有的圖與 ID。
+ *
+ * 欄位、標籤與順序照舊後台 Views/WebMs/EditArticles.cshtml:55-98：
+ * 文章分類 / 標題 / 代表圖 / 日期 / 內文。
+ * （新增頁那個欄位叫「日期」、編輯頁叫「開始日期」—— 舊系統自己就不一致，
+ *  兩邊統一用「日期」，那是它實際的意思。）
+ */
 import Csrf from './Csrf.astro';
 import RichText from './RichText.astro';
 import type { ArticleType } from '../../db/queries';
@@ -24,62 +31,60 @@ const dateValue = article ? article.createDate.slice(0, 10) : new Date().toISOSt
   <Csrf />
   {article && <input type="hidden" name="ArticleID" value={article.articleId}>}
 
-  <div class="record p-6">
-    <div class="grid gap-5 md:grid-cols-[2fr_1fr]">
-      <div>
-        <label class="field-label" for="Title">標題</label>
-        <input class="field-input" id="Title" name="Title" type="text" required
-               value={article?.title ?? ''} autocomplete="off">
-        <span class="field-hint">會出現在列表、首頁與瀏覽器分頁標題。</span>
-      </div>
+  <fieldset class="record p-6">
+    <legend class="form-legend">文章資料</legend>
 
-      <div>
-        <label class="field-label" for="CreateDate">日期</label>
-        <input class="field-input" id="CreateDate" name="CreateDate" type="date" required value={dateValue}>
-        <span class="field-hint">列表依這個日期由新到舊排序。</span>
-      </div>
+    <div class="form-row">
+      <label class="field-label" for="ArticleTypeID">文章分類</label>
+      <select class="field-input" id="ArticleTypeID" name="ArticleTypeID" required>
+        {articleTypes.map((t) => (
+          <option value={t.articleTypeId} selected={article?.articleTypeId === t.articleTypeId}>{t.title}</option>
+        ))}
+      </select>
     </div>
 
-    <div class="mt-5 grid gap-5 md:grid-cols-[2fr_1fr]">
-      <div>
-        <label class="field-label" for="ArticleTypeID">分類</label>
-        <select class="field-input" id="ArticleTypeID" name="ArticleTypeID" required>
-          {articleTypes.map((t) => (
-            <option value={t.articleTypeId} selected={article?.articleTypeId === t.articleTypeId}>{t.title}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label class="field-label" for="Photo">封面圖</label>
-        <input class="field-input" id="Photo" name="Photo" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
-        <span class="field-hint">
-          {article?.photo
-            ? '不選就沿用目前這張。'
-            : 'JPEG / PNG / GIF / WebP，10 MB 以內。'}
-        </span>
-      </div>
+    <div class="form-row">
+      <label class="field-label" for="Title">標題</label>
+      <input class="field-input" id="Title" name="Title" type="text" required
+             value={article?.title ?? ''} autocomplete="off">
+      <span class="field-hint">會出現在列表、首頁與瀏覽器分頁標題。</span>
     </div>
 
-    {article?.photo && (
-      <div class="mt-5 flex items-start gap-4">
-        <img src={`/Upload/Articles/${article.articleId}/${article.photo}`} alt=""
-             width="120" class="border border-bench-deep" loading="lazy">
-        <div>
-          <div class="eyebrow">目前的封面</div>
-          <div class="instrument mt-1 text-ink-faint">{article.photo}</div>
+    <div class="form-row">
+      <label class="field-label" for="Photo">代表圖</label>
+      <input class="field-input" id="Photo" name="Photo" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+      <span class="field-hint">
+        {article?.photo
+          ? '不選就沿用目前這張。'
+          : 'JPEG / PNG / GIF / WebP，10 MB 以內。'}
+      </span>
+      {article?.photo && (
+        <div class="mt-3 flex items-start gap-4">
+          <img src={`/Upload/Articles/${article.articleId}/${article.photo}`} alt=""
+               width="150" class="border border-bench-deep" loading="lazy">
+          <div>
+            <div class="eyebrow">目前的圖</div>
+            <div class="instrument mt-1 text-ink-faint">{article.photo}</div>
+          </div>
         </div>
-      </div>
-    )}
+      )}
+    </div>
 
-    <div class="mt-6">
+    <div class="form-row">
+      <label class="field-label" for="CreateDate">日期</label>
+      <input class="field-input" id="CreateDate" name="CreateDate" type="date" required value={dateValue}>
+      <span class="field-hint">列表依這個日期由新到舊排序。</span>
+    </div>
+
+    <div class="form-row">
+      {/* contenteditable 不是 labelable element —— RichText 自己帶 aria-label */}
       <label class="field-label">內文</label>
       <RichText name="Description" value={article?.description ?? ''} entity="Articles" recordId={article?.articleId} />
     </div>
-  </div>
+  </fieldset>
 
   <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? '新增文章' : '儲存變更'}</button>
+    <button type="submit" class="btn btn-primary">{isNew ? '新增文章' : '確認'}</button>
     <a href="/backend/WebMs/Articles" class="btn btn-quiet">取消</a>
     {article && (
       <a class="live-face ml-auto" href={`/Home/ArticleDetail?ArticleID=${article.articleId}`}

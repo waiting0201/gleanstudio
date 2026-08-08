@@ -19,7 +19,8 @@ const session = await getSession(Astro);
 if (!session) return Astro.redirect('/backend/Main/Login', 302);
 if (session.mustChangePassword) return Astro.redirect('/backend/Main/ChangePassword', 302);
 
-const nav = await visibleNav(session);
+const groups = await visibleNav(session);
+const nav = groups.flatMap((g) => g.items);
 
 // 各區塊筆數 —— 一個數字，不是一張圖表
 const TABLES: Record<string, string> = {
@@ -49,18 +50,23 @@ const recent = nav.some((n) => n.href === '/backend/WebMs/Articles')
 <h1 class="record-title text-2xl">內容維護</h1>
 <p class="mt-1 text-sm text-ink-soft">儲存之後，公開網站會立刻跟著改。</p>
 
-<section class="mt-9">
-  <h2 class="eyebrow">你能維護的區塊</h2>
-  <ul class="mt-3 divide-y divide-bench-deep border-y border-bench-deep">
-    {nav.map((item) => (
-      <li>
-        <a href={item.href} class="flex items-baseline justify-between gap-4 bg-paper px-4 py-3 no-underline transition-colors hover:bg-gild-wash">
-          <span class="text-sm text-ink">{item.label}</span>
-          <span class="eyebrow"><span class="instrument">{counts[item.href] ?? '—'}</span> 筆</span>
-        </a>
-      </li>
-    ))}
-  </ul>
+{groups.map((group) => (
+  <section class="mt-9">
+    <h2 class="eyebrow">{group.label}</h2>
+    <ul class="mt-3 divide-y divide-bench-deep border-y border-bench-deep">
+      {group.items.map((item) => (
+        <li>
+          <a href={item.href} class="flex items-baseline justify-between gap-4 bg-paper px-4 py-3 no-underline transition-colors hover:bg-gild-wash">
+            <span class="text-sm text-ink">{item.label}</span>
+            <span class="eyebrow"><span class="instrument">{counts[item.href] ?? '—'}</span> 筆</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+))}
+
+<section class="mt-4">
   {nav.length < 7 && (
     <p class="field-hint mt-3">
       沒列出來的區塊代表你的帳號沒有那個權限。需要的話請找管理者開通。

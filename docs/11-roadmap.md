@@ -120,7 +120,7 @@ node scripts/verify-media.mjs [--remote]
 
 ## Phase 5 — 後台重建 ✅ 完成（2026-08-07）
 
-完成條件見 [06-admin-spec](06-admin-spec.md) §12。介面設計方向見同文件 §10。
+完成條件見 [06-admin-spec](06-admin-spec.md) §12。視覺語彙見同文件 §10，資訊架構（選單／欄位）見 §10b。
 
 **已完成 —— 驗證與外殼**
 

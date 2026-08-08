@@ -7,8 +7,9 @@
  * 而 Type / Place / Title 是自由文字 —— 打錯一個字就會在公開頁多出一個
  * 全新的分類標題，而且只有一筆。
  *
- * 所以這一頁的重點不是「一列一列改」，是**讓分組結構看得見**：
- * 依 Type 篩選（那正是公開頁最外層的分法），每一列都印出它完整的分組路徑。
+ * 欄位照舊後台 Views/WebMs/Projects.cshtml:55-61：
+ * 排序 / 分類 / 地點 / 專案 / 標題 / 編輯 / 刪除 —— 四個分組欄位各自成一欄，
+ * 這正好就讓分組結構看得見。上面多一排依 Type 篩選的頁籤（那是公開頁最外層的分法）。
  */
 import { env } from 'cloudflare:workers';
 import Admin from '../../../layouts/Admin.astro';
@@ -60,13 +61,13 @@ const total = types.reduce((n, t) => n + t.n, 0);
 const tabs = [{ label: '全部', value: '', n: total }, ...types.map((t) => ({ label: t.Type, value: t.Type, n: t.n }))];
 const href = (t: string) => `?${new URLSearchParams({ ...(t ? { type: t } : {}), ...(q ? { q } : {}) })}`;
 ---
-<Admin title="案例" session={session}>
+<Admin title="案例維護" session={session}>
 
 <Flash />
 
 <div class="flex flex-wrap items-baseline justify-between gap-4">
   <div>
-    <h1 class="record-title text-2xl">案例</h1>
+    <h1 class="record-title text-2xl">案例維護</h1>
     <p class="eyebrow mt-1">
       <span class="instrument">{total}</span> 筆 · 顯示在 /Home/Project，依分類→地點→標題四層分組
     </p>
@@ -97,40 +98,61 @@ const href = (t: string) => `?${new URLSearchParams({ ...(t ? { type: t } : {}),
     <p class="text-sm text-ink-soft">{q ? `找不到符合「${q}」的案例。` : '這個分類還沒有案例。'}</p>
   </div>
 ) : (
-  <ul class="mt-6 space-y-px">
-    {rows.map((p) => (
-      <li class="record flex flex-wrap items-start justify-between gap-x-6 gap-y-2 px-4 py-3">
-        <div class="min-w-0 flex-1">
-          <div class="record-title text-base">
-            {mayEdit
-              ? <a href={`/backend/WebMs/EditProjects?id=${p.ProjectID}`}
-                   class="text-ink no-underline hover:text-brass">{p.SubTitle || '（沒有項目名稱）'}</a>
-              : (p.SubTitle || '（沒有項目名稱）')}
-          </div>
-          {/* 完整的分組路徑 —— 這就是它在公開頁上的位置 */}
-          <div class="eyebrow mt-0.5">{p.Type} › {p.Place} › {p.Title}</div>
-        </div>
-        <div class="flex shrink-0 items-center gap-4">
-          <span class="instrument text-ink-faint" title="公開頁上的排序">#{p.LegacyOrder}</span>
-          {mayDelete && (
-            <details class="text-right">
-              <summary class="cursor-pointer list-none text-sm text-ink-faint hover:text-oxide">刪除</summary>
-              <form method="post" action="/api/admin/Projects/delete" class="mt-2 flex items-center gap-2">
-                <Csrf />
-                <input type="hidden" name="id" value={p.ProjectID}>
-                <span class="text-sm text-ink-soft">確定刪掉？</span>
-                <button type="submit" class="btn btn-danger">刪除</button>
-              </form>
-            </details>
-          )}
-        </div>
-      </li>
-    ))}
-  </ul>
+  <div class="mt-6 overflow-x-auto">
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th class="text-center" style="width:6%">排序</th>
+          <th style="width:10%">分類</th>
+          <th style="width:14%">地點</th>
+          <th style="width:24%">專案</th>
+          <th>標題</th>
+          {mayEdit && <th class="text-center" style="width:6%">編輯</th>}
+          {mayDelete && <th class="text-center" style="width:6%">刪除</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((p) => (
+          <tr>
+            <td class="text-center align-middle">
+              <span class="instrument text-ink-faint" title="公開頁上的排序">{p.LegacyOrder}</span>
+            </td>
+            <td class="align-middle">{p.Type}</td>
+            <td class="align-middle">{p.Place}</td>
+            <td class="align-middle">{p.Title}</td>
+            <td class="align-middle">
+              {mayEdit
+                ? <a href={`/backend/WebMs/EditProjects?id=${p.ProjectID}`}
+                     class="record-title text-ink no-underline hover:text-brass">{p.SubTitle || '（沒有標題）'}</a>
+                : <span class="record-title">{p.SubTitle || '（沒有標題）'}</span>}
+            </td>
+            {mayEdit && (
+              <td class="text-center align-middle">
+                <a href={`/backend/WebMs/EditProjects?id=${p.ProjectID}`} class="btn-xs btn-xs-edit">編輯</a>
+              </td>
+            )}
+            {mayDelete && (
+              <td class="text-center align-middle">
+                <details class="inline-block text-left">
+                  <summary class="btn-xs btn-xs-del">刪除</summary>
+                  <form method="post" action="/api/admin/Projects/delete" class="mt-2 whitespace-nowrap">
+                    <Csrf />
+                    <input type="hidden" name="id" value={p.ProjectID}>
+                    <span class="mr-2 text-sm text-ink-soft">確定要刪除嗎？</span>
+                    <button type="submit" class="btn btn-danger">確定</button>
+                  </form>
+                </details>
+              </td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 )}
 
 <p class="field-hint mt-6">
-  公開頁的分組順序由 <span class="instrument">#</span> 這個號碼決定，不是由分類或地點的筆劃決定。
+  公開頁的分組順序由「排序」那一欄的號碼決定，不是由分類或地點的筆劃決定。
   新增的案例會排在最後面。
 </p>
 

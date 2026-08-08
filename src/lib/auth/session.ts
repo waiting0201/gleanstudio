@@ -87,24 +87,72 @@ export async function requirePermission(
   return { session };
 }
 
-/** 側邊導覽只列出這位編輯者真的能進的區塊 —— 導覽列本身就是權限模型。 */
+/**
+ * 側邊導覽。
+ *
+ * **名稱、分組與順序全部來自 Lims 表** —— 跟舊系統的
+ * `Html.SiteMenuAsUnorderedList`（App_Helpers/HtmlHelperExtensions.cs:185）
+ * 同一份資料、同一個 ORDER BY Sort。所以編輯者看到的是「網站管理 ▸ 文章維護」，
+ * 不是我們自己另外取的短名。網址也照舊：`/backend/{父 Key}/{子 Key}`。
+ *
+ * 過濾條件仍然是這位編輯者**實際的**權限：進不去的區塊就不會出現，
+ * 整個第一層都沒權限時連群組標題都不印。
+ */
 export interface NavItem {
   label: string;
   href: string;
   route: RouteKey;
 }
 
-export const NAV: NavItem[] = [
-  { label: '文章', href: '/backend/WebMs/Articles', route: 'WebMs/Articles' },
-  { label: '文章分類', href: '/backend/WebMs/ArticleTypes', route: 'WebMs/ArticleTypes' },
-  { label: '案例', href: '/backend/WebMs/Projects', route: 'WebMs/Projects' },
-  { label: '服務項目', href: '/backend/WebMs/Services', route: 'WebMs/Services' },
-  { label: '團隊成員', href: '/backend/WebMs/Teams', route: 'WebMs/Teams' },
-  { label: '關於禾勤', href: '/backend/WebMs/Abouts', route: 'WebMs/Abouts' },
-  { label: '管理者', href: '/backend/SettingMs/Admins', route: 'SettingMs/Admins' },
-];
+export interface NavGroup {
+  /** Lims 第一層的 Value —— 網站管理 / 系統管理 */
+  label: string;
+  key: string;
+  items: NavItem[];
+}
 
-export async function visibleNav(session: AdminSession | undefined): Promise<NavItem[]> {
-  const allowed = await Promise.all(NAV.map((n) => can(session, n.route)));
-  return NAV.filter((_, i) => allowed[i]);
+interface LimRow {
+  parentKey: string; parentLabel: string;
+  childKey: string; childLabel: string;
+}
+
+/** Lims 是設定資料，一個 isolate 內查一次就夠。 */
+let limTree: LimRow[] | null = null;
+
+async function loadLimTree(): Promise<LimRow[]> {
+  if (limTree) return limTree;
+  const { results } = await env.DB.prepare(
+    `SELECT p."Key" AS parentKey, p.Value AS parentLabel,
+            c."Key" AS childKey, c.Value AS childLabel
+     FROM Lims c JOIN Lims p ON p.LimID = c.ParentID
+     WHERE p.ParentID IS NULL
+     ORDER BY p.Sort, p.LimID, c.Sort, c.LimID`,
+  ).all<LimRow>();
+  limTree = results;
+  return results;
+}
+
+export async function visibleNav(session: AdminSession | undefined): Promise<NavGroup[]> {
+  const rows = await loadLimTree();
+
+  // Lims 的 (父 Key, 子 Key) 就是註冊表的 key。對不上的資料列直接跳過 ——
+  // 那代表有人在資料庫加了選單卻沒有對應的路由，寧可不印也不要印出 404。
+  const linked = rows
+    .map((r) => ({ ...r, route: `${r.parentKey}/${r.childKey}` as RouteKey }))
+    .filter((r) => r.route in ROUTE_PERMISSIONS);
+
+  const allowed = await Promise.all(linked.map((r) => can(session, r.route)));
+
+  const groups: NavGroup[] = [];
+  linked.forEach((r, i) => {
+    if (!allowed[i]) return;
+    let g = groups.find((x) => x.key === r.parentKey);
+    if (!g) groups.push((g = { label: r.parentLabel, key: r.parentKey, items: [] }));
+    g.items.push({
+      label: r.childLabel,
+      href: `/backend/${r.parentKey}/${r.childKey}`,
+      route: r.route,
+    });
+  });
+  return groups;
 }

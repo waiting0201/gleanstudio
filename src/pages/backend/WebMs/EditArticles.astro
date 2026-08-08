@@ -17,11 +17,11 @@ if (!article) return new Response('找不到這篇文章。', { status: 404 });
 
 const articleTypes = await getArticleTypes();
 ---
-<Admin title={`修改：${article.title}`} session={guard.session}>
+<Admin title="編輯文章" session={guard.session}>
 <Flash />
 <div class="record-id">{article.articleId.slice(0, 8)}</div>
-<h1 class="record-title mt-1 text-2xl">{article.title}</h1>
-<p class="eyebrow mt-1">儲存之後公開網站會立刻跟著改。</p>
+<h1 class="record-title mt-1 text-2xl">編輯文章</h1>
+<p class="eyebrow mt-1">{article.title} · 儲存之後公開網站會立刻跟著改。</p>
 <div class="mt-8">
   <ArticleForm articleTypes={articleTypes} article={article} />
 </div>

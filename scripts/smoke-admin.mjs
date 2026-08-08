@@ -177,7 +177,8 @@ try {
     !d1(`SELECT Description d FROM Articles WHERE ArticleID='${createdId}'`, true)[0].d.includes('base64'));
   // ── 共用實體層（ArticleTypes / Services / Teams / Abouts）──
   console.log('\n共用實體層');
-  for (const [key, label] of [['ArticleTypes', '文章分類'], ['Services', '服務項目'], ['Abouts', '關於禾勤']]) {
+  // label 是左側選單上的名稱（Lims.Value），也是列表頁的 <h1>
+  for (const [key, label] of [['ArticleTypes', '文章分類維護'], ['Services', '服務洽談維護'], ['Abouts', '關於禾勤']]) {
     const h = await get(`/backend/WebMs/${key}`);
     check(`${key} 列表渲染`, h.includes(label) && !h.includes('未知的實體'));
   }

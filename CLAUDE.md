@@ -47,7 +47,8 @@ parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30�
 富文本（擋 base64），以及 **7 個實體的完整 CRUD** —— `npm run smoke:admin` 48 項全綠。
 ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層；
 Articles / Projects / Admins 各有自己的形狀（[docs/06](docs/06-admin-spec.md) §10a）。
-[docs/06](docs/06-admin-spec.md) §12 的 8 條完成條件全部達成；介面設計方向見同文件 §10。
+[docs/06](docs/06-admin-spec.md) §12 的 8 條完成條件全部達成；視覺語彙見同文件 §10，
+**選單名稱／清單欄位／表單欄位一律逐字照舊後台，見 §10b**。
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---

@@ -19,10 +19,10 @@ if (!row) return new Response('找不到這筆案例。', { status: 404 });
 
 const existing = await existingValues();
 ---
-<Admin title={`修改：${row.SubTitle || row.Title}`} session={guard.session}>
+<Admin title="編輯案例" session={guard.session}>
 <Flash />
 <div class="record-id">#{row.LegacyOrder}</div>
-<h1 class="record-title mt-1 text-2xl">{row.SubTitle || row.Title}</h1>
+<h1 class="record-title mt-1 text-2xl">編輯案例</h1>
 <p class="eyebrow mt-1">目前在 {row.Type} › {row.Place} › {row.Title} 底下。</p>
 <div class="mt-8"><ProjectForm row={row} existing={existing} /></div>
 </Admin>

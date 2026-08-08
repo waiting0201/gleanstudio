@@ -30,10 +30,22 @@ export async function loadEntity(astro: AstroGlobal, key: string, verb: 'list' |
   return { def, session: guard.session, may: { add, edit, delete: del } };
 }
 
-/** 列表。可排序的依 Sort，否則依標題欄位 —— 跟公開站同一個順序。 */
+/** 列表的主要欄位 —— 標題那一格印的東西，也拿來當頁面標題。 */
+export function primaryColumn(def: EntityDef): string {
+  return def.columns.find((c) => c.primary)?.column ?? def.columns[0]?.column ?? def.idColumn;
+}
+
+/**
+ * 列表。可排序的依 Sort，否則依標題欄位 —— 跟公開站同一個順序。
+ * `def.join` 是為了「分類」那一欄（舊後台的 Services 表格有這一欄），
+ * 主表一律別名成 `e`。
+ */
 export async function listRows(def: EntityDef): Promise<Record<string, any>[]> {
-  const order = def.sortable ? `Sort, ${def.idColumn}` : def.listColumns[0] ?? def.idColumn;
-  const { results } = await env.DB.prepare(`SELECT * FROM ${def.table} ORDER BY ${order}`).all();
+  const order = def.sortable ? `e.Sort, e.${def.idColumn}` : `e.${primaryColumn(def)}`;
+  const select = def.join ? `e.*, ${def.join.select}` : 'e.*';
+  const { results } = await env.DB.prepare(
+    `SELECT ${select} FROM ${def.table} e ${def.join?.sql ?? ''} ORDER BY ${order}`,
+  ).all();
   return results as Record<string, any>[];
 }
 

@@ -415,6 +415,9 @@ app.post('/:entity/save', async (c) => {
 
   const values: Record<string, string> = {};
   for (const f of def.fields) {
+    // 圖片是 def.fields 的一員（為了讓「代表圖」排在舊系統的位置），
+    // 但它的值是 File，不能走這條字串路徑 —— 下面 def.media 那段才處理它。
+    if (f.kind === 'image') continue;
     const v = String(form.get(f.column) ?? '').trim();
     if (f.required && v === '') {
       await setFlash(c, { tone: 'stop', text: `請填「${f.label}」。` });

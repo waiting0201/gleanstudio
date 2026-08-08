@@ -2,7 +2,11 @@
 /**
  * 文章列表。每頁 20（舊站也是 20 —— 後台不在凍結範圍內，但沒有理由改）。
  *
- * 每一列都印著它真正的公開網址。整個專案就是為了讓那條網址的輸出不變，
+ * 欄位照舊後台 Views/WebMs/Articles.cshtml:51-56：
+ * 代表圖 / 分類 / 標題 / 日期 / 編輯 / 刪除。舊系統沒有「排序」欄 ——
+ * 文章是依日期排的，不是依 Sort。
+ *
+ * 多出來的一欄是公開網址：整個專案就是為了讓那條網址的輸出不變，
  * 列表不該讓編輯者忘記它在那裡。見 docs/06-admin-spec.md §10
  */
 import { env } from 'cloudflare:workers';
@@ -40,13 +44,13 @@ const { results: rows } = await env.DB.prepare(
   id: string; title: string; photo: string; createDate: string; typeTitle: string; descLen: number;
 }>();
 ---
-<Admin title="文章" session={session}>
+<Admin title="文章維護" session={session}>
 
 <Flash />
 
 <div class="flex flex-wrap items-baseline justify-between gap-4">
   <div>
-    <h1 class="record-title text-2xl">文章</h1>
+    <h1 class="record-title text-2xl">文章維護</h1>
     <p class="eyebrow mt-1"><span class="instrument">{total}</span> 篇 · 顯示在 /Home/Articles 與首頁</p>
   </div>
   {mayAdd && <a href="/backend/WebMs/AddArticles" class="btn btn-primary">新增文章</a>}
@@ -58,44 +62,66 @@ const { results: rows } = await env.DB.prepare(
     {mayAdd && <a href="/backend/WebMs/AddArticles" class="btn btn-primary mt-5">寫第一篇</a>}
   </div>
 ) : (
-  <ul class="mt-8 space-y-px">
-    {rows.map((a) => (
-      <li class="record px-4 py-4">
-        <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-          <div class="min-w-0 flex-1">
-            <div class="record-id">{a.id.slice(0, 8)}</div>
-            <div class="record-title mt-0.5 text-lg">
+  <div class="mt-8 overflow-x-auto">
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th class="text-center" style="width:10%">代表圖</th>
+          <th class="text-center" style="width:12%">分類</th>
+          <th>標題</th>
+          <th class="text-center" style="width:12%">日期</th>
+          <th class="text-center" style="width:10%">公開網址</th>
+          {mayEdit && <th class="text-center" style="width:6%">編輯</th>}
+          {mayDelete && <th class="text-center" style="width:6%">刪除</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((a) => (
+          <tr>
+            <td class="text-center align-middle">
+              {a.photo
+                ? <img src={`/Upload/Articles/${a.id}/${a.photo}`} alt="" width="150" loading="lazy"
+                       class="inline-block max-w-[150px] border border-bench-deep">
+                : <span class="eyebrow">（沒有圖）</span>}
+            </td>
+            <td class="text-center align-middle">{a.typeTitle}</td>
+            <td class="align-middle">
               {mayEdit
-                ? <a href={`/backend/WebMs/EditArticles?ArticleID=${a.id}`} class="text-ink no-underline hover:text-brass">{a.title}</a>
-                : a.title}
-            </div>
-            <div class="eyebrow mt-1">
-              {a.typeTitle} · <span class="instrument">{formatDate(a.createDate)}</span>
+                ? <a href={`/backend/WebMs/EditArticles?ArticleID=${a.id}`} class="record-title text-ink no-underline hover:text-brass">{a.title}</a>
+                : <span class="record-title">{a.title}</span>}
+              <div class="record-id mt-0.5">{a.id.slice(0, 8)}</div>
               {a.descLen > 500_000 && (
-                <span class="ml-2 text-oxide">內文 <span class="instrument">{(a.descLen / 1024 / 1024).toFixed(2)}</span> MB —— 偏大</span>
+                <div class="eyebrow text-oxide">內文 <span class="instrument">{(a.descLen / 1024 / 1024).toFixed(2)}</span> MB —— 偏大</div>
               )}
-            </div>
-          </div>
-
-          <div class="flex shrink-0 flex-col items-end gap-2">
-            <a class="live-face" href={`/Home/ArticleDetail?ArticleID=${a.id}`} target="_blank" rel="noopener"
-               title="在新分頁開啟公開頁面">/Home/ArticleDetail?ArticleID={a.id.slice(0, 8)}… ↗</a>
-            {mayDelete && (
-              <details class="text-right">
-                <summary class="cursor-pointer list-none text-sm text-ink-faint hover:text-oxide">刪除</summary>
-                <form method="post" action="/api/admin/articles/delete" class="mt-2 flex items-center gap-2">
-                  <Csrf />
-                  <input type="hidden" name="ArticleID" value={a.id}>
-                  <span class="text-sm text-ink-soft">確定刪掉？公開頁面會立刻消失。</span>
-                  <button type="submit" class="btn btn-danger">刪除</button>
-                </form>
-              </details>
+            </td>
+            <td class="text-center align-middle"><span class="instrument">{formatDate(a.createDate)}</span></td>
+            <td class="text-center align-middle">
+              <a class="live-face" href={`/Home/ArticleDetail?ArticleID=${a.id}`} target="_blank" rel="noopener"
+                 title={`在新分頁開啟 /Home/ArticleDetail?ArticleID=${a.id}`}>開啟 ↗</a>
+            </td>
+            {mayEdit && (
+              <td class="text-center align-middle">
+                <a href={`/backend/WebMs/EditArticles?ArticleID=${a.id}`} class="btn-xs btn-xs-edit">編輯</a>
+              </td>
             )}
-          </div>
-        </div>
-      </li>
-    ))}
-  </ul>
+            {mayDelete && (
+              <td class="text-center align-middle">
+                <details class="inline-block text-left">
+                  <summary class="btn-xs btn-xs-del">刪除</summary>
+                  <form method="post" action="/api/admin/articles/delete" class="mt-2 whitespace-nowrap">
+                    <Csrf />
+                    <input type="hidden" name="ArticleID" value={a.id}>
+                    <span class="mr-2 text-sm text-ink-soft">確定要刪除嗎？</span>
+                    <button type="submit" class="btn btn-danger">確定</button>
+                  </form>
+                </details>
+              </td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 )}
 
 {pageCount > 1 && (

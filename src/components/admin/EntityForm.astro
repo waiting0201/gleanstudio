@@ -1,5 +1,10 @@
 ---
-/** 共用的表單。欄位由 src/lib/admin/entities.ts 的定義決定。 */
+/**
+ * 共用的表單。欄位、標籤與**順序**由 src/lib/admin/entities.ts 決定，
+ * 三者都逐字照舊後台的 .cshtml —— 包括「代表圖」夾在哪兩個欄位之間。
+ *
+ * 版面也照舊後台：<legend>{實體}資料</legend> + 標籤在左的 horizontal form。
+ */
 import Csrf from './Csrf.astro';
 import RichText from './RichText.astro';
 import type { EntityDef } from '../../lib/admin/entities';
@@ -17,10 +22,13 @@ const photo = def.media ? row?.[def.media.photoColumn] : null;
   <Csrf />
   {row && <input type="hidden" name="id" value={id}>}
 
-  <div class="record p-6">
+  <fieldset class="record p-6">
+    <legend class="form-legend">{def.label}資料</legend>
+
     {def.fields.map((f) => (
-      <div class="mb-5">
-        <label class="field-label" for={f.column}>{f.label}{f.required && <span class="text-oxide"> ＊</span>}</label>
+      <div class="form-row">
+        {/* 富文本編輯器是 contenteditable，不是 labelable element —— 它自己帶 aria-label */}
+        <label class="field-label" for={f.kind === 'richtext' ? undefined : f.column}>{f.label}{f.required && <span class="text-oxide"> ＊</span>}</label>
 
         {f.kind === 'text' && (
           <input class="field-input" id={f.column} name={f.column} type="text"
@@ -44,21 +52,18 @@ const photo = def.media ? row?.[def.media.photoColumn] : null;
           <RichText name={f.column} value={row?.[f.column] ?? ''} entity={def.key} recordId={id} />
         )}
 
-        {f.hint && <span class="field-hint">{f.hint}</span>}
-      </div>
-    ))}
+        {f.kind === 'image' && (
+          <input class="field-input" id={f.column} name={f.column}
+                 type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+        )}
 
-    {def.media && (
-      <div class="mb-1">
-        <label class="field-label" for={def.media.photoColumn}>圖片</label>
-        <input class="field-input" id={def.media.photoColumn} name={def.media.photoColumn}
-               type="file" accept="image/jpeg,image/png,image/gif,image/webp">
-        <span class="field-hint">
-          {photo ? '不選就沿用目前這張。' : 'JPEG / PNG / GIF / WebP，10 MB 以內。'}
-        </span>
-        {photo && (
-          <div class="mt-4 flex items-start gap-4">
-            <img src={`/Upload/${def.media.entity}/${id}/${photo}`} alt="" width="120"
+        {f.kind === 'image'
+          ? <span class="field-hint">{photo ? '不選就沿用目前這張。' : 'JPEG / PNG / GIF / WebP，10 MB 以內。'}</span>
+          : f.hint && <span class="field-hint">{f.hint}</span>}
+
+        {f.kind === 'image' && photo && def.media && (
+          <div class="mt-3 flex items-start gap-4">
+            <img src={`/Upload/${def.media.entity}/${id}/${photo}`} alt="" width="150"
                  class="border border-bench-deep" loading="lazy">
             <div>
               <div class="eyebrow">目前的圖</div>
@@ -67,11 +72,11 @@ const photo = def.media ? row?.[def.media.photoColumn] : null;
           </div>
         )}
       </div>
-    )}
-  </div>
+    ))}
+  </fieldset>
 
   <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? `新增${def.label}` : '儲存變更'}</button>
+    <button type="submit" class="btn btn-primary">{isNew ? `新增${def.label}` : '確認'}</button>
     {def.singleton === undefined && <a href={`/backend/WebMs/${def.key}`} class="btn btn-quiet">取消</a>}
     {row && (
       <a class="live-face ml-auto" href={def.liveUrl(row)} target="_blank" rel="noopener">{def.liveUrl(row)} ↗</a>

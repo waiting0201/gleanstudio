@@ -2,6 +2,9 @@
 /**
  * 管理者表單。不走共用實體層 —— 它有密碼雜湊與 AdminLims 權限矩陣。
  *
+ * 欄位、標籤與順序照舊後台 Views/SettingMs/EditAdmins.cshtml:57-79：
+ * 姓名 / 帳號 / 密碼 / Email。
+ *
  * 權限的形狀跟舊系統一樣：每個 Lims 子節點一列，檢視 = 資料列存在，
  * 新增/修改/刪除 = 對應旗標。**沒有勾檢視就等於整個區塊不給進**，
  * 而導覽列是照著這個長出來的，所以這裡勾什麼，對方就看得到什麼。
@@ -27,27 +30,23 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
   <Csrf />
   {row && <input type="hidden" name="id" value={row.AdminID}>}
 
-  <div class="record p-6">
-    <div class="grid gap-5 md:grid-cols-2">
-      <div>
-        <label class="field-label" for="Name">姓名<span class="text-oxide"> ＊</span></label>
-        <input class="field-input" id="Name" name="Name" type="text" required value={row?.Name ?? ''} autocomplete="off">
-      </div>
-      <div>
-        <label class="field-label" for="Username">帳號<span class="text-oxide"> ＊</span></label>
-        <input class="field-input" id="Username" name="Username" type="text" required
-               value={row?.Username ?? ''} autocomplete="off">
-        <span class="field-hint">登入用，之後不建議更動。</span>
-      </div>
+  <fieldset class="record p-6">
+    <legend class="form-legend">管理者資料</legend>
+
+    <div class="form-row">
+      <label class="field-label" for="Name">姓名<span class="text-oxide"> ＊</span></label>
+      <input class="field-input" id="Name" name="Name" type="text" required value={row?.Name ?? ''} autocomplete="off">
     </div>
 
-    <div class="mt-5">
-      <label class="field-label" for="Email">Email</label>
-      <input class="field-input" id="Email" name="Email" type="email" value={row?.Email ?? ''} autocomplete="off">
+    <div class="form-row">
+      <label class="field-label" for="Username">帳號<span class="text-oxide"> ＊</span></label>
+      <input class="field-input" id="Username" name="Username" type="text" required
+             value={row?.Username ?? ''} autocomplete="off">
+      <span class="field-hint">登入用，之後不建議更動。</span>
     </div>
 
-    <div class="mt-5">
-      <label class="field-label" for="password">{isNew ? '初始密碼' : '重設密碼'}{isNew && <span class="text-oxide"> ＊</span>}</label>
+    <div class="form-row">
+      <label class="field-label" for="password">密碼{isNew && <span class="text-oxide"> ＊</span>}</label>
       <input class="field-input" id="password" name="password" type="password"
              required={isNew} autocomplete="new-password" minlength={MIN_PASSWORD_LENGTH}>
       <span class="field-hint">
@@ -56,10 +55,15 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
           : '留空就不動密碼。填了就會覆蓋，並要求對方下次登入時再換一次。'}
       </span>
     </div>
-  </div>
 
-  <div class="record mt-6 p-6">
-    <h2 class="record-title text-lg">權限</h2>
+    <div class="form-row">
+      <label class="field-label" for="Email">Email</label>
+      <input class="field-input" id="Email" name="Email" type="email" value={row?.Email ?? ''} autocomplete="off">
+    </div>
+  </fieldset>
+
+  <fieldset class="record mt-6 p-6">
+    <legend class="form-legend">權限</legend>
     <p class="field-hint mt-1 mb-5">
       沒有勾「檢視」的區塊，對方的左側導覽根本不會出現。改完立刻生效，不用重新登入。
     </p>
@@ -81,19 +85,19 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
       <div class="mb-5">
         <div class="eyebrow mb-2">{parent}</div>
         <div class="overflow-x-auto">
-          <table class="w-full text-sm">
+          <table class="grid-table">
             <thead>
-              <tr class="border-b border-bench-deep text-left">
-                <th class="pb-1 pr-4 font-normal text-ink-faint">區塊</th>
-                {VERBS.map(([, label]) => <th class="w-16 pb-1 font-normal text-ink-faint">{label}</th>)}
+              <tr>
+                <th>區塊</th>
+                {VERBS.map(([, label]) => <th class="text-center" style="width:12%">{label}</th>)}
               </tr>
             </thead>
             <tbody>
               {nodes.map((n) => (
-                <tr class="border-b border-bench">
-                  <td class="py-2 pr-4">{n.Value}</td>
+                <tr>
+                  <td>{n.Value}</td>
                   {VERBS.map(([verb]) => (
-                    <td class="py-2">
+                    <td class="text-center">
                       <input type="checkbox" name={`lim_${n.LimID}_${verb}`} value="1"
                              checked={granted[n.LimID]?.[verb] ?? false}
                              aria-label={`${n.Value} ${VERBS.find(([v]) => v === verb)?.[1]}`}>
@@ -106,10 +110,10 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
         </div>
       </div>
     ))}
-  </div>
+  </fieldset>
 
   <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? '新增管理者' : '儲存變更'}</button>
+    <button type="submit" class="btn btn-primary">{isNew ? '新增管理者' : '確認'}</button>
     <a href="/backend/SettingMs/Admins" class="btn btn-quiet">取消</a>
   </div>
 </form>

@@ -2,9 +2,14 @@
 /**
  * 案例的表單。
  *
+ * 欄位、標籤與順序照舊後台 Views/WebMs/EditProjects.cshtml:59-101：
+ * 分類 / 地點 / 專案 / 標題。**「專案」是 Title、「標題」是 SubTitle** ——
+ * 這組命名很反直覺，但舊後台就是這樣叫的，改掉只會讓熟舊系統的人對不上。
+ *
  * ⚠️ Type / Place / Title 是自由文字，而且**直接決定公開頁的分組標題** ——
- * 打錯一個字就會多出一個只有一筆的分類。所以三個欄位都掛 datalist，
- * 把現有的值直接列出來讓人挑，不要靠記憶重打。
+ * 打錯一個字就會多出一個只有一筆的分類。舊系統只有 Type 是固定的 <select>，
+ * Place 與 Title 掛 datalist；這裡三個都掛 datalist，把現有的值列出來讓人挑
+ * （Type 不寫死五個選項，是因為那份清單只存在於 .cshtml 裡，資料庫沒有）。
  */
 import Csrf from './Csrf.astro';
 
@@ -20,17 +25,19 @@ const FIELDS = [
     hint: '公開頁最外層的【標題】。打錯字會多出一個新分類。' },
   { name: 'Place', label: '地點', list: 'place-list', options: existing.places,
     hint: '分類底下的粗體地點名稱，通常是館所或宮廟。' },
-  { name: 'Title', label: '案名', list: 'title-list', options: existing.titles,
-    hint: '地點底下的案名。同一個案名底下可以有多個項目。' },
+  { name: 'Title', label: '專案', list: 'title-list', options: existing.titles,
+    hint: '地點底下的案名。同一個案名底下可以有多個標題。' },
 ] as const;
 ---
 <form method="post" action="/api/admin/Projects/save">
   <Csrf />
   {row && <input type="hidden" name="id" value={row.ProjectID}>}
 
-  <div class="record p-6">
+  <fieldset class="record p-6">
+    <legend class="form-legend">案例資料</legend>
+
     {FIELDS.map((f) => (
-      <div class="mb-5">
+      <div class="form-row">
         <label class="field-label" for={f.name}>{f.label}<span class="text-oxide"> ＊</span></label>
         <input class="field-input" id={f.name} name={f.name} type="text" required
                list={f.list} autocomplete="off" value={row?.[f.name] ?? ''}>
@@ -38,20 +45,20 @@ const FIELDS = [
       </div>
     ))}
 
-    <div>
-      <label class="field-label" for="SubTitle">項目</label>
+    <div class="form-row">
+      <label class="field-label" for="SubTitle">標題</label>
       <input class="field-input" id="SubTitle" name="SubTitle" type="text"
              autocomplete="off" value={row?.SubTitle ?? ''}>
       <span class="field-hint">公開頁上的一個 <span class="instrument">&lt;li&gt;</span>。</span>
     </div>
-  </div>
+  </fieldset>
 
   <datalist id="type-list">{existing.types.map((v) => <option value={v}></option>)}</datalist>
   <datalist id="place-list">{existing.places.map((v) => <option value={v}></option>)}</datalist>
   <datalist id="title-list">{existing.titles.map((v) => <option value={v}></option>)}</datalist>
 
   <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? '新增案例' : '儲存變更'}</button>
+    <button type="submit" class="btn btn-primary">{isNew ? '新增案例' : '確認'}</button>
     <a href="/backend/WebMs/Projects" class="btn btn-quiet">取消</a>
     <a class="live-face ml-auto" href="/Home/Project" target="_blank" rel="noopener">/Home/Project ↗</a>
   </div>

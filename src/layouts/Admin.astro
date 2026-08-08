@@ -2,8 +2,9 @@
 /**
  * 後台版型。**唯一 import admin.css 的地方** —— 見那個檔開頭的警告。
  *
- * 頂欄是近黑的品牌色，內容區是中性灰工作檯。左側導覽由編輯者**實際的**
- * 權限產生，不是寫死的選單：進不去的區塊就不會出現。
+ * 頂欄是近黑的品牌色，內容區是中性灰工作檯。左側導覽的**名稱與分組直接來自
+ * Lims 表**，跟舊系統同一份資料（網站管理 ▸ 文章分類維護 …），再依編輯者
+ * **實際的**權限過濾：進不去的區塊不會出現。
  * 這也讓 09-known-issues 3.3（現任管理員沒有 Teams 權限）浮出來而不是被藏起來。
  */
 import '../styles/admin.css';
@@ -52,26 +53,35 @@ const here = Astro.url.pathname;
     </header>
 
     <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-5 py-8 md:flex-row">
-      <nav aria-label="後台區塊" class="md:w-44 md:shrink-0">
-        <ul class="flex flex-wrap gap-x-5 gap-y-1 md:block">
-          {nav.map((item) => {
-            const active = here.startsWith(item.href);
-            return (
-              <li>
-                <a
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  class:list={[
-                    'block border-l-2 py-1.5 pl-3 text-sm no-underline transition-colors',
-                    active
-                      ? 'border-brass font-normal text-ink'
-                      : 'border-transparent text-ink-soft hover:border-bench-deep hover:text-ink',
-                  ]}
-                >{item.label}</a>
-              </li>
-            );
-          })}
-        </ul>
+      <nav aria-label="後台區塊" class="md:w-52 md:shrink-0">
+        {nav.map((group) => (
+          <div class="mb-6 last:mb-0">
+            <div class="eyebrow mb-1.5 md:pl-3">{group.label}</div>
+            <ul class="flex flex-wrap gap-x-5 gap-y-1 md:block">
+              {group.items.map((item) => {
+                /* 舊系統的 active 判斷是 action 去掉 Add/Edit 之後比對 Key，
+                   等價於「網址前綴是 /backend/{父}/{Add|Edit}?{子}」。 */
+                const active = here === item.href
+                  || here.startsWith(`/backend/${group.key}/Add${item.route.split('/')[1]}`)
+                  || here.startsWith(`/backend/${group.key}/Edit${item.route.split('/')[1]}`);
+                return (
+                  <li>
+                    <a
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      class:list={[
+                        'block border-l-2 py-1.5 pl-3 text-sm no-underline transition-colors',
+                        active
+                          ? 'border-brass font-normal text-ink'
+                          : 'border-transparent text-ink-soft hover:border-bench-deep hover:text-ink',
+                      ]}
+                    >{item.label}</a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <main class="min-w-0 flex-1">
