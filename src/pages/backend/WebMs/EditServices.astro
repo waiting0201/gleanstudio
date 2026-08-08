@@ -16,8 +16,6 @@ if (!row) return new Response('找不到這筆資料。', { status: 404 });
 ---
 <Admin title={`編輯${def.label}`} session={session}>
 <Flash />
-<div class="record-id">{String(row[def.idColumn]).slice(0, 8)}</div>
-<h1 class="record-title mt-1 text-2xl">編輯{def.label}</h1>
-<p class="eyebrow mt-1">{row[primaryColumn(def)]} · 儲存之後公開網站會立刻跟著改。</p>
-<div class="mt-8"><EntityForm def={def} row={row} /></div>
+<EntityForm def={def} row={row} title={`編輯${def.label}`}
+            note={`${row[primaryColumn(def)]} · 儲存之後公開網站會立刻跟著改。`} />
 </Admin>

@@ -8,6 +8,7 @@
  * 它真正的公開網址」。
  */
 import Admin from '../../../layouts/Admin.astro';
+import Panel from '../../../components/admin/Panel.astro';
 import { getSession, visibleNav } from '../../../lib/auth/session';
 import { getArticlesPage } from '../../../db/queries';
 import { formatDate } from '../../../lib/format';
@@ -47,52 +48,53 @@ const recent = nav.some((n) => n.href === '/backend/WebMs/Articles')
 ---
 <Admin title="首頁" session={session}>
 
-<h1 class="record-title text-2xl">內容維護</h1>
-<p class="mt-1 text-sm text-ink-soft">儲存之後，公開網站會立刻跟著改。</p>
+{/* 舊後台的首頁是一個 .jarviswidget，header 寫「禾勤藝術後端管理系統」、
+    body 是空的（Main/Index.cshtml:18-31）。這裡把 body 填成「你能維護的區塊
+    + 各有幾筆」。 */}
+<Panel title="內容維護" note="儲存之後，公開網站會立刻跟著改。" flush>
+  {groups.map((group) => (
+    <section>
+      <p class="panel-group-label">{group.label}</p>
+      <ul class="divide-y divide-bench-deep">
+        {group.items.map((item) => (
+          <li>
+            <a href={item.href} class="flex items-baseline justify-between gap-4 px-4 py-2.5 no-underline transition-colors hover:bg-gild-wash">
+              <span class="text-sm text-ink">{item.label}</span>
+              <span class="eyebrow"><span class="instrument">{counts[item.href] ?? '—'}</span> 筆</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
 
-{groups.map((group) => (
-  <section class="mt-9">
-    <h2 class="eyebrow">{group.label}</h2>
-    <ul class="mt-3 divide-y divide-bench-deep border-y border-bench-deep">
-      {group.items.map((item) => (
-        <li>
-          <a href={item.href} class="flex items-baseline justify-between gap-4 bg-paper px-4 py-3 no-underline transition-colors hover:bg-gild-wash">
-            <span class="text-sm text-ink">{item.label}</span>
-            <span class="eyebrow"><span class="instrument">{counts[item.href] ?? '—'}</span> 筆</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  </section>
-))}
-
-<section class="mt-4">
   {nav.length < 7 && (
-    <p class="field-hint mt-3">
+    <p slot="foot" class="field-hint mr-auto">
       沒列出來的區塊代表你的帳號沒有那個權限。需要的話請找管理者開通。
     </p>
   )}
-</section>
+</Panel>
 
 {recent.length > 0 && (
-  <section class="mt-10">
-    <h2 class="eyebrow">最近的文章</h2>
-    <ul class="mt-3 space-y-px">
+  <Panel title="最近的文章" flush>
+    <ul class="divide-y divide-bench-deep">
       {recent.map((a) => (
-        <li class="record flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 px-4 py-3">
+        <li class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-2.5">
           <div class="min-w-0">
             <div class="record-id">{a.articleId.slice(0, 8)}</div>
             <a href={`/backend/WebMs/EditArticles?ArticleID=${a.articleId}`} class="record-title text-ink no-underline hover:text-brass">{a.title}</a>
           </div>
           <div class="flex shrink-0 items-baseline gap-4">
             <span class="instrument text-ink-faint">{formatDate(a.createDate)}</span>
-            <a class="live-face" href={`/Home/ArticleDetail?ArticleID=${a.articleId}`} target="_blank" rel="noopener"
-               title="在新分頁開啟公開頁面">/Home/ArticleDetail?ArticleID={a.articleId.slice(0, 8)}… ↗</a>
+            {/* 整條網址，不是 slice() 之後手接的「…」—— 截斷交給 .live-url */}
+            <a class="live-face live-url" href={`/Home/ArticleDetail?ArticleID=${a.articleId}`} target="_blank" rel="noopener"
+               title={`在新分頁開啟 /Home/ArticleDetail?ArticleID=${a.articleId}`}
+            >/Home/ArticleDetail?ArticleID={a.articleId}</a>
           </div>
         </li>
       ))}
     </ul>
-  </section>
+  </Panel>
 )}
 
 </Admin>

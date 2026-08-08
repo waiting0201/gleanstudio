@@ -40,6 +40,17 @@
   --color-oxide: #8a3324;
   --color-oxide-wash: #f7ebe8;
 
+  /* ── 機殼的兩個深色階 ─────────────────────────────────
+     舊後台的頂欄／左欄／頁尾是一組由深到淺的暖灰：
+       aside        #3a3633   （smartadmin-production.min.css `aside{background:#3a3633}`）
+       #ribbon      #474544
+       .page-footer #2a2725
+     這裡**只沿用它們之間的階差關係，色相留在 ink 這一族**，不引進新色系：
+     頂欄與頁尾＝ink（#272726，剛好就是舊頁尾的 #2a2725），左欄提一階，
+     左欄裡的分隔線與 hover 底再提一階。 */
+  --color-ink-panel: #34322f;
+  --color-ink-panel-edge: #423f3b;
+
   --font-display: 'Cinzel', serif;
   --font-record: 'Noto Serif TC', serif;
   --font-ui: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
@@ -47,6 +58,13 @@
 }
 
 @layer base {
+  :root {
+    /* 舊後台 `#header{height:49px}`、`#header>:first-child,aside{width:220px}`。
+       高度多 3px 是因為我們的字比 Open Sans 大一級。 */
+    --admin-chrome: 3.25rem;
+    --admin-panel: 13.75rem;
+  }
+
   html {
     background: var(--color-bench);
     color: var(--color-ink);
@@ -72,6 +90,292 @@
 }
 
 @layer components {
+  /* ══ 機殼 ═══════════════════════════════════════════════
+     骨架逐件對應舊後台的 partial，讓熟舊系統的人不用重新學空間：
+
+       _Header.cshtml    → .admin-top    （通欄固定頂欄，左邊字標寬度＝左欄寬度）
+       _Aside.cshtml     → .admin-aside  （深色左欄：使用者區塊 + 兩層選單）
+       _CurrentUser      → .admin-user
+       _Ribbon.cshtml    → .admin-ribbon （麵包屑）
+       _Footer.cshtml    → .admin-foot
+       .well/.jarviswidget → .panel      （header 條 + body + form-actions）
+
+     ⚠️ 唯一刻意不照抄的是 ribbon 的**顏色**。舊後台 onyx 佈景的 ribbon 是
+     #474544，第三條深色帶；§10 的前提是「中性灰工作檯、色準光源」，三條深色
+     帶會把工作面吃掉。所以取它的淺色佈景那一版（同一份 CSS 裡的
+     `#ribbon{border-bottom:1px solid #CFCFCF;background:#F5F5F5}`）。
+     結構照 §10b，顏色照 §10。 */
+
+  body.admin {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bench);
+    color: var(--color-ink);
+  }
+
+  /* ── 頂欄 ───────────────────────────────────────────── */
+  .admin-top {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    min-height: var(--admin-chrome);
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  /* 舊後台 `#header>:first-child,aside{width:220px}` —— 字標壓在左欄正上方 */
+  .admin-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    padding: 0 1rem;
+    color: inherit;
+    text-decoration: none;
+  }
+  /* Cinzel 全站只有這一處。多用一次，工作室就變成展廳（§10） */
+  .admin-wordmark {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    letter-spacing: 0.18em;
+    line-height: 1;
+  }
+  .admin-brand .eyebrow { color: color-mix(in srgb, var(--color-bench) 55%, transparent); }
+
+  .admin-top-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+    padding: 0 1.25rem;
+  }
+  .admin-whoami { color: color-mix(in srgb, var(--color-bench) 78%, transparent); }
+  .admin-signout {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 0.8125rem;
+    color: color-mix(in srgb, var(--color-bench) 78%, transparent);
+    cursor: pointer;
+  }
+  .admin-signout:hover { color: var(--color-paper); }
+
+  /* ── 主體：左欄 + 內容 ──────────────────────────────── */
+  .admin-shell {
+    flex: 1 1 auto;
+    display: block;
+  }
+
+  .admin-aside {
+    background: var(--color-ink-panel);
+    color: var(--color-bench-deep);
+  }
+
+  /* 舊後台 `.login-info{height:39px}` + 頭像 `border-left:3px solid #fff` */
+  .admin-user {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid var(--color-ink-panel-edge);
+  }
+  .admin-avatar {
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: grid;
+    place-items: center;
+    background: var(--color-ink-panel-edge);
+    border-left: 3px solid var(--color-bench);
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: var(--color-bench);
+  }
+  .admin-user-name {
+    min-width: 0;
+    font-size: 0.875rem;
+    color: var(--color-bench);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-nav { padding-bottom: 1rem; }
+  .admin-nav-label {
+    padding: 0.875rem 1rem 0.25rem;
+    font-size: 0.75rem;
+    /* 從面板底與 bench-deep 調出來的，不是另外挑的灰 */
+    color: color-mix(in srgb, var(--color-bench-deep) 58%, var(--color-ink-panel));
+  }
+  .admin-nav a {
+    display: block;
+    /* 舊後台 `nav ul li a{padding:10px 10px 10px 11px;font-size:14px}` */
+    padding: 0.5rem 0.875rem;
+    border-left: 3px solid transparent;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--color-bench-deep);
+    text-decoration: none;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  .admin-nav a:hover {
+    background: var(--color-ink-panel-edge);
+    color: var(--color-paper);
+  }
+  /* 舊後台的 active 是 `nav ul li.active>a:before` 那個往右戳的三角形。
+     這裡換成黃銅左標 —— 同樣是「你在這裡」，但用 §10 的色。 */
+  .admin-nav a[aria-current='page'] {
+    background: var(--color-ink);
+    border-left-color: var(--color-gild);
+    color: var(--color-paper);
+  }
+
+  .admin-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* 舊後台 `#ribbon{min-height:40px;padding:0 13px}` */
+  .admin-ribbon {
+    display: flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.375rem 1.125rem;
+    background: var(--color-bench);
+    border-bottom: 1px solid var(--color-bench-deep);
+  }
+  .admin-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.125rem 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-faint);
+  }
+  .admin-crumbs a { color: inherit; text-decoration: none; }
+  .admin-crumbs a:hover { color: var(--color-brass); }
+  /* 舊後台 `#ribbon .breadcrumb li:last-child{color:#333}` */
+  .admin-crumbs li:last-child { color: var(--color-ink); }
+  .admin-crumb-sep { color: var(--color-bench-deep); }
+
+  .admin-content {
+    flex: 1 1 auto;
+    padding: 1.125rem 1.125rem 2.25rem;
+  }
+
+  /* 舊後台 `.page-footer{height:52px;padding:15px 13px 0;background:#2a2725}` */
+  .admin-foot {
+    padding: 0.9375rem 1.125rem;
+    background: var(--color-ink);
+    color: color-mix(in srgb, var(--color-bench) 62%, transparent);
+    font-size: 0.8125rem;
+  }
+
+  /* 窄螢幕：左欄改成頂部橫向選單。
+     舊後台自己就有這一版 —— `.menu-on-top aside#left-panel{width:100%!important}`
+     加上 `nav>ul>li{display:inline-block;float:left}`。 */
+  @media (max-width: 899px) {
+    .admin-nav-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 0.25rem;
+      padding: 0.25rem 0.625rem;
+    }
+    .admin-nav-label { flex: 0 0 100%; padding: 0.5rem 0.25rem 0.125rem; }
+    .admin-nav-list { display: flex; flex-wrap: wrap; }
+    .admin-nav a {
+      padding: 0.3125rem 0.625rem;
+      border-left: 0;
+      border-bottom: 2px solid transparent;
+    }
+    .admin-nav a[aria-current='page'] { border-bottom-color: var(--color-gild); }
+  }
+
+  @media (min-width: 900px) {
+    .admin-brand { flex: 0 0 var(--admin-panel); width: var(--admin-panel); }
+    .admin-shell { display: flex; align-items: stretch; }
+    .admin-aside { flex: 0 0 var(--admin-panel); width: var(--admin-panel); }
+    /* 捲動時選單跟著走，但不用 position:fixed —— fixed 在整頁截圖裡會脫隊 */
+    .admin-nav { position: sticky; top: var(--admin-chrome); }
+    .admin-main { flex: 1 1 auto; }
+    .admin-content { padding: 1.25rem 1.25rem 2.5rem; }
+  }
+
+  /* ── 面板（舊後台的 .well / .jarviswidget）───────────── */
+  .panel {
+    background: var(--color-paper);
+    border: 1px solid var(--color-bench-deep);
+  }
+  .panel + .panel { margin-top: 1.25rem; }
+
+  .panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.125rem 1rem;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid var(--color-bench-deep);
+    /* 舊後台 `.well{background-color:#fbfbfb}`：比 body 亮、比紙暗的一階 */
+    background: color-mix(in srgb, var(--color-bench) 42%, var(--color-paper));
+  }
+  /* 佔滿整列，把標題擠到下一行 —— 這是「標題上方的小字」不是同一行的副標 */
+  .panel-eyebrow { width: 100%; }
+  .panel-title {
+    font-family: var(--font-record);
+    font-weight: 500;
+    font-size: 1.0625rem;
+    line-height: 1.5;
+  }
+  .panel-note {
+    font-size: 0.8125rem;
+    color: var(--color-ink-faint);
+    line-height: 1.5;
+  }
+
+  /* 舊後台 `.widget-body-toolbar` —— 新增鈕在表格左上 */
+  .panel-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-bench-deep);
+  }
+  /* 舊後台的 toolbar 是 `.form-inline`：輸入框與按鈕同一條基線、高度相當
+     （Bootstrap 的 .form-control 32px vs .btn 34px）。這裡的 .field-input
+     是給表單頁用的，行高 1.8 會比 .btn 高 12px，同一列就看得出來沒對齊。 */
+  .panel-toolbar .field-input {
+    padding-block: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .panel-body { padding: 1.25rem 1rem; }
+  /* 表格要貼齊面板邊（舊後台的 `.no-padding` + `.table-responsive`） */
+  .panel-body-flush { padding: 0; }
+  .panel-scroll { overflow-x: auto; }
+
+  /* 舊後台 `.form-actions{padding:13px 14px 15px;border-top:1px solid rgba(0,0,0,.1);
+     background:rgba(249,249,249,.9);text-align:right}` —— 動作列在面板底部、靠右，
+     DOM 順序是「取消 → 確認」。 */
+  .panel-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    padding: 0.8125rem 0.875rem 0.9375rem;
+    border-top: 1px solid var(--color-bench-deep);
+    background: color-mix(in srgb, var(--color-bench) 42%, var(--color-paper));
+  }
+  /* 公開網址靠左，動作靠右 */
+  .panel-foot .live-face { margin-right: auto; }
+
   /* ── 儀表層 ───────────────────────────────────────────
      ID、日期、筆數、檔名、**網址**。等寬 + 字距，跟內容的襯線體形成對比。
      這個對比就是後台的個性來源，不靠裝飾。
@@ -116,12 +420,16 @@
   }
 
   /* ── 動作 ───────────────────────────────────────────── */
+  /* 舊後台的 .btn 是 Bootstrap 預設（padding:6px 12px;line-height:1.42）——
+     大約 34px 高。html 的 line-height:1.8 是給 CJK 內文的，套在按鈕上會胖一圈，
+     所以這裡把它壓回去。 */
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
+    padding: 0.4375rem 1.125rem;
     font-size: 0.875rem;
+    line-height: 1.5;
     border: 1px solid transparent;
     cursor: pointer;
     transition: background-color 120ms ease, border-color 120ms ease;
@@ -194,10 +502,21 @@
      「有格線、整列 hover」行為，只把配色換成工作檯的中性灰。 */
   .grid-table {
     width: 100%;
+    /* 沒有這一行，窄螢幕上表格不會溢出、`.panel-scroll` 也就不會捲 ——
+       CJK 每個字都能斷行，欄位會被壓成一個字寬的直書，右邊幾欄直接消失。
+       舊後台靠 Bootstrap 的 .table-responsive 得到同樣的行為。
+       ⚠️ 42rem 不夠：量過 375 寬的文章維護，分類欄只分到 51px，
+       「文物保存與修護」還是一字一行。要讓七欄都有可讀寬度得到 58rem。 */
+    min-width: 58rem;
     border-collapse: collapse;
     background: var(--color-paper);
     border: 1px solid var(--color-bench-deep);
   }
+  /* 每一欄的下限。auto table 演算法會把空間讓給內容最寬的欄（公開網址那條
+     等寬網址是 nowrap，一欄就吃掉 290px），沒有下限的話 CJK 欄位會被榨乾。
+     4.5rem 約等於三個中文字 —— 排序 / 編輯 / 刪除 這些窄欄本來就在這附近。 */
+  .grid-table th,
+  .grid-table td { min-width: 4.5rem; }
   .grid-table th {
     padding: 0.625rem 0.75rem;
     font-size: 0.8125rem;
@@ -214,18 +533,44 @@
     border: 1px solid var(--color-bench-deep);
   }
   .grid-table tbody tr:hover { background: var(--color-gild-wash); }
+  /* 日期、ID、筆數這種儀表欄不換行 —— 「01 January 2026」斷成兩行就讀不成一個日期 */
+  .grid-table td > .instrument { white-space: nowrap; }
+
+  /* 首頁面板裡的群組小標（網站管理 / 系統管理）—— 跟左欄同一份字，
+     所以視覺上要跟左欄的群組標籤是同一個東西。 */
+  .panel-group-label {
+    padding: 0.375rem 1rem;
+    font-size: 0.75rem;
+    color: var(--color-ink-faint);
+    background: color-mix(in srgb, var(--color-bench) 42%, var(--color-paper));
+    border-bottom: 1px solid var(--color-bench-deep);
+  }
+  .panel-body-flush > section + section > .panel-group-label { border-top: 1px solid var(--color-bench-deep); }
 
   /* ── 表單 ─────────────────────────────────────────────
      舊後台是 Bootstrap 的 horizontal form：標籤在左（col-lg-2），
      輸入在右。這裡用 grid 做同一件事，窄螢幕才疊成上下。 */
+  /* 舊後台的 <fieldset> 沒有外框，外框是外面那層 .well 給的。
+     ⚠️ min-width:0 一定要留 —— fieldset 預設 min-width:min-content，
+     少了它，裡面的表格與富文本編輯器撐不進面板寬度。 */
+  .form-block {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+
+  /* 舊後台 `legend{display:block;padding:8px 0;border-bottom:1px dashed rgba(0,0,0,.2)}`。
+     它是 .form-block 的第一個子元素、不再壓在任何外框上。 */
   .form-legend {
+    display: block;
+    width: 100%;
     font-family: var(--font-record);
     font-weight: 500;
     font-size: 1.0625rem;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1.5rem;
+    padding: 0 0 0.5rem;
+    margin: 0 0 1.5rem;
     border-bottom: 1px solid var(--color-bench-deep);
-    width: 100%;
   }
 
   .form-row {
@@ -266,6 +611,16 @@
     font-family: inherit;
     font-size: 0.9375rem;
   }
+  /* 舊後台的 horizontal form 是用 Bootstrap 的欄寬決定輸入框寬度，不是一路拉滿：
+     標題 col-lg-5、內文 col-lg-8、分類／日期／代表圖 col-lg-2
+     （EditArticles.cshtml:56,64,72,91,99）。滿版的日期輸入框看起來就不像
+     一個日期。這裡用 max-width 還原那個節奏，窄螢幕自然收回 100%。 */
+  .form-row > .field-input { max-width: 30rem; }
+  .form-row > select.field-input,
+  .form-row > .field-input[type='date'] { max-width: 16rem; }
+  .form-row > .field-input[type='file'] { max-width: 22rem; }
+  .form-row > textarea.field-input { max-width: 46rem; }
+
   .field-input:focus {
     outline: none;
     border-color: var(--color-gild);
@@ -307,4 +662,21 @@
     color: var(--color-brass);
     border-color: var(--color-gild);
   }
+
+  /* 列表那一欄印的是**整條網址**，不是「開啟 ↗」這種按鈕文案 ——
+     那正是 §10 說的簽名元素。太長就用 CSS 截，不要在樣板裡 slice() 之後
+     手動接一個「…」：那樣連 title 提示與複製貼上都拿不到完整網址。
+     30ch 剛好放得下 `/Home/ArticleDetail?ArticleID=`（正好 30 個字元）。 */
+  .live-url {
+    display: block;
+    /* 窄螢幕先讓步 —— 這一欄 nowrap，40ch 在 375 上會吃掉 290px，
+       把同一列的分類與標題榨成一字一行。網址完整值在 title 屬性裡。 */
+    max-width: 22ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (min-width: 900px) {
+    .live-url { max-width: 40ch; }
+  }
+  .panel-foot .live-url { max-width: 52ch; }
 }

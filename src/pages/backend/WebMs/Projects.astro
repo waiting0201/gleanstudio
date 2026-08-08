@@ -15,6 +15,7 @@ import { env } from 'cloudflare:workers';
 import Admin from '../../../layouts/Admin.astro';
 import Flash from '../../../components/admin/Flash.astro';
 import Csrf from '../../../components/admin/Csrf.astro';
+import Panel from '../../../components/admin/Panel.astro';
 import { requirePermission, can } from '../../../lib/auth/session';
 
 export const prerender = false;
@@ -65,40 +66,41 @@ const href = (t: string) => `?${new URLSearchParams({ ...(t ? { type: t } : {}),
 
 <Flash />
 
-<div class="flex flex-wrap items-baseline justify-between gap-4">
-  <div>
-    <h1 class="record-title text-2xl">案例維護</h1>
-    <p class="eyebrow mt-1">
-      <span class="instrument">{total}</span> 筆 · 顯示在 /Home/Project，依分類→地點→標題四層分組
-    </p>
-  </div>
+<Panel title="案例維護" note={`${total} 筆 · 顯示在 /Home/Project，依分類→地點→標題四層分組`} flush>
+
+{/* 舊後台的 .widget-body-toolbar 只有一顆新增鈕；篩選與搜尋是這裡加的，
+    但位置一樣 —— 表格正上方那一條。 */}
+<Fragment slot="toolbar">
   {mayAdd && <a href="/backend/WebMs/AddProjects" class="btn btn-primary">新增案例</a>}
-</div>
 
-<nav aria-label="依分類篩選" class="mt-7 flex flex-wrap gap-x-4 gap-y-1 border-b border-bench-deep pb-2">
-  {tabs.map((t) => (
-    <a href={href(t.value)} aria-current={t.value === type ? 'page' : undefined}
-       class:list={[
-         'text-sm no-underline',
-         t.value === type ? 'text-brass' : 'text-ink-soft hover:text-ink',
-       ]}>{t.label} <span class="instrument">{t.n}</span></a>
-  ))}
-</nav>
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    {type && <input type="hidden" name="type" value={type}>}
+    {/* w-56 而不是 max-w-56：`.field-input` 是 width:100%，百分比在 max-content
+        計算時當成 auto，於是 form 只量到 250px、放不下 224px 的輸入框加上搜尋鈕，
+        搜尋鈕就換行、form 變兩倍高，「新增案例」被 align-items:center 推成階梯。 */}
+    <input class="field-input w-56" type="search" name="q" value={q}
+           placeholder="搜尋地點、標題或項目" aria-label="搜尋案例">
+    <button type="submit" class="btn btn-quiet">搜尋</button>
+    {(q || type) && <a href="?" class="text-sm text-ink-faint no-underline hover:text-ink">清除</a>}
+  </form>
 
-<form method="get" class="mt-4 flex flex-wrap items-center gap-2">
-  {type && <input type="hidden" name="type" value={type}>}
-  <input class="field-input max-w-xs" type="search" name="q" value={q}
-         placeholder="搜尋地點、標題或項目" aria-label="搜尋案例">
-  <button type="submit" class="btn btn-quiet">搜尋</button>
-  {(q || type) && <a href="?" class="text-sm text-ink-faint no-underline hover:text-ink">清除</a>}
-</form>
+  <nav aria-label="依分類篩選" class="flex w-full flex-wrap gap-x-4 gap-y-1">
+    {tabs.map((t) => (
+      <a href={href(t.value)} aria-current={t.value === type ? 'page' : undefined}
+         class:list={[
+           'text-sm no-underline',
+           t.value === type ? 'text-brass' : 'text-ink-soft hover:text-ink',
+         ]}>{t.label} <span class="instrument">{t.n}</span></a>
+    ))}
+  </nav>
+</Fragment>
 
 {rows.length === 0 ? (
-  <div class="record mt-8 p-10 text-center">
+  <div class="p-10 text-center">
     <p class="text-sm text-ink-soft">{q ? `找不到符合「${q}」的案例。` : '這個分類還沒有案例。'}</p>
   </div>
 ) : (
-  <div class="mt-6 overflow-x-auto">
+  <div class="panel-scroll">
     <table class="grid-table">
       <thead>
         <tr>
@@ -151,11 +153,16 @@ const href = (t: string) => `?${new URLSearchParams({ ...(t ? { type: t } : {}),
   </div>
 )}
 
-<p class="field-hint mt-6">
+<Fragment slot="foot">
+  <a class="live-face live-url" href="/Home/Project" target="_blank" rel="noopener"
+     title="在新分頁開啟 /Home/Project">/Home/Project</a>
+</Fragment>
+
+</Panel>
+
+<p class="field-hint mt-4">
   公開頁的分組順序由「排序」那一欄的號碼決定，不是由分類或地點的筆劃決定。
   新增的案例會排在最後面。
 </p>
-
-<a class="live-face mt-3 inline-block" href="/Home/Project" target="_blank" rel="noopener">/Home/Project ↗</a>
 
 </Admin>

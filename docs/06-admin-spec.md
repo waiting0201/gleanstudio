@@ -305,7 +305,33 @@ putEntityPhoto(
 - **儀表板不放任何統計數字。** 9 篇文章、1–3 個使用者，KPI 方格是演戲。首頁是「你能維護的區塊 + 各有幾筆」加上「最近的文章」
 - **左側導覽由實際權限產生**，不是寫死的選單。進不去的區塊不會出現 —— 這也讓 [09-known-issues](09-known-issues.md) 3.3（現任管理員沒有 Teams 權限）浮出來而不是被藏起來
 
----
+### 10c. 骨架逐件照舊後台（2026-08-08）
+
+§10 定的是顏色與字體，但第一版的**空間結構**是我們自己想的：置中的 `max-w-6xl`、
+選單浮在跟內容同一片灰底上、內容沒有外框、沒有麵包屑也沒有頁尾。
+舊後台（SmartAdmin）的空間感完全不是這樣，而編輯者熟的是那一個。
+
+**規則與 §10b 相同：結構逐件對應舊後台的 partial，顏色仍照 §10。**
+
+| 新的 | 舊後台出處 |
+|---|---|
+| `.admin-top` 固定頂欄 | `Shared/_Header.cshtml`；`#header{height:49px}` |
+| `.admin-aside` 深色左欄（220px，通欄到底） | `_Aside.cshtml`；`aside{width:220px;background:#3a3633}` |
+| `.admin-user` 使用者區塊 | `_CurrentUser.cshtml`；`.login-info{height:39px}`，含那道 3px 白邊 |
+| `.admin-ribbon` 麵包屑 | `_Ribbon.cshtml`；`#ribbon{min-height:40px;padding:0 13px}` |
+| `.admin-foot` 頁尾 | `_Footer.cshtml`；`.page-footer{height:52px}` |
+| `Panel.astro`（head / toolbar / body / foot） | `.well`／`.jarviswidget`；toolbar 見 `WebMs/Articles.cshtml:20-32`，foot 見 `EditArticles.cshtml:107-119` |
+| 動作列靠右、順序 取消 → 確認 | `.form-actions{…;text-align:right}`；`AddArticles.cshtml:107,111` |
+| 通欄流式版面（拿掉 `max-w-6xl`） | `#main{margin-left:220px}` |
+
+⚠️ **唯一刻意不照抄的是 ribbon 的顏色。** 舊站 onyx 佈景是 `#ribbon{background:#474544}`，
+那會是頂欄與左欄之外的第三條深色帶，跟 §10「中性灰工作檯、色準光源」的前提衝突。
+改用同一份 CSS 裡的淺色佈景版本（`#ribbon{background:#F5F5F5;border-bottom:1px solid #CFCFCF}`）。
+**結構照舊後台，顏色照 §10。**
+
+只新增了兩個色階，都在 ink 這一族內延伸：`--color-ink-panel`（左欄）、
+`--color-ink-panel-edge`（左欄內的分隔線與 hover）。青銅按鈕仍然全站只有一種。
+
 
 ## 10b. 資訊架構一律照舊後台（2026-08-08 修訂）
 

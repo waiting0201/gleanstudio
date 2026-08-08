@@ -12,13 +12,16 @@
  * （Type 不寫死五個選項，是因為那份清單只存在於 .cshtml 裡，資料庫沒有）。
  */
 import Csrf from './Csrf.astro';
+import Panel from './Panel.astro';
 
 interface Props {
+  /** 面板 header 條上的字 —— 舊後台 `<header><h2>編輯案例</h2></header>` */
+  title: string;
+  note?: string;
   row?: { ProjectID: string; Type: string; Place: string; Title: string; SubTitle: string | null; LegacyOrder: number };
   existing: { types: string[]; places: string[]; titles: string[] };
 }
-const { row, existing } = Astro.props;
-const isNew = !row;
+const { row, existing, title, note } = Astro.props;
 
 const FIELDS = [
   { name: 'Type', label: '分類', list: 'type-list', options: existing.types,
@@ -33,7 +36,8 @@ const FIELDS = [
   <Csrf />
   {row && <input type="hidden" name="id" value={row.ProjectID}>}
 
-  <fieldset class="record p-6">
+  <Panel title={title} note={note}>
+  <fieldset class="form-block">
     <legend class="form-legend">案例資料</legend>
 
     {FIELDS.map((f) => (
@@ -51,15 +55,18 @@ const FIELDS = [
              autocomplete="off" value={row?.SubTitle ?? ''}>
       <span class="field-hint">公開頁上的一個 <span class="instrument">&lt;li&gt;</span>。</span>
     </div>
+    <datalist id="type-list">{existing.types.map((v) => <option value={v}></option>)}</datalist>
+    <datalist id="place-list">{existing.places.map((v) => <option value={v}></option>)}</datalist>
+    <datalist id="title-list">{existing.titles.map((v) => <option value={v}></option>)}</datalist>
   </fieldset>
 
-  <datalist id="type-list">{existing.types.map((v) => <option value={v}></option>)}</datalist>
-  <datalist id="place-list">{existing.places.map((v) => <option value={v}></option>)}</datalist>
-  <datalist id="title-list">{existing.titles.map((v) => <option value={v}></option>)}</datalist>
-
-  <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? '新增案例' : '確認'}</button>
+  {/* 動作列在面板底部（舊後台的 .form-actions），順序照舊站：取消 → 確認 */}
+  <Fragment slot="foot">
+    <a class="live-face live-url" href="/Home/Project" target="_blank" rel="noopener"
+       title="在新分頁開啟 /Home/Project">/Home/Project</a>
     <a href="/backend/WebMs/Projects" class="btn btn-quiet">取消</a>
-    <a class="live-face ml-auto" href="/Home/Project" target="_blank" rel="noopener">/Home/Project ↗</a>
-  </div>
+    {/* 新增與編輯一律「確認」—— §10b 與舊站 AddProjects.cshtml:116 */}
+    <button type="submit" class="btn btn-primary">確認</button>
+  </Fragment>
+  </Panel>
 </form>

@@ -24,10 +24,6 @@ const [lims, granted] = await Promise.all([limTree(), grantsFor(row.AdminID)]);
 ---
 <Admin title="編輯管理者" session={guard.session}>
 <Flash />
-<div class="record-id">{row.Username}</div>
-<h1 class="record-title mt-1 text-2xl">編輯管理者</h1>
-<p class="eyebrow mt-1">{row.Name}</p>
-<div class="mt-8">
-  <AdminForm row={row} lims={lims} granted={granted} isSelf={row.AdminID === guard.session.adminId} />
-</div>
+<AdminForm row={row} lims={lims} granted={granted} isSelf={row.AdminID === guard.session.adminId}
+           title="編輯管理者" note={`${row.Name} · ${row.Username}`} />
 </Admin>

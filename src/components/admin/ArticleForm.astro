@@ -8,10 +8,14 @@
  *  兩邊統一用「日期」，那是它實際的意思。）
  */
 import Csrf from './Csrf.astro';
+import Panel from './Panel.astro';
 import RichText from './RichText.astro';
 import type { ArticleType } from '../../db/queries';
 
 interface Props {
+  /** 面板 header 條上的字 —— 舊後台 EditArticles.cshtml:19 的 `<h2>編輯文章</h2>` */
+  title: string;
+  note?: string;
   articleTypes: ArticleType[];
   article?: {
     articleId: string;
@@ -22,8 +26,7 @@ interface Props {
     createDate: string;
   };
 }
-const { articleTypes, article } = Astro.props;
-const isNew = !article;
+const { articleTypes, article, title, note } = Astro.props;
 // <input type="date"> 要 YYYY-MM-DD；資料庫存的是 ISO8601 UTC
 const dateValue = article ? article.createDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
 ---
@@ -31,7 +34,8 @@ const dateValue = article ? article.createDate.slice(0, 10) : new Date().toISOSt
   <Csrf />
   {article && <input type="hidden" name="ArticleID" value={article.articleId}>}
 
-  <fieldset class="record p-6">
+  <Panel title={title} note={note}>
+  <fieldset class="form-block">
     <legend class="form-legend">文章資料</legend>
 
     <div class="form-row">
@@ -83,12 +87,18 @@ const dateValue = article ? article.createDate.slice(0, 10) : new Date().toISOSt
     </div>
   </fieldset>
 
-  <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? '新增文章' : '確認'}</button>
-    <a href="/backend/WebMs/Articles" class="btn btn-quiet">取消</a>
+  {/* 動作列在面板底部（舊後台的 .form-actions），順序照舊站：取消 → 確認 */}
+  <Fragment slot="foot">
     {article && (
-      <a class="live-face ml-auto" href={`/Home/ArticleDetail?ArticleID=${article.articleId}`}
-         target="_blank" rel="noopener">/Home/ArticleDetail?ArticleID={article.articleId.slice(0, 8)}… ↗</a>
+      /* 印整條網址，太長交給 .live-url 用 CSS 截 —— 不在這裡 slice() 硬接「…」 */
+      <a class="live-face live-url" href={`/Home/ArticleDetail?ArticleID=${article.articleId}`}
+         target="_blank" rel="noopener"
+         title={`在新分頁開啟 /Home/ArticleDetail?ArticleID=${article.articleId}`}
+      >/Home/ArticleDetail?ArticleID={article.articleId}</a>
     )}
-  </div>
+    <a href="/backend/WebMs/Articles" class="btn btn-quiet">取消</a>
+    {/* 新增與編輯一律「確認」—— §10b 與舊站 AddArticles.cshtml:111 */}
+    <button type="submit" class="btn btn-primary">確認</button>
+  </Fragment>
+  </Panel>
 </form>

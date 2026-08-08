@@ -2,17 +2,21 @@
 /**
  * 共用的列表。
  *
- * 版面照舊後台：一張表格，欄位順序與表頭文字逐字對照 .cshtml
- * （排序 → 代表圖 → 分類 → 標題 → 編輯 → 刪除），最後兩欄是動作。
- * 欄位定義在 src/lib/admin/entities.ts 的 `columns`。
+ * 版面照舊後台：面板（`.well`）包住一切 —— header 條是頁面名稱，body 上方是
+ * 新增鈕（`.widget-body-toolbar`，Articles.cshtml:20-32），下面一張表格，
+ * 欄位順序與表頭文字逐字對照 .cshtml（排序 → 代表圖 → 分類 → 標題 →
+ * 編輯 → 刪除）。欄位定義在 src/lib/admin/entities.ts 的 `columns`。
  *
- * 兩處跟舊系統不同，都是刻意的：
+ * 三處跟舊系統不同，都是刻意的：
  *  1. 「排序」欄舊系統是每列一個數字輸入框 + 上方「儲存排序」整批送出。
  *     這裡沿用既有的上/下一格（/api/admin/{key}/sort），數字照樣印在旁邊 ——
  *     少一個「改了數字忘了按儲存」的失敗模式。
  *  2. 刪除舊系統是 Bootstrap modal，這裡是原地展開的 <details>，不需要 JS。
+ *  3. 多一欄「公開網址」，而且印的是**那條網址本身**，不是「開啟 ↗」這種
+ *     按鈕文案 —— 那是 §10 的簽名元素定義。過長由 .live-url 用 CSS 截。
  */
 import Csrf from './Csrf.astro';
+import Panel from './Panel.astro';
 import { type EntityDef } from '../../lib/admin/entities';
 import { formatDate } from '../../lib/format';
 
@@ -24,92 +28,90 @@ interface Props {
 const { def, rows, may } = Astro.props;
 const editUrl = (row: Record<string, any>) => `/backend/WebMs/Edit${def.key}?id=${row[def.idColumn]}`;
 ---
-<div class="flex flex-wrap items-baseline justify-between gap-4">
-  <div>
-    <h1 class="record-title text-2xl">{def.menuLabel}</h1>
-    <p class="eyebrow mt-1"><span class="instrument">{rows.length}</span> 筆 · 顯示在 {def.publicNote}</p>
-  </div>
-  {may.add && <a href={`/backend/WebMs/Add${def.key}`} class="btn btn-primary">新增{def.label}</a>}
-</div>
+<Panel title={def.menuLabel} note={`${rows.length} 筆 · 顯示在 ${def.publicNote}`} flush>
+  {may.add && (
+    <a slot="toolbar" href={`/backend/WebMs/Add${def.key}`} class="btn btn-primary">新增{def.label}</a>
+  )}
 
-{rows.length === 0 ? (
-  <div class="record mt-8 p-10 text-center">
-    <p class="text-sm text-ink-soft">還沒有任何{def.label}。</p>
-    {may.add && <a href={`/backend/WebMs/Add${def.key}`} class="btn btn-primary mt-5">新增第一筆</a>}
-  </div>
-) : (
-  <div class="mt-8 overflow-x-auto">
-    <table class="grid-table">
-      <thead>
-        <tr>
-          {def.sortable && may.edit && <th class="text-center" style="width:6%">排序</th>}
-          {def.columns.map((c) => (
-            <th class:list={[c.center && 'text-center']} style={c.width ? `width:${c.width}` : undefined}>{c.label}</th>
-          ))}
-          <th class="text-center" style="width:12%">公開網址</th>
-          {may.edit && <th class="text-center" style="width:6%">編輯</th>}
-          {may.delete && <th class="text-center" style="width:6%">刪除</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, i) => (
+  {rows.length === 0 ? (
+    <div class="p-10 text-center">
+      <p class="text-sm text-ink-soft">還沒有任何{def.label}。</p>
+      {may.add && <a href={`/backend/WebMs/Add${def.key}`} class="btn btn-primary mt-5">新增第一筆</a>}
+    </div>
+  ) : (
+    <div class="panel-scroll">
+      <table class="grid-table">
+        <thead>
           <tr>
-            {def.sortable && may.edit && (
-              <td class="text-center align-middle">
-                <form method="post" action={`/api/admin/${def.key}/sort`} class="flex items-center justify-center gap-1">
-                  <Csrf />
-                  <input type="hidden" name="id" value={row[def.idColumn]}>
-                  <button type="submit" name="dir" value="up" class="sort-btn" disabled={i === 0}
-                          aria-label={`把第 ${i + 1} 筆往上移`}>↑</button>
-                  <span class="instrument text-ink-faint">{row.Sort}</span>
-                  <button type="submit" name="dir" value="down" class="sort-btn" disabled={i === rows.length - 1}
-                          aria-label={`把第 ${i + 1} 筆往下移`}>↓</button>
-                </form>
-              </td>
-            )}
-
+            {def.sortable && may.edit && <th class="text-center" style="width:6%">排序</th>}
             {def.columns.map((c) => (
-              <td class:list={['align-middle', c.center && 'text-center']}>
-                {c.kind === 'photo'
-                  ? (row[c.column] && def.media
-                      ? <img src={`/Upload/${def.media.entity}/${row[def.idColumn]}/${row[c.column]}`}
-                             alt="" width="150" loading="lazy" class="inline-block max-w-[150px] border border-bench-deep">
-                      : <span class="eyebrow">（沒有圖）</span>)
-                  : c.kind === 'date'
-                    ? <span class="instrument">{formatDate(String(row[c.column] ?? ''))}</span>
-                    : c.primary && may.edit
-                      ? <a href={editUrl(row)} class="record-title text-ink no-underline hover:text-brass">{row[c.column]}</a>
-                      : <span class:list={[c.primary && 'record-title']}>{row[c.column]}</span>}
-              </td>
+              <th class:list={[c.center && 'text-center']} style={c.width ? `width:${c.width}` : undefined}>{c.label}</th>
             ))}
-
-            <td class="text-center align-middle">
-              <a class="live-face" href={def.liveUrl(row)} target="_blank" rel="noopener"
-                 title={`在新分頁開啟 ${def.liveUrl(row)}`}>開啟 ↗</a>
-            </td>
-
-            {may.edit && (
-              <td class="text-center align-middle">
-                <a href={editUrl(row)} class="btn-xs btn-xs-edit">編輯</a>
-              </td>
-            )}
-
-            {may.delete && (
-              <td class="text-center align-middle">
-                <details class="inline-block text-left">
-                  <summary class="btn-xs btn-xs-del">刪除</summary>
-                  <form method="post" action={`/api/admin/${def.key}/delete`} class="mt-2 whitespace-nowrap">
+            <th style="width:18%">公開網址</th>
+            {may.edit && <th class="text-center" style="width:6%">編輯</th>}
+            {may.delete && <th class="text-center" style="width:6%">刪除</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr>
+              {def.sortable && may.edit && (
+                <td class="text-center align-middle">
+                  <form method="post" action={`/api/admin/${def.key}/sort`} class="flex items-center justify-center gap-1">
                     <Csrf />
                     <input type="hidden" name="id" value={row[def.idColumn]}>
-                    <span class="mr-2 text-sm text-ink-soft">確定要刪除嗎？</span>
-                    <button type="submit" class="btn btn-danger">確定</button>
+                    <button type="submit" name="dir" value="up" class="sort-btn" disabled={i === 0}
+                            aria-label={`把第 ${i + 1} 筆往上移`}>↑</button>
+                    <span class="instrument text-ink-faint">{row.Sort}</span>
+                    <button type="submit" name="dir" value="down" class="sort-btn" disabled={i === rows.length - 1}
+                            aria-label={`把第 ${i + 1} 筆往下移`}>↓</button>
                   </form>
-                </details>
+                </td>
+              )}
+
+              {def.columns.map((c) => (
+                <td class:list={['align-middle', c.center && 'text-center']}>
+                  {c.kind === 'photo'
+                    ? (row[c.column] && def.media
+                        ? <img src={`/Upload/${def.media.entity}/${row[def.idColumn]}/${row[c.column]}`}
+                               alt="" width="150" loading="lazy" class="inline-block max-w-[150px] border border-bench-deep">
+                        : <span class="eyebrow">（沒有圖）</span>)
+                    : c.kind === 'date'
+                      ? <span class="instrument">{formatDate(String(row[c.column] ?? ''))}</span>
+                      : c.primary && may.edit
+                        ? <a href={editUrl(row)} class="record-title text-ink no-underline hover:text-brass">{row[c.column]}</a>
+                        : <span class:list={[c.primary && 'record-title']}>{row[c.column]}</span>}
+                </td>
+              ))}
+
+              <td class="align-middle">
+                <a class="live-face live-url" href={def.liveUrl(row)} target="_blank" rel="noopener"
+                   title={`在新分頁開啟 ${def.liveUrl(row)}`}>{def.liveUrl(row)}</a>
               </td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-)}
+
+              {may.edit && (
+                <td class="text-center align-middle">
+                  <a href={editUrl(row)} class="btn-xs btn-xs-edit">編輯</a>
+                </td>
+              )}
+
+              {may.delete && (
+                <td class="text-center align-middle">
+                  <details class="inline-block text-left">
+                    <summary class="btn-xs btn-xs-del">刪除</summary>
+                    <form method="post" action={`/api/admin/${def.key}/delete`} class="mt-2 whitespace-nowrap">
+                      <Csrf />
+                      <input type="hidden" name="id" value={row[def.idColumn]}>
+                      <span class="mr-2 text-sm text-ink-soft">確定要刪除嗎？</span>
+                      <button type="submit" class="btn btn-danger">確定</button>
+                    </form>
+                  </details>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</Panel>

@@ -13,6 +13,7 @@ import { env } from 'cloudflare:workers';
 import Admin from '../../../layouts/Admin.astro';
 import Flash from '../../../components/admin/Flash.astro';
 import Csrf from '../../../components/admin/Csrf.astro';
+import Panel from '../../../components/admin/Panel.astro';
 import { requirePermission, can } from '../../../lib/auth/session';
 import { formatDate } from '../../../lib/format';
 
@@ -48,21 +49,17 @@ const { results: rows } = await env.DB.prepare(
 
 <Flash />
 
-<div class="flex flex-wrap items-baseline justify-between gap-4">
-  <div>
-    <h1 class="record-title text-2xl">文章維護</h1>
-    <p class="eyebrow mt-1"><span class="instrument">{total}</span> 篇 · 顯示在 /Home/Articles 與首頁</p>
-  </div>
-  {mayAdd && <a href="/backend/WebMs/AddArticles" class="btn btn-primary">新增文章</a>}
-</div>
+<Panel title="文章維護" note={`${total} 篇 · 顯示在 /Home/Articles 與首頁`} flush>
+
+{mayAdd && <a slot="toolbar" href="/backend/WebMs/AddArticles" class="btn btn-primary">新增文章</a>}
 
 {rows.length === 0 ? (
-  <div class="record mt-8 p-10 text-center">
+  <div class="p-10 text-center">
     <p class="text-sm text-ink-soft">還沒有任何文章。</p>
     {mayAdd && <a href="/backend/WebMs/AddArticles" class="btn btn-primary mt-5">寫第一篇</a>}
   </div>
 ) : (
-  <div class="mt-8 overflow-x-auto">
+  <div class="panel-scroll">
     <table class="grid-table">
       <thead>
         <tr>
@@ -70,7 +67,7 @@ const { results: rows } = await env.DB.prepare(
           <th class="text-center" style="width:12%">分類</th>
           <th>標題</th>
           <th class="text-center" style="width:12%">日期</th>
-          <th class="text-center" style="width:10%">公開網址</th>
+          <th style="width:20%">公開網址</th>
           {mayEdit && <th class="text-center" style="width:6%">編輯</th>}
           {mayDelete && <th class="text-center" style="width:6%">刪除</th>}
         </tr>
@@ -95,9 +92,12 @@ const { results: rows } = await env.DB.prepare(
               )}
             </td>
             <td class="text-center align-middle"><span class="instrument">{formatDate(a.createDate)}</span></td>
-            <td class="text-center align-middle">
-              <a class="live-face" href={`/Home/ArticleDetail?ArticleID=${a.id}`} target="_blank" rel="noopener"
-                 title={`在新分頁開啟 /Home/ArticleDetail?ArticleID=${a.id}`}>開啟 ↗</a>
+            <td class="align-middle">
+              {/* 印的是那條網址本身，不是「開啟 ↗」—— §10 的簽名元素。
+                  太長由 .live-url 用 text-overflow 截，title 仍給完整網址。 */}
+              <a class="live-face live-url" href={`/Home/ArticleDetail?ArticleID=${a.id}`} target="_blank" rel="noopener"
+                 title={`在新分頁開啟 /Home/ArticleDetail?ArticleID=${a.id}`}
+              >/Home/ArticleDetail?ArticleID={a.id}</a>
             </td>
             {mayEdit && (
               <td class="text-center align-middle">
@@ -124,8 +124,9 @@ const { results: rows } = await env.DB.prepare(
   </div>
 )}
 
+{/* 舊後台的分頁器在表格底下、面板之內（Articles.cshtml:78-80） */}
 {pageCount > 1 && (
-  <nav aria-label="分頁" class="mt-8 flex items-center gap-2">
+  <nav slot="foot" aria-label="分頁" class="mr-auto flex items-center gap-2">
     {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
       <a href={`?p=${n}`} aria-current={n === page ? 'page' : undefined}
          class:list={[
@@ -135,5 +136,7 @@ const { results: rows } = await env.DB.prepare(
     ))}
   </nav>
 )}
+
+</Panel>
 
 </Admin>

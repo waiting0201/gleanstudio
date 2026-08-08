@@ -9,6 +9,7 @@
 import { env } from 'cloudflare:workers';
 import Admin from '../../../layouts/Admin.astro';
 import Csrf from '../../../components/admin/Csrf.astro';
+import Panel from '../../../components/admin/Panel.astro';
 import { verifyPassword } from '../../../lib/auth/password';
 import { verifyCsrf } from '../../../lib/auth/csrf';
 import { SESSION_KEY, type AdminSession } from '../../../lib/auth/session';
@@ -65,17 +66,15 @@ if (Astro.request.method === 'POST') {
   error = '帳號或密碼不對。再試一次，或請管理者重設密碼。';
 }
 ---
+{/* 版面照舊後台 Views/Main/Login.cshtml:11-51：垂直置中的 `.well.no-padding`，
+    卡片上方一條「登入系統」header（`.smart-form header`），送出鈕在底部
+    footer 條靠右（`.smart-form footer .btn{float:right}`）。
+    字標不在卡片裡 —— 它在頂欄，跟舊站的 `#extr-page #header #logo` 一樣。 */}
 <Admin title="登入" bare>
-<main class="flex min-h-screen items-center justify-center px-5 py-16">
-  <div class="w-full max-w-sm">
-
-    <div class="mb-8">
-      <div class="font-display text-2xl tracking-[0.2em] text-ink">GLEAN</div>
-      <div class="eyebrow mt-1">禾勤藝術 · 內容後台</div>
-    </div>
-
-    <form method="post" class="record p-7" novalidate>
-      <Csrf />
+<div class="w-full max-w-sm">
+  <form method="post" novalidate>
+    <Csrf />
+    <Panel title="登入系統">
       {error && (
         <p role="alert" class="mb-5 border-l-2 border-oxide bg-oxide-wash px-3 py-2 text-sm text-oxide">
           {error}
@@ -91,7 +90,7 @@ if (Astro.request.method === 'POST') {
         >
       </div>
 
-      <div class="mb-7">
+      <div>
         <label class="field-label" for="password">密碼</label>
         <input
           class="field-input" id="password" name="password" type="password"
@@ -100,13 +99,12 @@ if (Astro.request.method === 'POST') {
         >
       </div>
 
-      <button type="submit" class="btn btn-primary w-full justify-center">登入</button>
-    </form>
+      <button slot="foot" type="submit" class="btn btn-primary">登入</button>
+    </Panel>
+  </form>
 
-    <p class="eyebrow mt-6">
-      忘記密碼請找管理者重設。這裡沒有自助重設。
-    </p>
-
-  </div>
-</main>
+  <p class="eyebrow mt-4">
+    忘記密碼請找管理者重設。這裡沒有自助重設。
+  </p>
+</div>
 </Admin>

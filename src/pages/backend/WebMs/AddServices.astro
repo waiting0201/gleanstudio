@@ -12,7 +12,6 @@ const { def, session } = loaded;
 ---
 <Admin title={`新增${def.label}`} session={session}>
 <Flash />
-<h1 class="record-title text-2xl">新增{def.label}</h1>
-<p class="eyebrow mt-1">儲存之後會立刻出現在 {def.publicNote}。</p>
-<div class="mt-8"><EntityForm def={def} /></div>
+<EntityForm def={def} title={`新增${def.label}`}
+            note={`儲存之後會立刻出現在 ${def.publicNote}。`} />
 </Admin>

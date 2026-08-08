@@ -10,17 +10,21 @@
  * 而導覽列是照著這個長出來的，所以這裡勾什麼，對方就看得到什麼。
  */
 import Csrf from './Csrf.astro';
+import Panel from './Panel.astro';
 import { MIN_PASSWORD_LENGTH } from '../../lib/auth/password';
 
 interface LimNode { LimID: number; Key: string; Value: string; ParentValue: string }
 interface Props {
+  /** 面板 header 條上的字 —— 舊後台 EditAdmins.cshtml:22 的 `<h2>編輯管理者</h2>` */
+  title: string;
+  note?: string;
   row?: { AdminID: number; Name: string; Username: string; Email: string | null; IsSuperAdmin: number; MustChangePassword: number };
   lims: LimNode[];
   granted: Record<number, { view: boolean; add: boolean; update: boolean; delete: boolean }>;
   /** 正在編輯自己 —— 不給關掉自己的超級使用者旗標 */
   isSelf: boolean;
 }
-const { row, lims, granted, isSelf } = Astro.props;
+const { row, lims, granted, isSelf, title, note } = Astro.props;
 const isNew = !row;
 
 const groups = [...new Map(lims.map((l) => [l.ParentValue, lims.filter((x) => x.ParentValue === l.ParentValue)])).entries()];
@@ -30,7 +34,8 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
   <Csrf />
   {row && <input type="hidden" name="id" value={row.AdminID}>}
 
-  <fieldset class="record p-6">
+  <Panel title={title} note={note}>
+  <fieldset class="form-block">
     <legend class="form-legend">管理者資料</legend>
 
     <div class="form-row">
@@ -61,10 +66,12 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
       <input class="field-input" id="Email" name="Email" type="email" value={row?.Email ?? ''} autocomplete="off">
     </div>
   </fieldset>
+  </Panel>
 
-  <fieldset class="record mt-6 p-6">
-    <legend class="form-legend">權限</legend>
-    <p class="field-hint mt-1 mb-5">
+  <Panel title="權限">
+  <fieldset class="form-block">
+    <legend class="sr-only">權限</legend>
+    <p class="field-hint mt-0 mb-5">
       沒有勾「檢視」的區塊，對方的左側導覽根本不會出現。改完立刻生效，不用重新登入。
     </p>
 
@@ -112,8 +119,11 @@ const VERBS = [['view', '檢視'], ['add', '新增'], ['update', '修改'], ['de
     ))}
   </fieldset>
 
-  <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? '新增管理者' : '確認'}</button>
+  {/* 動作列在面板底部（舊後台的 .form-actions），順序照舊站：取消 → 確認 */}
+  <Fragment slot="foot">
     <a href="/backend/SettingMs/Admins" class="btn btn-quiet">取消</a>
-  </div>
+    {/* 新增與編輯一律「確認」—— §10b 與舊站 SettingMs/AddAdmins.cshtml:178 */}
+    <button type="submit" class="btn btn-primary">確認</button>
+  </Fragment>
+  </Panel>
 </form>

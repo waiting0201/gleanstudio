@@ -13,7 +13,6 @@ const lims = await limTree();
 ---
 <Admin title="新增管理者" session={guard.session}>
 <Flash />
-<h1 class="record-title text-2xl">新增管理者</h1>
-<p class="eyebrow mt-1">建立之後對方就能登入，第一次登入會被要求更改密碼。</p>
-<div class="mt-8"><AdminForm lims={lims} granted={{}} isSelf={false} /></div>
+<AdminForm lims={lims} granted={{}} isSelf={false}
+           title="新增管理者" note="建立之後對方就能登入，第一次登入會被要求更改密碼。" />
 </Admin>

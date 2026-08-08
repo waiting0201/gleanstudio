@@ -2,10 +2,21 @@
 /**
  * 後台版型。**唯一 import admin.css 的地方** —— 見那個檔開頭的警告。
  *
- * 頂欄是近黑的品牌色，內容區是中性灰工作檯。左側導覽的**名稱與分組直接來自
- * Lims 表**，跟舊系統同一份資料（網站管理 ▸ 文章分類維護 …），再依編輯者
- * **實際的**權限過濾：進不去的區塊不會出現。
- * 這也讓 09-known-issues 3.3（現任管理員沒有 Teams 權限）浮出來而不是被藏起來。
+ * 骨架照舊後台的 partial 逐件對過（docs/06-admin-spec.md §10b）：
+ *
+ *   _Header.cshtml     → 固定頂欄，左邊字標的寬度就是左欄的寬度
+ *   _Aside.cshtml      → 深色左欄
+ *   _CurrentUser.cshtml→ 左欄頂端的使用者區塊
+ *   _Ribbon.cshtml     → 麵包屑
+ *   _Footer.cshtml     → 「禾勤藝術 － 後端管理系統」
+ *
+ * 顏色仍照 §10：灰工作檯、青銅只給記錄身分與會改動公開站的動作，
+ * Cinzel 只出現在頂欄那一處。
+ *
+ * 左側導覽的**名稱與分組直接來自 Lims 表**，跟舊系統同一份資料
+ * （網站管理 ▸ 文章分類維護 …），再依編輯者**實際的**權限過濾：進不去的
+ * 區塊不會出現。這也讓 09-known-issues 3.3（現任管理員沒有 Teams 權限）
+ * 浮出來而不是被藏起來。
  */
 import '../styles/admin.css';
 import type { AdminSession } from '../lib/auth/session';
@@ -15,12 +26,41 @@ import Csrf from '../components/admin/Csrf.astro';
 interface Props {
   title: string;
   session?: AdminSession;
-  /** 沒有版型外框的頁面（登入、403） */
+  /** 沒有左欄與麵包屑的頁面（登入、強制換密碼）—— 舊後台的 `#extr-page` */
   bare?: boolean;
 }
 const { title, session, bare = false } = Astro.props;
 const nav = bare ? [] : await visibleNav(session);
 const here = Astro.url.pathname;
+const HOME = '/backend/Main/Index';
+
+/* 舊系統的 active 判斷是 action 去掉 Add/Edit 之後比對 Key，
+   等價於「網址前綴是 /backend/{父}/{Add|Edit}?{子}」。 */
+const isActive = (groupKey: string, item: { href: string; route: string }) => {
+  const child = item.route.split('/')[1];
+  return here === item.href
+    || here.startsWith(`/backend/${groupKey}/Add${child}`)
+    || here.startsWith(`/backend/${groupKey}/Edit${child}`);
+};
+
+/* 麵包屑：首頁 › {群組} › {選單項目} › {這一頁}。
+   群組與項目一律用 Lims 的名稱，跟左欄同一份字。 */
+const crumbs: { label: string; href?: string }[] = [];
+if (!bare) {
+  crumbs.push({ label: '首頁', href: here === HOME ? undefined : HOME });
+  for (const group of nav) {
+    const item = group.items.find((i) => isActive(group.key, i));
+    if (!item) continue;
+    crumbs.push({ label: group.label });
+    crumbs.push({ label: item.label, href: here === item.href ? undefined : item.href });
+    break;
+  }
+  const last = crumbs[crumbs.length - 1];
+  // 「文章分類維護」底下的「文章分類」不用再印一次
+  if (here !== HOME && !last.label.startsWith(title)) crumbs.push({ label: title });
+}
+
+const initial = (session?.name ?? session?.username ?? '?').trim().charAt(0) || '?';
 ---
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
@@ -33,65 +73,75 @@ const here = Astro.url.pathname;
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Noto+Sans+TC:wght@300;400;500&family=Noto+Serif+TC:wght@500&display=swap" rel="stylesheet">
 </head>
-<body class="min-h-screen bg-bench text-ink">
-{bare ? (
-  <slot />
-) : (
-  <div class="min-h-screen flex flex-col">
-    <header class="bg-ink text-white">
-      <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
-        <a href="/backend/Main/Index" class="flex items-baseline gap-3 text-white no-underline">
-          <span class="font-display text-lg tracking-[0.18em]">GLEAN</span>
-          <span class="eyebrow text-white/45">內容後台</span>
-        </a>
-        <div class="flex items-center gap-4">
-          <span class="eyebrow text-white/55">{session?.name ?? ''}</span>
-          {/* 登出也是變更操作，同樣走 Hono 那條 CSRF 鏈 —— 少這一行就必然 403 */}
-          <form method="post" action="/api/admin/logout">
-            <Csrf />
-            <button type="submit" class="eyebrow bg-transparent text-white/70 hover:text-white cursor-pointer border-0 p-0">登出</button>
-          </form>
-        </div>
-      </div>
-    </header>
+<body class="admin">
 
-    <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-5 py-8 md:flex-row">
-      <nav aria-label="後台區塊" class="md:w-52 md:shrink-0">
+<header class="admin-top">
+  <a href={bare ? '/' : HOME} class="admin-brand">
+    <span class="admin-wordmark">GLEAN</span>
+    <span class="eyebrow">內容後台</span>
+  </a>
+  {!bare && session && (
+    <div class="admin-top-right">
+      <span class="eyebrow admin-whoami">{session.name}</span>
+      {/* 登出也是變更操作，同樣走 Hono 那條 CSRF 鏈 —— 少這一行就必然 403 */}
+      <form method="post" action="/api/admin/logout">
+        <Csrf />
+        <button type="submit" class="admin-signout">登出</button>
+      </form>
+    </div>
+  )}
+</header>
+
+{bare ? (
+  <main class="admin-shell flex items-center justify-center px-5 py-12">
+    <slot />
+  </main>
+) : (
+  <div class="admin-shell">
+    <aside class="admin-aside">
+      {session && (
+        <div class="admin-user">
+          <span class="admin-avatar" aria-hidden="true">{initial}</span>
+          <span class="admin-user-name">{session.name}</span>
+        </div>
+      )}
+      <nav class="admin-nav" aria-label="後台區塊">
         {nav.map((group) => (
-          <div class="mb-6 last:mb-0">
-            <div class="eyebrow mb-1.5 md:pl-3">{group.label}</div>
-            <ul class="flex flex-wrap gap-x-5 gap-y-1 md:block">
-              {group.items.map((item) => {
-                /* 舊系統的 active 判斷是 action 去掉 Add/Edit 之後比對 Key，
-                   等價於「網址前綴是 /backend/{父}/{Add|Edit}?{子}」。 */
-                const active = here === item.href
-                  || here.startsWith(`/backend/${group.key}/Add${item.route.split('/')[1]}`)
-                  || here.startsWith(`/backend/${group.key}/Edit${item.route.split('/')[1]}`);
-                return (
-                  <li>
-                    <a
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      class:list={[
-                        'block border-l-2 py-1.5 pl-3 text-sm no-underline transition-colors',
-                        active
-                          ? 'border-brass font-normal text-ink'
-                          : 'border-transparent text-ink-soft hover:border-bench-deep hover:text-ink',
-                      ]}
-                    >{item.label}</a>
-                  </li>
-                );
-              })}
+          <div class="admin-nav-group">
+            <p class="admin-nav-label">{group.label}</p>
+            <ul class="admin-nav-list">
+              {group.items.map((item) => (
+                <li>
+                  <a href={item.href} aria-current={isActive(group.key, item) ? 'page' : undefined}
+                  >{item.label}</a>
+                </li>
+              ))}
             </ul>
           </div>
         ))}
       </nav>
+    </aside>
 
-      <main class="min-w-0 flex-1">
+    <div class="admin-main">
+      <div class="admin-ribbon">
+        <ol class="admin-crumbs">
+          {crumbs.map((c, i) => (
+            <li>
+              {i > 0 && <span class="admin-crumb-sep" aria-hidden="true">›&nbsp;</span>}
+              {c.href ? <a href={c.href}>{c.label}</a> : c.label}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <main class="admin-content">
         <slot />
       </main>
     </div>
   </div>
 )}
+
+<footer class="admin-foot">禾勤藝術 － 後端管理系統</footer>
+
 </body>
 </html>

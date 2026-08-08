@@ -10,7 +10,7 @@ const loaded = await loadEntity(Astro, 'ArticleTypes', 'list');
 if ('response' in loaded) return loaded.response;
 const rows = await listRows(loaded.def);
 ---
-<Admin title={loaded.def.label} session={loaded.session}>
+<Admin title={loaded.def.menuLabel} session={loaded.session}>
 <Flash />
 <EntityList def={loaded.def} rows={rows} may={loaded.may} />
 </Admin>

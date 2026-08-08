@@ -21,8 +21,6 @@ const existing = await existingValues();
 ---
 <Admin title="編輯案例" session={guard.session}>
 <Flash />
-<div class="record-id">#{row.LegacyOrder}</div>
-<h1 class="record-title mt-1 text-2xl">編輯案例</h1>
-<p class="eyebrow mt-1">目前在 {row.Type} › {row.Place} › {row.Title} 底下。</p>
-<div class="mt-8"><ProjectForm row={row} existing={existing} /></div>
+<ProjectForm row={row} existing={existing} title="編輯案例"
+             note={`目前在 ${row.Type} › ${row.Place} › ${row.Title} 底下。`} />
 </Admin>

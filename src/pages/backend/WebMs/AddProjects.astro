@@ -13,7 +13,6 @@ const existing = await existingValues();
 ---
 <Admin title="新增案例" session={guard.session}>
 <Flash />
-<h1 class="record-title text-2xl">新增案例</h1>
-<p class="eyebrow mt-1">會排在 /Home/Project 最後面。分類與地點請盡量從既有的值挑，不要重打。</p>
-<div class="mt-8"><ProjectForm existing={existing} /></div>
+<ProjectForm existing={existing} title="新增案例"
+             note="會排在 /Home/Project 最後面。分類與地點請盡量從既有的值挑，不要重打。" />
 </Admin>

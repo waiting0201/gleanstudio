@@ -6,15 +6,18 @@
  * 版面也照舊後台：<legend>{實體}資料</legend> + 標籤在左的 horizontal form。
  */
 import Csrf from './Csrf.astro';
+import Panel from './Panel.astro';
 import RichText from './RichText.astro';
 import type { EntityDef } from '../../lib/admin/entities';
 
 interface Props {
   def: EntityDef;
   row?: Record<string, any>;
+  /** 面板 header 條上的字 —— 舊後台 `<header><h2>編輯文章</h2></header>` */
+  title: string;
+  note?: string;
 }
-const { def, row } = Astro.props;
-const isNew = !row;
+const { def, row, title, note } = Astro.props;
 const id = row ? String(row[def.idColumn]) : '';
 const photo = def.media ? row?.[def.media.photoColumn] : null;
 ---
@@ -22,7 +25,8 @@ const photo = def.media ? row?.[def.media.photoColumn] : null;
   <Csrf />
   {row && <input type="hidden" name="id" value={id}>}
 
-  <fieldset class="record p-6">
+  <Panel title={title} note={note}>
+  <fieldset class="form-block">
     <legend class="form-legend">{def.label}資料</legend>
 
     {def.fields.map((f) => (
@@ -75,11 +79,17 @@ const photo = def.media ? row?.[def.media.photoColumn] : null;
     ))}
   </fieldset>
 
-  <div class="mt-6 flex flex-wrap items-center gap-3">
-    <button type="submit" class="btn btn-primary">{isNew ? `新增${def.label}` : '確認'}</button>
-    {def.singleton === undefined && <a href={`/backend/WebMs/${def.key}`} class="btn btn-quiet">取消</a>}
+  {/* 動作列在面板底部（舊後台的 .form-actions），順序照舊站：取消 → 確認 */}
+  <Fragment slot="foot">
     {row && (
-      <a class="live-face ml-auto" href={def.liveUrl(row)} target="_blank" rel="noopener">{def.liveUrl(row)} ↗</a>
+      <a class="live-face live-url" href={def.liveUrl(row)} target="_blank" rel="noopener"
+         title={`在新分頁開啟 ${def.liveUrl(row)}`}>{def.liveUrl(row)}</a>
     )}
-  </div>
+    {def.singleton === undefined && <a href={`/backend/WebMs/${def.key}`} class="btn btn-quiet">取消</a>}
+    {/* 新增與編輯一律「確認」—— 06-admin-spec §10b 明文，舊站六支 Add view
+        （AddArticleTypes.cshtml:70 等）也逐字都是「確認」。「新增X」是比較好的
+        介面文案，但 §10b 是業主看過第一版說「對不上」之後定的，逐字照舊站優先。 */}
+    <button type="submit" class="btn btn-primary">確認</button>
+  </Fragment>
+  </Panel>
 </form>

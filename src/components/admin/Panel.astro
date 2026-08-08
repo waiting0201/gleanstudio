@@ -1,0 +1,49 @@
+---
+/**
+ * 內容一律包在面板裡 —— 舊後台的 `.well` / `.jarviswidget`。
+ *
+ * 三個區塊逐件對應（docs/06-admin-spec.md §10b）：
+ *
+ *   header  → `<header><h2>編輯文章</h2></header>`（EditArticles.cshtml:17-20）
+ *             列表頁放頁面名稱，表單頁放「新增/編輯{實體}」
+ *   toolbar → `.widget-body-toolbar`（Articles.cshtml:20-32）—— 新增鈕在表格左上
+ *   foot    → `.form-actions`（EditArticles.cshtml:107-119）—— 靠右，取消 → 確認
+ *
+ * `flush` 是舊後台的 `.no-padding`：表格要貼齊面板邊。
+ */
+interface Props {
+  title: string;
+  /** 副標。列表的筆數、表單的一句提示 —— 舊後台沒有，是我們加的 */
+  note?: string;
+  /**
+   * 標題「上方」的青銅小字（`.record-id`）。狀態碼這種儀表資訊放這裡 ——
+   * 塞進 note 會讀起來像註腳。拉丁字母與數字限定，見 §10 的儀表層警告。
+   */
+  eyebrow?: string;
+  /** body 不留內距（表格用） */
+  flush?: boolean;
+  class?: string;
+}
+const { title, note, eyebrow, flush = false, class: extra } = Astro.props;
+
+/* 先算出來再決定要不要印外框。`Astro.slots.has()` 對
+   `{cond && <a slot="toolbar">}` 這種寫法一律回 true，直接用它會在條件不成立時
+   留下一條空的分隔線。 */
+const toolbar = Astro.slots.has('toolbar') ? (await Astro.slots.render('toolbar')).trim() : '';
+const foot = Astro.slots.has('foot') ? (await Astro.slots.render('foot')).trim() : '';
+---
+<section class:list={['panel', extra]}>
+  <header class="panel-head">
+    {eyebrow && <p class="record-id panel-eyebrow">{eyebrow}</p>}
+    <h2 class="panel-title">{title}</h2>
+    {note && <p class="panel-note">{note}</p>}
+  </header>
+
+  {toolbar && <div class="panel-toolbar" set:html={toolbar} />}
+
+  <div class:list={['panel-body', flush && 'panel-body-flush']}>
+    <slot />
+  </div>
+
+  {foot && <div class="panel-foot" set:html={foot} />}
+</section>

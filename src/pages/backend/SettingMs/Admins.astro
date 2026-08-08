@@ -4,6 +4,7 @@ import { env } from 'cloudflare:workers';
 import Admin from '../../../layouts/Admin.astro';
 import Flash from '../../../components/admin/Flash.astro';
 import Csrf from '../../../components/admin/Csrf.astro';
+import Panel from '../../../components/admin/Panel.astro';
 import { requirePermission, can } from '../../../lib/auth/session';
 
 export const prerender = false;
@@ -28,17 +29,13 @@ const { results: rows } = await env.DB.prepare(
 <Admin title="管理者維護" session={session}>
 <Flash />
 
-<div class="flex flex-wrap items-baseline justify-between gap-4">
-  <div>
-    <h1 class="record-title text-2xl">管理者維護</h1>
-    <p class="eyebrow mt-1"><span class="instrument">{rows.length}</span> 個帳號</p>
-  </div>
-  {mayAdd && <a href="/backend/SettingMs/AddAdmins" class="btn btn-primary">新增管理者</a>}
-</div>
+<Panel title="管理者維護" note={`${rows.length} 個帳號`} flush>
+
+{mayAdd && <a slot="toolbar" href="/backend/SettingMs/AddAdmins" class="btn btn-primary">新增管理者</a>}
 
 {/* 欄位照舊後台 Views/SettingMs/Admins.cshtml:48-52：姓名 / 帳號 / Email / 編輯 / 刪除。
     多一欄「權限」—— 舊系統要點進去才知道對方能碰哪些區塊。 */}
-<div class="mt-8 overflow-x-auto">
+<div class="panel-scroll">
   <table class="grid-table">
     <thead>
       <tr>
@@ -94,4 +91,5 @@ const { results: rows } = await env.DB.prepare(
     </tbody>
   </table>
 </div>
+</Panel>
 </Admin>

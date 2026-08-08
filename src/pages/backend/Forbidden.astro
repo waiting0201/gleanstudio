@@ -7,6 +7,7 @@
  * 見 docs/06-admin-spec.md §7
  */
 import Admin from '../../layouts/Admin.astro';
+import Panel from '../../components/admin/Panel.astro';
 import { getSession } from '../../lib/auth/session';
 
 export const prerender = false;
@@ -14,13 +15,13 @@ const session = await getSession(Astro);
 Astro.response.status = 403;
 ---
 <Admin title="沒有權限" session={session}>
-<div class="record max-w-lg p-7">
-  <div class="record-id">403</div>
-  <h1 class="record-title mt-2 text-xl">這個區塊沒有開給你</h1>
-  <p class="mt-3 text-sm text-ink-soft">
+{/* 403 放在標題上方的青銅儀表層，不當副標 —— 狀態碼是這一頁唯一的儀表資訊，
+    印成副標會讀起來像註腳。 */}
+<Panel title="這個區塊沒有開給你" eyebrow="403" class="max-w-2xl">
+  <p class="text-sm text-ink-soft">
     你的帳號沒有這個區塊的權限。左側只會列出你能進的地方 ——
     如果你認為這裡應該開放，請找管理者調整權限，改完立刻生效，不用重新登入。
   </p>
-  <a href="/backend/Main/Index" class="btn btn-quiet mt-6">回到首頁</a>
-</div>
+  <a slot="foot" href="/backend/Main/Index" class="btn btn-quiet">回到首頁</a>
+</Panel>
 </Admin>

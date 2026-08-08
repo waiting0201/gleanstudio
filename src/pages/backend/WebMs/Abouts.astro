@@ -17,9 +17,8 @@ const { def, session } = loaded;
 const row = await getRow(def, String(def.singleton));
 if (!row) return new Response('Abouts 沒有 AboutID = 1 的資料列。', { status: 500 });
 ---
-<Admin title={def.label} session={session}>
+<Admin title={def.menuLabel} session={session}>
 <Flash />
-<h1 class="record-title text-2xl">{def.label}</h1>
-<p class="eyebrow mt-1">顯示在 {def.publicNote}。只有這一筆，沒有新增或刪除。</p>
-<div class="mt-8"><EntityForm def={def} row={row} /></div>
+<EntityForm def={def} row={row} title={def.menuLabel}
+            note={`顯示在 ${def.publicNote}。只有這一筆，沒有新增或刪除。`} />
 </Admin>
