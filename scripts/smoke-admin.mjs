@@ -4,11 +4,14 @@
  *
  *   npm run smoke:admin        （先跑 npm run preview 讓 wrangler dev 起來）
  *
- * 會**真的**在本機 D1 建一筆文章再刪掉。跑完資料回到原狀，parity 應該仍然全綠 ——
+ *   # 打已部署的站，碰的是**正式** D1（Phase 7 用）
+ *   node scripts/smoke-admin.mjs --remote --base https://gleanstudio.waiting0201.workers.dev
+ *
+ * 會**真的**建一筆文章再刪掉。跑完資料回到原狀，parity 應該仍然全綠 ——
  * 最後一步就是驗這件事。
  *
  * 密碼從 gitignored 的 data/export/Admins.json 讀，不印出來。
- * 測試期間暫時把 MustChangePassword 設成 0，結束時還原。
+ * 測試期間暫時把 MustChangePassword 設成 0，結束時還原成**原值**。
  */
 import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -16,6 +19,21 @@ import { execFileSync } from 'node:child_process';
 const BASE = process.argv.includes('--base')
   ? process.argv[process.argv.indexOf('--base') + 1]
   : 'http://localhost:8787';
+
+/**
+ * ⚠️ `--remote` 動的是正式 D1。
+ *
+ * 這支測試會建資料再刪掉，`finally` 保證清理，但**中途被 Ctrl-C 砍掉就會留渣**。
+ * 而 `--base` 打線上、`d1` 卻寫死 `--local` 的組合更糟 —— 斷言會拿本機資料去
+ * 比對線上回應，得出的綠燈毫無意義。所以兩者不一致時直接擋下來。
+ */
+const REMOTE = process.argv.includes('--remote');
+if (REMOTE !== !/^https?:\/\/localhost|^https?:\/\/127\.0\.0\.1/.test(BASE)) {
+  console.error(`❌ --remote 與 --base 對不上：base=${BASE}，d1=${REMOTE ? 'remote' : 'local'}`);
+  console.error('   打線上站要加 --remote，否則斷言會拿本機 D1 去比對線上回應。');
+  process.exit(2);
+}
+if (REMOTE) console.log(`⚠️  正在對**正式** D1 執行，目標 ${BASE}\n`);
 
 const TEST_TITLE = '【煙霧測試】跑完會自動刪除';
 const TYPE_ID = 'ff829f70-4d55-4f55-aa1f-750c050d2be0';
@@ -29,7 +47,9 @@ let d1Calls = 0;
 const d1 = (sql, json = false) => {
   if (process.env.SMOKE_TRACE) console.log(`      [d1 #${++d1Calls}] ${sql.slice(0, 70)}`);
   const out = execFileSync('npx', [
-    'wrangler', 'd1', 'execute', 'gleanstudio', '--local', ...(json ? ['--json'] : []), '--command', sql,
+    // 遠端的寫入會跳確認提示，而這裡的 stdin 是 ignore —— 不給 -y 會卡死
+    'wrangler', 'd1', 'execute', 'gleanstudio', ...(REMOTE ? ['--remote', '-y'] : ['--local']),
+    ...(json ? ['--json'] : []), '--command', sql,
   ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   return json ? JSON.parse(out)[0].results : out;
 };
@@ -71,6 +91,14 @@ if (!ADMIN_ID) {
   console.error(`找不到帳號 ${admin.Username}。CI 請先跑 scripts/bootstrap-admin.mjs`);
   process.exit(1);
 }
+/**
+ * 還原成**原值**，不是寫死的 1。
+ *
+ * 本機的 seed 一定是 1，所以寫死看不出問題；正式站的管理者可能早就換過密碼、
+ * 值是 0，那樣「還原」等於平白把人鎖在換密碼頁。
+ */
+const MUST_CHANGE_BEFORE =
+  d1(`SELECT MustChangePassword m FROM Admins WHERE AdminID = ${ADMIN_ID}`, true)[0].m;
 d1(`UPDATE Admins SET MustChangePassword = 0 WHERE AdminID = ${ADMIN_ID}`);
 
 let cookie = '';
@@ -327,9 +355,10 @@ try {
   if (createdAdminId) d1(`DELETE FROM Admins WHERE AdminID = ${createdAdminId}`);
   d1("DELETE FROM Admins WHERE Username IN ('smoketest','weakpw')");
   check('測試帳號已清乾淨', d1("SELECT COUNT(*) n FROM Admins WHERE Username IN ('smoketest','weakpw')", true)[0].n === 0);
-  d1(`UPDATE Admins SET MustChangePassword = 1 WHERE AdminID = ${ADMIN_ID}`);
+  d1(`UPDATE Admins SET MustChangePassword = ${MUST_CHANGE_BEFORE} WHERE AdminID = ${ADMIN_ID}`);
   check('MustChangePassword 已還原',
-    d1(`SELECT MustChangePassword m FROM Admins WHERE AdminID = ${ADMIN_ID}`, true)[0].m === 1);
+    d1(`SELECT MustChangePassword m FROM Admins WHERE AdminID = ${ADMIN_ID}`, true)[0].m === MUST_CHANGE_BEFORE,
+    `→ ${MUST_CHANGE_BEFORE}`);
 }
 
 console.log(fail ? `\n❌ ${fail} 項未通過（${pass} 項通過）` : `\n✅ ${pass} 項全部通過`);

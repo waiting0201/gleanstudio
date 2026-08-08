@@ -221,14 +221,22 @@ node scripts/verify-media.mjs [--remote]
 - [ ] **輪替 reCAPTCHA 與 SendGrid key** —— 目前設的是舊程式碼裡的原值，等於沒清償
 - [x] **§3.1 的收件人已經決定** —— 收件人改由 `CONTACT_TO` 決定，訪客的信箱放 `reply_to`
       （`1420cef`，[09-known-issues](09-known-issues.md) §3.1）。兩個 secret 任一個沒設就不寄，
-      是 fail-safe 而不是預設寄給誰。`CONTACT_TO` 現在是開發者信箱，Phase 8 要換成禾勤的
+      是 fail-safe 而不是預設寄給誰。**`CONTACT_TO` 已於 2026-08-08 改成 `glean1218@gmail.com`**
 
 - [x] 部署到 `gleanstudio.workers.dev`，**使用正式資料**（Phase 6 一併完成）
 - [x] parity 套件打**已部署的 URL**：Level B 31/31、Level A 29/31
-- [ ] `parity:contact` 與 `smoke:admin` 也打已部署的 URL —— **還沒跑過線上站**
+- [x] `parity:contact` 打已部署的 URL：**4/4**（2026-08-08）。4 個情境都停在驗證失敗或
+      captcha 失敗，**不會寄出任何信**，可以安全重跑
+- [~] `smoke:admin` 打已部署的 URL：**45/48**（2026-08-08）。腳本原本把
+      `wrangler d1 execute --local` 寫死，加了 `--remote` 才跑得起來。
+      3 項失敗**全部是部署落後**，不是回歸 —— 線上跑的是 2026-08-07 13:12 那一版，
+      而斷言來自 `28f6515`（列表欄位改版）與 `0d08fc1`（密碼下限拿掉）。
+      同一份程式碼在 CI 是 48/48。**重新部署後要再跑一次確認**
 - [ ] Level C 視覺比對在 375 / 768 / 1440 跑過
 - [ ] 編輯者在新後台實際改一筆內容，確認前台渲染正常
-- [ ] **D1 → Azure SQL 反向回退腳本已寫好並測過**（[07-deployment](07-deployment.md) §5）
+- [~] ~~D1 → Azure SQL 反向回退腳本~~ —— **決定不做**（2026-08-08）：Azure SQL 會刪掉。
+      代價是切換後一旦有人用新後台就沒有回退路徑，
+      見 [13-cutover-worksheet](13-cutover-worksheet.md) §4
 - [ ] 至少跑 3 天
 
 ---
@@ -237,28 +245,31 @@ node scripts/verify-media.mjs [--remote]
 
 步驟見 [07-deployment](07-deployment.md) §4。
 
-**前置：DNS 換手**（[12-dns-cutover](12-dns-cutover.md)）—— **等 Phase 7 soak 通過之後才做**。開發期間新站跑在 `workers.dev`，不動正式網域。做完時網站還在 Azure，訪客無感。
+**操作單見 [13-cutover-worksheet](13-cutover-worksheet.md)** —— 照著打的逐步清單。
 
-⚠️ 有 ≥24 小時的 TTL 前置期，**至少留 3 個工作天**，不要排在切換當天。
+**前置：DNS 換手 ✅ 已完成**（2026-08-08 實測確認）。zone 已在 Cloudflare，
+apex 與 `www` 都已 proxied，origin 仍指 Azure。
 
-- [ ] Cloudflare zone 已建立（**Add a site**，不是 Transfer domain —— [Cloudflare Registrar 不支援 .tw](https://developers.cloudflare.com/registrar/top-level-domains/)）
-- [ ] HiNet 完整 DNS 記錄已匯出並與盤點結果對照
-- [ ] **DNS TTL 提前 ≥24 小時降到 60 秒**（無法事後補做）
-- [ ] NS 已改指 Cloudflare，解析結果與切換前一致
-- [ ] 回退用的 A 記錄值已記錄（`23.97.79.119`）
+⚠️ 原本寫的「≥24 小時 TTL 前置期、至少留 3 個工作天」**已經不適用** ——
+Cloudflare 對 proxied 記錄一律回 TTL 300，而且回退根本不必碰 DNS。
+
+- [x] Cloudflare zone 已建立，NS = `bella` / `carlos.ns.cloudflare.com`
+- [x] apex 與 `www` 已 proxied，TXT 驗證記錄保留
+- [x] 確認無 MX / CAA / 其他子網域 —— 切換不會影響任何信箱
+- [ ] **登入 Dashboard 抄下 apex A 與 `www` 的 origin 值**（從外部查不到，回退要用）
 
 **切換本身**
 
-- [ ] **`wrangler secret put CONTACT_TO` 改成禾勤的信箱** —— 目前是開發者的信箱（測試用）。
-      候選值 `glean1218@gmail.com` 是禾勤自己印在 Contact 頁上的，但最終值要業主確認。
-      見 [09-known-issues](09-known-issues.md) §3.1
+- [x] **`CONTACT_TO` 已設成 `glean1218@gmail.com`**（2026-08-08，
+      見 [09-known-issues](09-known-issues.md) §3.1）
 - [ ] 內容凍結，舊後台停用
 - [ ] 用正式站資料重跑 Phase 2（需要 Azure 存取）
 - [ ] 用新資料重跑 parity
-- [ ] Worker route + DNS 切換
-- [ ] 13 條 URL smoke test + `/Upload/*` 抽驗 + gtag 確認
-- [ ] **新後台前 48 小時維持唯讀**（保住 60 秒無損回退）
-- [ ] **Azure App Service 保持運行並付費 30 天**
+- [ ] **加 Worker route**（DNS 不用動，apex 已 proxied）
+- [ ] parity 打正式網域 31/31 + `/Upload/*` 抽驗 + gtag 確認
+- [ ] **新後台前 48 小時維持唯讀** —— 沒有反向腳本，這是**唯一**的保險
+- [ ] **Azure App Service 與 Azure SQL 一起保持運行 30 天**
+      —— 只留 App Service 沒有用，舊站靠 Azure SQL 跑
 
 ---
 
@@ -275,7 +286,9 @@ node scripts/verify-media.mjs [--remote]
 5. [ ] Bootstrap 版本錯配（1.2）
 6. [ ] Gallery 與 Team 的去留（1.5 / 1.6）
 7. [ ] Azure SQL 密碼輪替（2.1）—— 遷移完成後
-8. [ ] 舊 Azure App Service 下線 —— 切換滿 30 天後
+8. [ ] 舊 Azure App Service **與 Azure SQL** 下線 —— 切換滿 30 天後。
+   ⚠️ **刪掉 Azure SQL 的那一刻就是回退視窗的終點**，
+   見 [13-cutover-worksheet](13-cutover-worksheet.md) §4
 
 ---
 

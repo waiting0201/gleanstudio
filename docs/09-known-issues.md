@@ -101,7 +101,7 @@ var response = Librarys.SendGridExecute(entity.Email, "禾勤藝術", "禾勤藝
 | `reply_to` | 訪客的信箱與姓名 —— 禾勤按「回覆」直接回到客戶 |
 | 沒設 `CONTACT_TO` 或 `SENDGRID_API_KEY` | **不寄**（fail-safe，不是預設寄給誰） |
 
-**目前 `CONTACT_TO` 是開發者的信箱**，為了在 `workers.dev` 上實測。**Phase 8 換上正式網域時要改成禾勤的信箱**（`glean1218@gmail.com` 是他們自己印在 Contact 頁上的，但最終值要業主確認）。這一項列在 [11-roadmap](11-roadmap.md) Phase 8 的檢查清單裡。
+**`CONTACT_TO` 已於 2026-08-08 改成 `glean1218@gmail.com`** —— 禾勤自己印在 Contact 頁上的信箱，也是整套 `tests/golden/` 裡唯一出現過的一個。在此之前是開發者信箱，用來在 `workers.dev` 上實測。
 
 表單的可見行為（成功 302 / 失敗 200 重新渲染）與有沒有寄信完全無關，所以 markup 契約不受影響。
 

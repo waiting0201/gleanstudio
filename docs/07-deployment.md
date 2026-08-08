@@ -288,6 +288,14 @@ DNS 換手做完時網站還在 Azure，訪客無感 —— 但它有 ≥24 小�
 
 **緩解措施**：切換後**前 48 小時新後台維持唯讀**，讓那條「60 秒無損回退」的路徑多活兩天。
 
-48 小時之後若還需要回退，就需要一支 D1 → Azure SQL 的反向腳本。**那支腳本必須在 Phase 7 就寫好並測過**，不能等到事故當下才動手。
+⚠️ **上表第一列的實際時間比這裡寫的更好，第二列則更糟。** 兩點更新（2026-08-08）：
+
+1. **DNS 已經在 Cloudflare 且 apex 已 proxied**，所以回退是**刪 Worker route**，秒級生效，
+   不必動 DNS、也不依賴 TTL 有沒有先降。見 [13-cutover-worksheet](13-cutover-worksheet.md) §0。
+2. **D1 → Azure SQL 的反向腳本決定不寫**，因為 Azure SQL 會刪掉。
+   代價是第二列從「有資料損失但做得到」變成**做不到** —— 編輯者一在新後台寫入就沒有回頭路，
+   而且 **Azure SQL 一刪，連第一列也一起消失**（舊站靠它跑）。
+   所以「App Service 保持 30 天」那句話必須同樣套用在 Azure SQL 上。
+   完整說明見 [13-cutover-worksheet](13-cutover-worksheet.md) §4。
 
 回退用的 A 記錄值：**`23.97.79.119`**（2026-08-07 盤點，Azure App Service `gleanstudio.azurewebsites.net`）。切換前再確認一次。

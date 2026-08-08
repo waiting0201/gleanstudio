@@ -67,7 +67,7 @@
 只有 harness 與文件，**沒有任何應用程式碼**：
 
 - `CLAUDE.md` —— 索引
-- `docs/00` ~ `docs/12` —— 13 篇架構文件
+- `docs/00` ~ `docs/13` —— 14 篇架構文件
 - `.claude/settings.json` 與兩個 skill
 
 `package.json`、`astro.config.mjs`、`wrangler.jsonc`、`src/`、`scripts/`、`.github/` 都還不存在。它們的完整內容寫在對應文件裡，等後續階段照著建立。

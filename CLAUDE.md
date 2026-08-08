@@ -32,7 +32,9 @@
 **Phase 4 完成**（聯絡表單 POST）。`npm run parity:contact` 4 個情境全綠。
 收件人已改由 `CONTACT_TO` 決定，訪客的信箱放 `reply_to` —— 舊站那個把信寄給訪客本人的行為
 **刻意不重現**（[docs/09](docs/09-known-issues.md) §3.1）。
-Worker secret 已設定 —— ⚠️ **但用的是舊程式碼裡的原值，不是輪替後的新值**，Phase 7 之前必須輪替。
+`CONTACT_TO` 已於 2026-08-08 設成正式信箱 `glean1218@gmail.com`。
+⚠️ **但 `RECAPTCHA_SECRET` 與 `SENDGRID_API_KEY` 用的仍是舊程式碼裡的外洩原值，不是輪替後的新值** ——
+切換上線前必須輪替（[docs/09](docs/09-known-issues.md) §2.3 / §2.4）。
 
 **Phase 6 完成**（CI/CD，2026-08-07）。GitHub Actions 上 `guard` + `verify` 兩個 job 全綠 ——
 parity 31/31、聯絡表單 4/4、後台端到端 47/47、權限註冊表 30/30，**都是在 Linux 上驗的**。
@@ -49,6 +51,16 @@ ArticleTypes / Services / Teams / Abouts 走共用的宣告式實體層；
 Articles / Projects / Admins 各有自己的形狀（[docs/06](docs/06-admin-spec.md) §10a）。
 [docs/06](docs/06-admin-spec.md) §12 的 8 條完成條件全部達成；視覺語彙見同文件 §10，
 **選單名稱／清單欄位／表單欄位一律逐字照舊後台，見 §10b**。
+
+**Phase 8 準備中**（2026-08-08）。**DNS 換手其實早就做完了** —— zone 已在 Cloudflare，
+apex 與 `www` 都已 proxied，origin 仍指 Azure。所以切換 = **加一條 Worker route**，
+回退 = 刪掉它，秒級生效、不必動 DNS。原本文件寫的「≥24 小時降 TTL、留 3 個工作天」不再適用。
+→ 操作單 [docs/13-cutover-worksheet.md](docs/13-cutover-worksheet.md)
+
+⚠️ **D1 → Azure SQL 的反向腳本決定不寫**（Azure SQL 會刪）。代價：編輯者一在新後台寫入
+就沒有回頭路，而且 **Azure SQL 一刪、連「回舊站」都不可能**（舊站靠它跑）。
+「App Service 留 30 天」那句話必須同樣套用在 Azure SQL 上。
+
 → [docs/11-roadmap.md](docs/11-roadmap.md)
 
 ---
@@ -69,7 +81,8 @@ Articles / Projects / Admins 各有自己的形狀（[docs/06](docs/06-admin-spe
 | 看已知 bug 與待辦 | [docs/09-known-issues.md](docs/09-known-issues.md) |
 | 查某個技術決策為什麼這樣定 | [docs/10-decisions.md](docs/10-decisions.md) |
 | 看階段規劃與完成條件 | [docs/11-roadmap.md](docs/11-roadmap.md) |
-| 把 DNS 從 HiNet 換到 Cloudflare | [docs/12-dns-cutover.md](docs/12-dns-cutover.md) |
+| 把 DNS 從 HiNet 換到 Cloudflare | [docs/12-dns-cutover.md](docs/12-dns-cutover.md) ← **已完成，歷史紀錄** |
+| **把流量從舊站切到新站** | [docs/13-cutover-worksheet.md](docs/13-cutover-worksheet.md) ← **操作當下照著打** |
 
 ---
 
@@ -118,7 +131,7 @@ sa 密碼在 `docker inspect sqlserver` 的環境變數，**不是** `Web.config
 
 ```
 CLAUDE.md          這個檔
-docs/              13 篇架構文件（繁體中文）
+docs/              14 篇架構文件（繁體中文）
 reference/old/     舊 ASP.NET 系統 —— 唯讀，gitignored
 .claude/           settings.json + 2 個 skill
 

@@ -2,13 +2,23 @@
 
 把 `gleanstudio.com.tw` 的 DNS 解析交給 Cloudflare。**網域註冊繼續留在 HiNet**，續約、擁有權、聯絡人全部不動。
 
-**狀態**：⬜ 未開始。網域管理權已取得（2026-08-07）。
+**狀態**：✅ **已完成**（2026-08-08 實測確認）。以下內容轉為歷史紀錄，不再是待辦。
 
-**執行時機**：**等新站做好、Phase 7 soak 通過之後才做**（2026-08-07 決定）。開發期間新站跑在 `gleanstudio.workers.dev`，不需要動到正式網域。
+```bash
+dig +short NS gleanstudio.com.tw
+# bella.ns.cloudflare.com. / carlos.ns.cloudflare.com.
+```
 
-⚠️ **但要把前置時間算進時程**：Step 2 的降 TTL 要提前 ≥24 小時，加上 HiNet 介面可能有的變數（§3 Step 3），保守估至少留 3 個工作天，不要排在切換當天。
+zone 已在 Cloudflare，apex 與 `www` 都已是 proxied（橘雲），origin 仍指 Azure。
+Step 1–4 全部做完，§6 的備案也用不到了。
 
-相關：[07-deployment](07-deployment.md) §4｜[11-roadmap](11-roadmap.md) Phase 8
+⚠️ **底下那個「至少留 3 個工作天」的前置期已經過去。** Cloudflare 對 proxied 記錄
+一律回 TTL 300，降 TTL 那一步不再需要 —— 而且回退根本不必碰 DNS，刪掉 Worker
+route 就好，秒級生效。
+
+**接下來要執行的是網站切換，見 [13-cutover-worksheet](13-cutover-worksheet.md)。**
+
+相關：[13-cutover-worksheet](13-cutover-worksheet.md)（實際操作單）｜[07-deployment](07-deployment.md) §4｜[11-roadmap](11-roadmap.md) Phase 8
 
 ---
 
